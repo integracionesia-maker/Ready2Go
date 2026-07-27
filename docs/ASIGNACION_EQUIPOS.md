@@ -5,7 +5,7 @@
 > Contrato de API: `docs/contratos/` — **solo lectura**.
 > Este documento manda sobre el plan si algo se contradice. Si algo no esta aqui, preguntalo antes de escribirlo.
 
-> **ANTES DE ESCRIBIR CODIGO:** el contrato de API (`docs/contratos/`) se publica en master el dia 0 y todavia no esta. Lee este documento completo, prepara tu entorno y planea tu orden de trabajo, pero **no arranques la tarea 0 hasta que se avise que el contrato ya esta en master**. Se avisa el mismo dia.
+> **El contrato de API ya esta en master:** `docs/contratos/` — leelo antes de escribir la primera linea. Es solo lectura. Si algo no alcanza, se reporta y se cambia arriba; no se improvisa. Puedes arrancar por la tarea 0.
 
 ---
 
