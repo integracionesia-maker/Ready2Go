@@ -1,0 +1,18 @@
+{
+  "_nota": "Forma exacta de GET /api/auth/me tras agregar permisos. El campo permisos default es {} para no romper nada existente.",
+  "id": 4,
+  "username": "melisa",
+  "email": "melisa.avendano@grupo-ortiz.com",
+  "full_name": "Melisa Avendano",
+  "role": "colaborador_mkt",
+  "creator_id": null,
+  "is_active": true,
+  "must_change_password": false,
+  "permisos": {
+    "inicio": ["ver"],
+    "perfil": ["ver", "editar_propio"],
+    "equipos_inventario": ["ver"],
+    "equipos_prestamos": ["solicitar", "ver_propios", "ver_global", "registrar_devolucion"],
+    "equipos_aprobacion": ["autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"]
+  }
+}

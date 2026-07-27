@@ -1,0 +1,10 @@
+{
+  "_nota": "Los codigos feos que la interfaz debe pintar bien. No solo el camino feliz.",
+  "EQUIPO_OCUPADO":          {"http":409,"body":{"detail":"El equipo ya esta en un prestamo abierto.","codigo":"EQUIPO_OCUPADO"}},
+  "TRANSICION_INVALIDA":     {"http":409,"body":{"detail":"Faltan las fotos de atras de 1 equipo.","codigo":"TRANSICION_INVALIDA"}},
+  "SIN_PERMISO":             {"http":403,"body":{"detail":"No tienes permiso para esta accion.","codigo":"SIN_PERMISO"}},
+  "PERMISOS_NO_DISPONIBLES": {"http":503,"body":{"detail":"No se pudieron resolver los permisos. Reintenta en un momento.","codigo":"PERMISOS_NO_DISPONIBLES"}},
+  "MEDIA_MUY_GRANDE":        {"http":413,"body":{"detail":"La foto excede 3 MB.","codigo":"MEDIA_MUY_GRANDE"}},
+  "MEDIA_INVALIDA":          {"http":422,"body":{"detail":"El archivo no es una imagen JPEG o PNG valida.","codigo":"MEDIA_INVALIDA"}},
+  "SESION_EXPIRADA":         {"http":401,"body":{"detail":"Sesion invalida o expirada.","codigo":null}}
+}

@@ -1,0 +1,29 @@
+{
+  "_nota": "CONGELADO. Renombrar una accion sin cambiar este archivo hace que la interfaz esconda botones en silencio, sin error visible. Por eso es contrato y no codigo.",
+  "modulos": {
+    "inicio": ["ver"],
+    "perfil": ["ver", "editar_propio"],
+    "presupuestos": ["ver_global","ver_propio","subir_ticket","validar_ticket","borrar_ticket","gestionar_ciclos","gastos_generales","exportar"],
+    "equipos_inventario": ["ver","crear","editar","auditar_condicion","dar_de_baja"],
+    "equipos_prestamos": ["solicitar","ver_propios","ver_global","registrar_devolucion","cancelar","exportar"],
+    "equipos_aprobacion": ["autorizar_entrega","confirmar_devolucion","cerrar_incidencia"],
+    "usuarios": ["gestionar","gestionar_roles"]
+  },
+  "paquetes": {
+    "_PISO":            {"kind":"piso",   "permisos":{"inicio":["ver"],"perfil":["ver","editar_propio"]}},
+    "superadmin":       {"kind":"base",   "permisos":"*"},
+    "admin":            {"kind":"base",   "permisos":{"presupuestos":["ver_global","ver_propio","subir_ticket","validar_ticket","borrar_ticket","gestionar_ciclos","gastos_generales","exportar"],"equipos_inventario":["ver"],"equipos_prestamos":["solicitar","ver_propios","ver_global","registrar_devolucion","exportar"]}},
+    "creador":          {"kind":"base",   "permisos":{"presupuestos":["ver_propio","subir_ticket"]}},
+    "colaborador_mkt":  {"kind":"base",   "permisos":{"equipos_inventario":["ver"],"equipos_prestamos":["solicitar","ver_propios","registrar_devolucion"]}},
+    "APROBADOR_EQUIPO": {"kind":"aditivo","permisos":{"equipos_aprobacion":["autorizar_entrega","confirmar_devolucion","cerrar_incidencia"],"equipos_prestamos":["ver_global"]}},
+    "CUSTODIO_EQUIPO":  {"kind":"aditivo","permisos":{"equipos_inventario":["crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["ver_global"]}},
+    "AUDITOR":          {"kind":"aditivo","permisos":{"presupuestos":["ver_global"],"equipos_inventario":["ver"],"equipos_prestamos":["ver_global"]}}
+  },
+  "reglas": [
+    "Permisos efectivos = UNION de los paquetes de [_PISO, rol base, ...aditivos concedidos].",
+    "Deny-by-default: (modulo, accion) sin fila = sin permiso.",
+    "Un paquete aditivo SOLO abre lo que lista. Jamas amplia el rol base en otro modulo.",
+    "APROBADOR_EQUIPO no concede ni un permiso de presupuestos. Hay una prueba que lo afirma por enumeracion.",
+    "Fallo al resolver permisos = 503 PERMISOS_NO_DISPONIBLES. Nunca {} silencioso (un dict vacio = 403 masivo que parece politica)."
+  ]
+}
