@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Equipos GO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --go-black:#080808;
+    --go-gold:#A07840;
+    --go-gold-light:#c9a877;
+    --go-orange:#C8873A;
+    --go-white:#FFFFFF;
+    --bg:#f2efe9;
+    --card:#ffffff;
+    --ink:#1c1a17;
+    --muted:#6b675f;
+    --line:#e6e1d6;
+    --green:#2e7d4f;
+    --green-bg:#e6f4ec;
+    --red:#b3352c;
+    --red-bg:#fbe9e7;
+    --orange-bg:#fbecd9;
+    --blue:#2f5f8a;
+    --blue-bg:#e8f0f7;
+    --radius:14px;
+    --shadow:0 2px 10px rgba(8,8,8,.06), 0 1px 2px rgba(8,8,8,.05);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Montserrat',sans-serif;font-weight:400;}
+  h1,h2,h3,h4{font-family:'Montserrat',sans-serif;font-weight:800;margin:0;}
+  header.topbar{
+    background:var(--go-black);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.25);
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .mark{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,var(--go-gold),var(--go-orange));display:flex;align-items:center;justify-content:center;font-weight:900;color:#080808;font-size:15px;letter-spacing:.5px;}
+  .brand .txt div:first-child{font-size:15px;font-weight:900;letter-spacing:.5px;}
+  .brand .txt div:last-child{font-size:11px;color:#c9a877;letter-spacing:1px;font-weight:600;}
+  .header-right{display:flex;align-items:center;gap:14px;font-size:12px;color:#cfcac0;}
+  nav.tabs{
+    display:flex;gap:4px;padding:10px 24px 0;background:#fff;border-bottom:1px solid var(--line);
+    overflow-x:auto; position:sticky; top:70px; z-index:40;
+  }
+  nav.tabs button{
+    border:none;background:transparent;padding:12px 16px;font-family:'Montserrat';font-weight:700;font-size:13px;
+    color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;letter-spacing:.2px;
+  }
+  nav.tabs button.active{color:var(--go-black);border-bottom-color:var(--go-gold);}
+  nav.tabs button:hover{color:var(--go-black);}
+  main{padding:24px;max-width:1280px;margin:0 auto;}
+  .view{display:none;}
+  .view.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px;}
+  .kpi{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;border-left:5px solid var(--go-gold);}
+  .kpi .num{font-size:28px;font-weight:900;line-height:1;}
+  .kpi .lbl{font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-top:6px;}
+  .kpi.warn{border-left-color:var(--go-orange);}
+  .kpi.bad{border-left-color:var(--red);}
+  .kpi.good{border-left-color:var(--green);}
+  .grid-2{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;}
+  @media(max-width:900px){.grid-2{grid-template-columns:1fr;}}
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px;}
+  .card h3{font-size:14px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px;color:var(--go-black);}
+  .alert-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;margin-bottom:8px;font-size:13px;}
+  .alert-row.red{background:var(--red-bg);color:var(--red);}
+  .alert-row.orange{background:var(--orange-bg);color:#8a5a1c;}
+  .alert-row b{font-weight:800;}
+  .btn{
+    border:none;background:var(--go-black);color:#fff;padding:10px 16px;border-radius:9px;font-family:'Montserrat';
+    font-weight:700;font-size:12.5px;cursor:pointer;letter-spacing:.3px;transition:transform .1s, background .15s;
+  }
+  .btn:hover{background:#222;}
+  .btn.gold{background:var(--go-gold);color:#fff;}
+  .btn.gold:hover{background:#8c6636;}
+  .btn.outline{background:transparent;border:1.5px solid var(--go-black);color:var(--go-black);}
+  .btn.outline:hover{background:var(--go-black);color:#fff;}
+  .btn.sm{padding:6px 11px;font-size:11.5px;border-radius:7px;}
+  .btn.danger{background:var(--red);}
+  .btn.danger:hover{background:#8f2a23;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px;justify-content:space-between;}
+  .toolbar .filters{display:flex;flex-wrap:wrap;gap:8px;}
+  input,select,textarea{
+    font-family:'Montserrat';border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;
+    background:#fff;color:var(--ink);
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--go-gold);}
+  label{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px;}
+  .field{margin-bottom:14px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:10px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--line);}
+  td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:hover td{background:#faf8f4;}
+  .badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:10.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;}
+  .badge.green{background:var(--green-bg);color:var(--green);}
+  .badge.red{background:var(--red-bg);color:var(--red);}
+  .badge.orange{background:var(--orange-bg);color:#8a5a1c;}
+  .badge.blue{background:var(--blue-bg);color:var(--blue);}
+  .badge.gray{background:#ececec;color:#555;}
+  .empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px;}
+  .equip-pick{border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+  .equip-pick input[type=checkbox]{width:17px;height:17px;}
+  .equip-pick .meta{flex:1;}
+  .equip-pick .meta .n{font-weight:700;font-size:13.5px;}
+  .equip-pick .meta .c{font-size:11.5px;color:var(--muted);}
+  .photo-block{border:1.5px dashed var(--line);border-radius:10px;padding:12px;margin-top:10px;background:#fbfaf7;}
+  .photo-block .ph-title{font-weight:800;font-size:12.5px;margin-bottom:8px;}
+  .photo-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .photo-slot{width:130px;}
+  .photo-slot .lbl2{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;}
+  .photo-slot img{width:130px;height:130px;object-fit:cover;border-radius:8px;border:1.5px solid var(--line);display:block;background:#eee;}
+  .photo-slot .ph-empty{width:130px;height:130px;border-radius:8px;border:1.5px dashed #c8c2b4;display:flex;align-items:center;justify-content:center;color:#a6a094;font-size:11px;text-align:center;background:#f5f3ee;}
+  .photo-slot input[type=file]{display:none;}
+  .photo-slot .pick-btn{margin-top:6px;width:100%;font-size:10.5px;padding:6px;}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(8,8,8,.55);z-index:100;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;}
+  .modal-bg.active{display:flex;}
+  .modal{background:#fff;border-radius:16px;max-width:720px;width:100%;padding:24px 26px;box-shadow:0 20px 60px rgba(0,0,0,.35);margin-bottom:40px;}
+  .modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+  .modal-head h3{font-size:17px;}
+  .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);}
+  .incident-box{border:1.5px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;}
+  .incident-box .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .radio-group{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;}
+  .radio-opt{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;}
+  .compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;}
+  .compare-col{flex:1;min-width:150px;}
+  .compare-col h4{font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .compare-col img{width:100%;max-width:160px;border-radius:8px;border:1px solid var(--line);}
+  .timeline{list-style:none;margin:0;padding:0;}
+  .timeline li{padding:8px 0 8px 18px;border-left:2px solid var(--line);position:relative;font-size:12.5px;margin-left:4px;}
+  .timeline li::before{content:'';position:absolute;left:-6px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--go-gold);}
+  .timeline li:last-child{border-left:2px solid transparent;}
+  .small{font-size:11.5px;color:var(--muted);}
+  .footer-note{text-align:center;color:var(--muted);font-size:11.5px;margin-top:30px;padding-bottom:20px;}
+  .flex-between{display:flex;justify-content:space-between;align-items:center;}
+  .tag-pill{display:inline-flex;align-items:center;gap:5px;background:#f3f0e9;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--go-black);}
+  .storage-bar{height:6px;background:#eee;border-radius:4px;overflow:hidden;margin-top:6px;}
+  .storage-bar .fill{height:100%;background:var(--go-gold);}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:#d8d2c4;border-radius:4px;}
+
+  /* Carta responsiva */
+  .responsiva-doc{font-family:Arial,Helvetica,sans-serif;color:#111;font-size:13px;line-height:1.5;background:#fff;padding:14px;}
+  .responsiva-doc h2{text-align:center;font-size:16px;margin:18px 0;text-transform:uppercase;letter-spacing:.5px;}
+  .responsiva-doc h3{font-size:13.5px;margin:16px 0 6px;}
+  .responsiva-doc p{margin:6px 0;}
+  table.resp-table{width:100%;border-collapse:collapse;margin:4px 0 2px;}
+  table.resp-table td{border:1px solid #999;padding:6px 8px;font-size:12px;}
+  table.resp-table td.resp-label{background:#f0f0f0;font-weight:700;width:170px;}
+  .responsiva-doc .firma-block{display:flex;justify-content:space-around;margin-top:50px;text-align:center;gap:20px;flex-wrap:wrap;}
+  .responsiva-doc .firma-block img{max-height:65px;display:block;margin:0 auto 6px;}
+  .responsiva-doc .firma-line{border-top:1px solid #000;padding-top:6px;min-width:200px;font-size:11.5px;}
+  #print-area{position:absolute;left:-9999px;top:0;width:800px;}
+  @media print{
+    body *{visibility:hidden;}
+    #print-area, #print-area *{visibility:visible;}
+    #print-area{position:absolute;left:0;top:0;width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">GO</div>
+    <div class="txt">
+      <div>CONTROL DE EQUIPOS</div>
+      <div>GRUPO ORTIZ · PRÉSTAMOS</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="today-lbl"></span>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-view="inicio" class="active">Inicio</button>
+  <button data-view="inventario">Inventario</button>
+  <button data-view="nuevo">Nuevo préstamo</button>
+  <button data-view="activos">Préstamos activos</button>
+  <button data-view="aprobaciones">Aprobaciones</button>
+  <button data-view="historial">Historial</button>
+  <button data-view="respaldo">Respaldo</button>
+</nav>
+
+<main>
+
+  <!-- INICIO -->
+  <section class="view active" id="view-inicio">
+    <div class="kpis" id="kpi-row"></div>
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <h3>Requiere atención</h3>
+          <div id="attention-list"></div>
+        </div>
+        <div class="card">
+          <h3>Préstamos en curso</h3>
+          <div id="inicio-activos-table"></div>
+        </div>
+      </div>
+      <div class="card" style="height:fit-content;">
+        <h3>Distribución de estados</h3>
+        <canvas id="statusChart" height="220"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- INVENTARIO -->
+  <section class="view" id="view-inventario">
+    <div class="toolbar">
+      <input id="inv-search" placeholder="Buscar equipo por nombre o código...">
+      <button class="btn gold" id="btn-add-equip">+ Agregar equipo</button>
+    </div>
+    <div class="card">
+      <table id="inv-table"><thead><tr>
+        <th>Equipo</th><th>Categoría</th><th>Responsable actual</th><th>Condición</th><th>Disponibilidad</th><th></th>
+      </tr></thead><tbody></tbody></table>
+      <div class="empty" id="inv-empty" style="display:none;">Aún no hay equipos registrados. Agrega el primero arriba.</div>
+    </div>
+  </section>
+
+  <!-- NUEVO PRESTAMO -->
+  <section class="view" id="view-nuevo">
+    <div class="card">
+      <h3>Datos del préstamo</h3>
+      <div class="grid-2">
+        <div class="field">
+          <label>Persona que se lleva el equipo</label>
+          <input id="np-responsable" placeholder="Nombre completo">
+        </div>
+        <div class="field">
+          <label>Correo de quien se lleva el equipo</label>
+          <input type="email" id="np-correo-responsable" placeholder="nombre@grupo-ortiz.com">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Área</label>
+          <input id="np-area" placeholder="Ej. Contenido, Marketing, Plaza Madero...">
+        </div>
+        <div class="field">
+          <label>Empresa / razón social del colaborador</label>
+          <select id="np-empresa">
+            <option value="">Selecciona...</option>
+            <option value="MERCASYSTEM SA DE CV">MERCASYSTEM SA DE CV</option>
+            <option value="DISTRIBUCIÓN Y COMERCIALIZACIÓN DE PRODUCTOS INNOVADORES INNOVA SA DE CV">DISTRIBUCIÓN Y COMERCIALIZACIÓN DE PRODUCTOS INNOVADORES INNOVA SA DE CV</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Quien entrega y autoriza el equipo</label>
+          <select id="np-entregado-por">
+            <option value="">Selecciona...</option>
+          </select>
+          <p class="small" style="margin-top:4px;">Melisa es la única autorizada para firmar la entrega y aprobar la devolución del equipo. Recibirá un correo para autorizar la carta responsiva.</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Fecha en que se lleva el equipo</label>
+          <input type="date" id="np-fecha-entrega">
+        </div>
+        <div class="field">
+          <label>Fecha esperada de regreso</label>
+          <input type="date" id="np-fecha-regreso">
+        </div>
+      </div>
+      <div class="field">
+        <label>Motivo</label>
+        <input id="np-motivo" placeholder="Ej. Evento Plaza Madero, viaje, grabación... (obligatorio)">
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Selecciona los equipos que se lleva</h3>
+      <div id="np-equip-list"></div>
+      <div class="empty" id="np-equip-empty" style="display:none;">No hay equipos disponibles en este momento (todos están prestados o dados de baja). Ve a la pestaña Inventario para ver su estado o agregar equipos nuevos.</div>
+    </div>
+
+    <div class="card" id="np-photos-card" style="display:none;">
+      <h3>Fotos y accesorios de entrega</h3>
+      <p class="small">Marca los accesorios que efectivamente se llevan de cada equipo e indica quién se queda con el cargador.</p>
+      <div id="np-photos-container"></div>
+      <div class="field" style="margin-top:10px;">
+        <label>Notas</label>
+        <textarea id="np-notas-resp" rows="2" placeholder="Notas adicionales para la carta responsiva (opcional)"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Firmas</h3>
+      <p class="small">Ambas firmas son obligatorias para registrar el préstamo y generar la carta responsiva.</p>
+      <div class="grid-2">
+        <div>
+          <label>Firma de quien entrega el equipo</label>
+          <canvas id="firma-entrega" width="500" height="160" style="border:1.5px solid var(--line);border-radius:8px;width:100%;height:140px;touch-action:none;background:#fff;"></canvas>
+          <button type="button" class="btn outline sm" style="margin-top:6px;" onclick="clearSignature('firma-entrega')">Borrar firma</button>
+        </div>
+        <div>
+          <label>Firma de quien recibe el equipo (responsable)</label>
+          <canvas id="firma-responsable" width="500" height="160" style="border:1.5px solid var(--line);border-radius:8px;width:100%;height:140px;touch-action:none;background:#fff;"></canvas>
+          <button type="button" class="btn outline sm" style="margin-top:6px;" onclick="clearSignature('firma-responsable')">Borrar firma</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="text-align:right;">
+      <div class="small" id="np-validation" style="text-align:left;margin-bottom:10px;color:var(--red);"></div>
+      <button class="btn gold" id="btn-save-loan">Registrar préstamo y generar responsiva</button>
+    </div>
+  </section>
+
+  <!-- PRESTAMOS ACTIVOS -->
+  <section class="view" id="view-activos">
+    <div class="card">
+      <table><thead><tr>
+        <th>Responsable</th><th>Equipos</th><th>Entregado</th><th>Regreso esperado</th><th>Estado</th><th></th>
+      </tr></thead><tbody id="activos-tbody"></tbody></table>
+      <div class="empty" id="activos-empty" style="display:none;">No hay préstamos activos en este momento.</div>
+    </div>
+  </section>
+
+  <!-- APROBACIONES -->
+  <section class="view" id="view-aprobaciones">
+    <div class="card">
+      <h3>Persona autorizada (entregas y devoluciones)</h3>
+      <div id="approvers-list" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="card">
+      <h3>Autorización de entregas nuevas</h3>
+      <p class="small">Estos préstamos ya están firmados y en curso; falta que quien entregó el equipo confirme la carta responsiva para cerrar el trámite.</p>
+      <table><thead><tr>
+        <th>Folio</th><th>Responsable</th><th>Equipos</th><th>Entrega por</th><th></th>
+      </tr></thead><tbody id="autorizacion-tbody"></tbody></table>
+      <div class="empty" id="autorizacion-empty" style="display:none;">No hay entregas pendientes de autorizar.</div>
+    </div>
+    <div class="card">
+      <h3>Devoluciones por confirmar</h3>
+      <table><thead><tr>
+        <th>Responsable</th><th>Equipos</th><th>Devuelto</th><th>Estado</th><th></th>
+      </tr></thead><tbody id="aprob-tbody"></tbody></table>
+      <div class="empty" id="aprob-empty" style="display:none;">No hay préstamos pendientes de aprobación.</div>
+    </div>
+  </section>
+
+  <!-- HISTORIAL -->
+  <section class="view" id="view-historial">
+    <div class="toolbar">
+      <div class="filters">
+        <input id="hist-search" placeholder="Buscar por responsable o equipo...">
+        <select id="hist-filter-estado">
+          <option value="">Todos los estados</option>
+          <option value="prestado">Prestado</option>
+          <option value="pendiente_aprobacion">Pendiente de aprobación</option>
+          <option value="completado">Completado</option>
+          <option value="incompleto">Incompleto / dañado</option>
+        </select>
+      </div>
+      <button class="btn outline sm" id="btn-export-csv">Exportar CSV</button>
+    </div>
+    <div class="card">
+      <table><thead><tr>
+        <th>Responsable</th><th>Equipos</th><th>Entregado</th><th>Regreso</th><th>Estado</th><th>Aprobó</th><th></th>
+      </tr></thead><tbody id="hist-tbody"></tbody></table>
+      <div class="empty" id="hist-empty" style="display:none;">Sin registros.</div>
+    </div>
+  </section>
+
+  <!-- RESPALDO -->
+  <section class="view" id="view-respaldo">
+    <div class="card">
+      <h3>Uso de almacenamiento local</h3>
+      <p class="small">Esta plataforma guarda toda la información (equipos, préstamos y fotos) en el navegador de este dispositivo. Se recomienda exportar un respaldo periódicamente, sobre todo antes de borrar datos del navegador o cambiar de equipo.</p>
+      <div class="storage-bar"><div class="fill" id="storage-fill" style="width:0%;"></div></div>
+      <p class="small" id="storage-lbl"></p>
+    </div>
+    <div class="card">
+      <h3>Exportar respaldo</h3>
+      <p class="small">Descarga un archivo .json con todo el historial, inventario y fotos.</p>
+      <button class="btn gold" id="btn-export-json">Descargar respaldo (.json)</button>
+    </div>
+    <div class="card">
+      <h3>Importar respaldo</h3>
+      <p class="small">Restaura la información desde un archivo .json exportado previamente. Esto reemplazará los datos actuales.</p>
+      <input type="file" id="import-file" accept=".json">
+    </div>
+    <div class="card">
+      <h3 style="color:var(--red);">Zona de riesgo</h3>
+      <p class="small">Borra permanentemente todos los datos guardados en este navegador.</p>
+      <button class="btn danger" id="btn-wipe">Borrar todos los datos</button>
+    </div>
+  </section>
+
+</main>
+
+<div class="footer-note">Control de Equipos GO · Grupo Ortiz — datos almacenados localmente en este navegador</div>
+
+<!-- MODAL: Carta responsiva -->
+<div class="modal-bg" id="modal-responsiva">
+  <div class="modal" style="max-width:820px;">
+    <div class="modal-head">
+      <h3>Carta responsiva de equipo</h3>
+      <button class="modal-close" onclick="closeResponsivaModal()">✕</button>
+    </div>
+    <div id="responsiva-body" style="border:1px solid var(--line);border-radius:10px;max-height:60vh;overflow-y:auto;"></div>
+    <div style="text-align:right;margin-top:14px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+      <a class="btn outline" id="btn-avisar-responsable" style="text-decoration:none;">Enviar copia al responsable</a>
+      <a class="btn outline" id="btn-avisar-melisa" style="text-decoration:none;">Avisar a Melisa para autorizar</a>
+      <button class="btn outline" onclick="closeResponsivaModal()">Cerrar</button>
+      <button class="btn gold" id="btn-print-responsiva">Imprimir / guardar como PDF</button>
+    </div>
+  </div>
+</div>
+<div id="print-area"></div>
+
+<!-- MODAL: Condición / auditoría de equipo -->
+<div class="modal-bg" id="modal-condicion">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Detalle del equipo</h3>
+      <button class="modal-close" onclick="closeModal('modal-condicion')">✕</button>
+    </div>
+    <div id="condicion-body"></div>
+  </div>
+</div>
+
+<!-- MODAL: Registrar devolución -->
+<div class="modal-bg" id="modal-devolucion">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Registrar devolución</h3>
+      <button class="modal-close" onclick="closeModal('modal-devolucion')">✕</button>
+    </div>
+    <div id="devolucion-body"></div>
+  </div>
+</div>
+
+<!-- MODAL: Aprobación -->
+<div class="modal-bg" id="modal-aprobacion">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Confirmar alta de entrega</h3>
+      <button class="modal-close" onclick="closeModal('modal-aprobacion')">✕</button>
+    </div>
+    <div id="aprobacion-body"></div>
+  </div>
+</div>
+
+<!-- MODAL: Detalle historial -->
+<div class="modal-bg" id="modal-detalle">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Detalle del préstamo</h3>
+      <button class="modal-close" onclick="closeModal('modal-detalle')">✕</button>
+    </div>
+    <div id="detalle-body"></div>
+  </div>
+</div>
+
+<!-- MODAL: Agregar equipo -->
+<div class="modal-bg" id="modal-equip">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Agregar equipo</h3>
+      <button class="modal-close" onclick="closeModal('modal-equip')">✕</button>
+    </div>
+    <div class="field"><label>Nombre del equipo</label><input id="eq-nombre" placeholder="Ej. Cámara Sony A7III"></div>
+    <div class="field"><label>Categoría</label><input id="eq-categoria" placeholder="Ej. Cámaras, Audio, Iluminación, Cómputo..."></div>
+    <div class="field"><label>Código interno (opcional)</label><input id="eq-codigo" placeholder="Ej. GO-CAM-014"></div>
+    <div class="grid-2">
+      <div class="field"><label>No. de serie (opcional)</label><input id="eq-serie" placeholder="Para la carta responsiva"></div>
+      <div class="field"><label>Activo fijo (opcional)</label><input id="eq-activo-fijo" placeholder="Para la carta responsiva"></div>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label>Marca (opcional)</label><input id="eq-marca" placeholder="Ej. Lenovo, Apple, DJI..."></div>
+      <div class="field"><label>Modelo (opcional)</label><input id="eq-modelo" placeholder="Ej. ThinkPad, iPhone 17 Pro..."></div>
+    </div>
+    <div class="field"><label>Cuenta de Gmail asociada (opcional)</label><input id="eq-gmail" placeholder="usuario@gmail.com"></div>
+    <div class="field"><label>Accesorios típicos (separados por coma)</label><input id="eq-accesorios" placeholder="Ej. Cargador, Funda / Bolsa, Estuche, Cable conector / Tapas de lente, Tripié, Luces"></div>
+    <div style="text-align:right;"><button class="btn gold" id="btn-save-equip">Guardar equipo</button></div>
+  </div>
+</div>
+
+<script>
+const APPROVERS = [
+  { nombre:'Melisa', email:'melisa.avendano@grupo-ortiz.com' }
+];
+function approverEmailsCsv(){ return APPROVERS.map(a=>a.email).join(','); }
+function buildMailtoNotificacion(loan){
+  const subject = encodeURIComponent(`Confirmación de entrega pendiente — ${loan.responsable}`);
+  const bodyLines = [
+    `Hola,`,
+    ``,
+    `Hay una devolución de equipo lista para confirmar en Control de Equipos GO:`,
+    `Responsable: ${loan.responsable}`,
+    `Equipos: ${equipNames(loan)}`,
+    `Fecha de regreso: ${fmtDate(loan.fechaRegresoReal)}`,
+    ``,
+    `Por favor entra a la pestaña "Aprobaciones" para revisar las fotos y confirmar la alta de entrega.`,
+    ``,
+    `Gracias.`
+  ];
+  const body = encodeURIComponent(bodyLines.join('\n'));
+  return `mailto:${approverEmailsCsv()}?subject=${subject}&body=${body}`;
+}
+function buildMailtoAutorizacion(loan){
+  const approver = APPROVERS.find(a=>a.nombre===loan.entregadoPor);
+  const email = approver? approver.email : approverEmailsCsv();
+  const subject = encodeURIComponent(`Autorización de carta responsiva — ${loan.responsable} (${loan.folio||''})`);
+  const bodyLines = [
+    `Hola ${loan.entregadoPor||''},`,
+    ``,
+    `Se generó un nuevo préstamo de equipo en Control de Equipos GO que requiere tu autorización, ya que quedaste como quien entrega el equipo:`,
+    `Folio: ${loan.folio||''}`,
+    `Responsable: ${loan.responsable}`,
+    `Área: ${loan.area||''}`,
+    `Motivo: ${loan.motivo||''}`,
+    `Equipos: ${equipNames(loan)}`,
+    `Fecha de entrega: ${fmtDate(loan.fechaEntrega)}`,
+    ``,
+    `La carta responsiva ya está firmada por ambas partes. Por favor entra a la pestaña "Aprobaciones" de la plataforma y marca esta entrega como autorizada para cerrar el préstamo.`,
+    ``,
+    `Gracias.`
+  ];
+  const body = encodeURIComponent(bodyLines.join('\n'));
+  return `mailto:${email}?subject=${subject}&body=${body}`;
+}
+function buildMailtoResponsableEntrega(loan){
+  const subject = encodeURIComponent(`Tu carta responsiva de equipo — folio ${loan.folio||''}`);
+  const bodyLines = [
+    `Hola ${loan.responsable||''},`,
+    ``,
+    `Te confirmamos que se registró la entrega de equipo a tu nombre en Control de Equipos GO:`,
+    `Folio: ${loan.folio||''}`,
+    `Equipos: ${equipNames(loan)}`,
+    `Fecha de entrega: ${fmtDate(loan.fechaEntrega)}`,
+    `Motivo: ${loan.motivo||''}`,
+    ``,
+    `La carta responsiva ya quedó firmada por ti y por ${loan.entregadoPor||'quien te entregó el equipo'}, y está en espera de autorización final.`,
+    `Recuerda cuidar el equipo y sus accesorios; cualquier daño, robo o pérdida debe reportarse de inmediato.`,
+    ``,
+    `Gracias.`
+  ];
+  const body = encodeURIComponent(bodyLines.join('\n'));
+  return `mailto:${loan.correoResponsable||''}?subject=${subject}&body=${body}`;
+}
+function buildMailtoResponsableDevolucion(loan){
+  const subject = encodeURIComponent(`Confirmación de devolución registrada — folio ${loan.folio||''}`);
+  const bodyLines = [
+    `Hola ${loan.responsable||''},`,
+    ``,
+    `Te confirmamos que se registró la devolución del equipo que tenías a tu cargo:`,
+    `Folio: ${loan.folio||''}`,
+    `Equipos: ${equipNames(loan)}`,
+    `Fecha de devolución: ${fmtDate(loan.fechaRegresoReal)}`,
+    ``,
+    `Queda en espera de que Melisa confirme que el equipo se recibió en buen estado.`,
+    ``,
+    `Gracias.`
+  ];
+  const body = encodeURIComponent(bodyLines.join('\n'));
+  return `mailto:${loan.correoResponsable||''}?subject=${subject}&body=${body}`;
+}
+
+// ---------- Carta responsiva ----------
+const RESPONSIVA_EMPRESA = {
+  nombre: 'SERVICIOS CORPORATIVOS QUANTUM DE OCCIDENTE, S.C.',
+  direccion: 'Belisario Domínguez No. 30 Col. Centro',
+  ciudad: 'Morelia, Michoacán',
+  rfc: 'SCQ1212149P0'
+};
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function buildFolio(){
+  state.folioCounter = (state.folioCounter||0) + 1;
+  return 'CE-' + String(state.folioCounter).padStart(4,'0');
+}
+function generateResponsivaHTML(loan){
+  const [y,m,d] = (loan.fechaEntrega||todayISO()).split('-');
+  const fechaTexto = `${parseInt(d,10)} de ${MESES[parseInt(m,10)-1]} de ${y}`;
+  const accPorEquipo = loan.accesoriosPorEquipo || {};
+  const equiposBlocks = loan.equipos.map(id=>{
+    const e = equipmentById(id) || {};
+    const condicion = [e.estadoFisico, e.comentarioAuditoria].filter(Boolean).join(' — ') || '—';
+    const acc = accPorEquipo[id] || {};
+    const seleccionados = acc.seleccionados || [];
+    const accTexto = [...seleccionados, acc.otros].filter(Boolean).join(', ') || 'Ninguno registrado';
+    return `
+      <p style="font-weight:700;margin:14px 0 4px;">${esc(e.nombre||'(equipo)')}</p>
+      <table class="resp-table">
+        <tr><td class="resp-label">No. Serie</td><td>${esc(e.numeroSerie||'—')}</td></tr>
+        <tr><td class="resp-label">Activo fijo</td><td>${esc(e.activoFijo||'—')}</td></tr>
+        <tr><td class="resp-label">Marca</td><td>${esc(e.marca||'—')}</td></tr>
+        <tr><td class="resp-label">Modelo</td><td>${esc(e.modelo||'—')}</td></tr>
+        <tr><td class="resp-label">Cuenta de Gmail</td><td>${esc(e.cuentaGmail||'—')}</td></tr>
+        <tr><td class="resp-label">Condiciones del equipo</td><td>${esc(condicion)}</td></tr>
+        <tr><td class="resp-label">Accesorios</td><td>${esc(accTexto)}</td></tr>
+        ${acc.cargadorCon? `<tr><td class="resp-label">Cargador con</td><td>${esc(acc.cargadorCon)}</td></tr>`:''}
+      </table>`;
+  }).join('');
+
+  return `
+  <div class="responsiva-doc">
+    <div style="text-align:right;font-size:12px;">FOLIO: <b>${esc(loan.folio||'')}</b><br>${RESPONSIVA_EMPRESA.ciudad}, ${fechaTexto}</div>
+    <div style="margin-top:6px;font-size:12px;line-height:1.4;">
+      <b>${RESPONSIVA_EMPRESA.nombre}</b><br>
+      ${RESPONSIVA_EMPRESA.direccion}<br>
+      <b>${RESPONSIVA_EMPRESA.ciudad.toUpperCase()}</b><br>
+      RFC: ${RESPONSIVA_EMPRESA.rfc}
+    </div>
+    <h2>Carta responsiva de equipo</h2>
+    <p>Por medio de la presente, hago constar que recibí el siguiente equipo para uso del desempeño de mis funciones y actividades asignadas en el área de <b>${esc(loan.area||'____')}</b>, empleado de la empresa <b>${esc(loan.empresa||'____')}</b>.</p>
+    <p><b>Responsable del equipo:</b> ${esc(loan.responsable)} &nbsp;·&nbsp; <b>Motivo:</b> ${esc(loan.motivo||'—')}</p>
+    <p><b>Características del equipo:</b></p>
+    ${equiposBlocks}
+    <p><b>Notas:</b> ${esc(loan.notasResponsiva||'—')}</p>
+    <h3 style="margin-top:20px;">Situaciones extraordinarias</h3>
+    <p><b>Daño:</b> por mal manejo o imprudencia serán mi responsabilidad y asumo las consecuencias, costos que de esto se deriven.</p>
+    <p><b>Robo:</b> Se deberá de reportar al área responsable, de forma inmediata y dejar constancia mediante un acta de hechos, asumiendo las consecuencias que de ahí se deriven.</p>
+    <p><b>Pérdida:</b> Se deberá de reportar al área responsable, de forma inmediata y dejar constancia mediante un acta de hechos y pagar el costo del equipo para su reposición.</p>
+    <p><b>Nota:</b> Al momento de entregar el equipo, ya sea por cambio o terminación de contrato laboral con la empresa, éste deberá entregarse en óptimas condiciones físicas y bajo ninguna circunstancia el trabajador podrá eliminar la copia de seguridad de la información que se genere en el mismo; de lo contrario se aplicará el uso del pagaré correspondiente para cubrir los daños generados.</p>
+    <p>Al término del contrato del equipo celular corporativo, el colaborador tendrá la opción de adquirir el equipo pagando el valor de mercado vigente al momento de la finalización del contrato, monto que será determinado por la empresa conforme a una valoración comercial.</p>
+    <div class="firma-block">
+      <div>${loan.firmaResponsable? `<img src="${loan.firmaResponsable}">`:''}<div class="firma-line">${esc(loan.responsable||'')}<br>Nombre y firma del responsable</div></div>
+      <div>${loan.firmaEntrega? `<img src="${loan.firmaEntrega}">`:''}<div class="firma-line">${esc(loan.entregadoPor||'')}<br>Nombre y firma Entrega</div></div>
+    </div>
+  </div>`;
+}
+function printResponsiva(html){
+  const area = document.getElementById('print-area');
+  area.innerHTML = html;
+  window.print();
+}
+
+// ---------- Firma digital (canvas) ----------
+const signaturePads = {};
+function setupSignaturePad(canvasId){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas || signaturePads[canvasId]) return;
+  const ctx = canvas.getContext('2d');
+  ctx.lineWidth = 2.2; ctx.lineCap='round'; ctx.strokeStyle = '#111';
+  let drawing=false, last=null;
+  function pos(e){
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.touches? e.touches[0].clientX : e.clientX;
+    const cy = e.touches? e.touches[0].clientY : e.clientY;
+    return { x:(cx-rect.left)*(canvas.width/rect.width), y:(cy-rect.top)*(canvas.height/rect.height) };
+  }
+  function start(e){ drawing=true; last=pos(e); e.preventDefault(); }
+  function move(e){ if(!drawing) return; const p=pos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; e.preventDefault(); }
+  function end(){ drawing=false; }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, {passive:false});
+  canvas.addEventListener('touchmove', move, {passive:false});
+  canvas.addEventListener('touchend', end);
+  signaturePads[canvasId] = true;
+}
+function clearSignature(canvasId){
+  const c = document.getElementById(canvasId);
+  if(!c) return;
+  c.getContext('2d').clearRect(0,0,c.width,c.height);
+}
+function isCanvasBlank(canvas){
+  const blank = document.createElement('canvas');
+  blank.width = canvas.width; blank.height = canvas.height;
+  return canvas.toDataURL() === blank.toDataURL();
+}
+
+const STORE_KEY = 'go_equipos_control_v1';
+
+// ---------- Datos semilla: auditoría inicial de equipos (importados de hoja de cálculo) ----------
+const SEED_EQUIPMENT = [
+  { id:'eq_s3', nombre:'Celular para grabaciones — iPhone 17 Pro gris (Jeziel)', categoria:'Celular para grabaciones y videos', codigo:'', descripcion:'iPhone 17 Pro de 256 GB color gris, con cargador original y funda protectora', estadoFisico:'nuevo', condicion:'bueno', espacioDisponible:'87.43 GB de 256 GB', comentarioAuditoria:'Sin rayones, excelente estado, como nuevo. Se solicita cambio de funda porque la actual tapa la calidad de los lentes.', fechaAuditoria:'2026-06-10', fotosOriginalesUrl:'https://drive.google.com/drive/folders/1ubmWiP2pcVJhpcs3r2RfqegzTbKpgcvZ?usp=drive_link', estado:'disponible', accesoriosTipicos:['Cargador','Funda'] },
+  { id:'eq_s6', nombre:'Micrófonos RODE (2 pzas., Barbara)', categoria:'Micrófonos para grabación', codigo:'', descripcion:'2 micrófonos marca RODE con funda, receptor y cable espiga, con bolsa original', estadoFisico:'usado', condicion:'atencion', espacioDisponible:'', comentarioAuditoria:'El cable tipo C presenta falla. El resto del equipo está en excelente estado, sin golpes y funcionando bien.', fechaAuditoria:'2026-06-10', fotosOriginalesUrl:'https://drive.google.com/drive/folders/15bOmRBp0vs97yYRSZmwsX7oe7s2rd3UV?usp=drive_link', estado:'disponible', accesoriosTipicos:['Bolsa','Estuche de micrófonos','Cable conector'] },
+  { id:'eq_s7', nombre:'Celular para grabaciones — iPhone 17 Pro plateado (Barbara)', categoria:'Celular para grabaciones y videos', codigo:'', descripcion:'iPhone 17 Pro de 256 GB color plateado, con cargador original y funda protectora', estadoFisico:'nuevo', condicion:'bueno', espacioDisponible:'200.06 GB de 256 GB', comentarioAuditoria:'Sin rayones ni golpes, buen estado. Mica con leves despostillados en la orilla; case con rayón pequeño en el lente. Cargador en buen estado.', fechaAuditoria:'2026-06-10', fotosOriginalesUrl:'https://drive.google.com/drive/folders/15bOmRBp0vs97yYRSZmwsX7oe7s2rd3UV?usp=drive_link', estado:'disponible', accesoriosTipicos:['Cargador','Funda'] },
+  { id:'eq_s8', nombre:'Micrófonos DJI Mic Mini (dúo, plaza)', categoria:'Audio / micrófonos inalámbricos', codigo:'', descripcion:'2 micrófonos con cargador portátil, receptor y dos imanes, con 2 juegos de fundas para ruido y una bolsa con cables originales', estadoFisico:'nuevo', condicion:'bueno', espacioDisponible:'', comentarioAuditoria:'El equipo está en excelente estado y completo.', fechaAuditoria:'2026-06-10', fotosOriginalesUrl:'https://drive.google.com/drive/folders/11VqUpC0OanzUtW6qT-iFfZU_kTErBcL7?usp=drive_link', estado:'disponible', accesoriosTipicos:['Bolsa','Cargador portátil','Fundas para ruido','Cables'] },
+  { id:'eq_s9a', nombre:'(1) Osmo DJI 7', categoria:'Estabilizadores', codigo:'OSMO-1', descripcion:'Estabilizador marca DJI Osmo 7, con todos los accesorios completos', estadoFisico:'nuevo', condicion:'bueno', espacioDisponible:'', comentarioAuditoria:'Excelente estado, sin defectos y completo.', fechaAuditoria:'2026-06-10', fotosOriginalesUrl:'https://drive.google.com/drive/folders/11VqUpC0OanzUtW6qT-iFfZU_kTErBcL7?usp=drive_link', estado:'disponible', accesoriosTipicos:['Estuche','Cargador','Accesorios de montaje'] },
+  { id:'eq_s9b', nombre:'(2) Osmo DJI 7', categoria:'Estabilizadores', codigo:'OSMO-2', descripcion:'Estabilizador marca DJI Osmo 7, con todos los accesorios completos', estadoFisico:'nuevo', condicion:'bueno', espacioDisponible:'', comentarioAuditoria:'Excelente estado, sin defectos y completo.', fechaAuditoria:'2026-06-10', fotosOriginalesUrl:'https://drive.google.com/drive/folders/11VqUpC0OanzUtW6qT-iFfZU_kTErBcL7?usp=drive_link', estado:'disponible', accesoriosTipicos:['Estuche','Cargador','Accesorios de montaje'] },
+  { id:'eq_s10', nombre:'Celular para grabaciones — iPhone 17 Pro Max', categoria:'Celular para grabaciones y videos', codigo:'', descripcion:'iPhone 17 Pro Max (agregar color, No. de serie y cuenta de Gmail cuando se registre en el detalle).', estadoFisico:'nuevo', condicion:'bueno', espacioDisponible:'', comentarioAuditoria:'Equipo agregado al inventario; pendiente de auditoría física inicial y fotos de referencia.', fechaAuditoria:'', fotosOriginalesUrl:'', estado:'disponible', accesoriosTipicos:['Cargador','Funda'] },
+  { id:'eq_s11', nombre:'Celular para grabaciones — iPhone 17 Pro', categoria:'Celular para grabaciones y videos', codigo:'', descripcion:'iPhone 17 Pro (agregar color, No. de serie y cuenta de Gmail cuando se registre en el detalle).', estadoFisico:'nuevo', condicion:'bueno', espacioDisponible:'', comentarioAuditoria:'Equipo agregado al inventario; pendiente de auditoría física inicial y fotos de referencia.', fechaAuditoria:'', fotosOriginalesUrl:'', estado:'disponible', accesoriosTipicos:['Cargador','Funda'] }
+];
+const SEED_NOTE = 'Importado desde la auditoría inicial de equipos (hoja de cálculo). No hay fotos capturadas en esta plataforma para esta entrega; ver carpeta de Drive original en el detalle del equipo.';
+const SEED_RETURN_NOTE = 'Actualización manual: equipo reportado como desocupado/regresado. No se capturaron fotos de devolución en la plataforma para este ajuste inicial.';
+const SEED_LOANS = [];
+
+let state = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){ const parsed = JSON.parse(raw); if(typeof parsed.folioCounter!=='number') parsed.folioCounter=0; return parsed; }
+  }catch(e){ console.warn('No se pudo leer almacenamiento', e); }
+  return { equipment: JSON.parse(JSON.stringify(SEED_EQUIPMENT)), loans: JSON.parse(JSON.stringify(SEED_LOANS)), folioCounter: 0 };
+}
+function saveState(){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  }catch(e){
+    alert('No se pudo guardar: el almacenamiento local está lleno. Exporta un respaldo y elimina préstamos antiguos completados, o reduce el número de fotos.');
+    console.error(e);
+  }
+  renderStorageUsage();
+}
+function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function fmtDate(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+document.getElementById('today-lbl').textContent = new Date().toLocaleDateString('es-MX', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+document.getElementById('np-fecha-entrega').value = todayISO();
+
+// ---------- TABS ----------
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    renderAll();
+  });
+});
+
+function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+function openModal(id){ document.getElementById(id).classList.add('active'); }
+
+// ---------- IMAGE HELPERS ----------
+function compressImage(file, maxW=900, quality=0.72){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w=img.width, h=img.height;
+        if(w>maxW){ h = Math.round(h*(maxW/w)); w=maxW; }
+        const canvas=document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror=reject;
+      img.src=e.target.result;
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ================= INVENTARIO =================
+function equipmentById(id){ return state.equipment.find(e=>e.id===id); }
+
+function currentHolder(equipId){
+  const loan = state.loans.find(l=> l.estado==='prestado' && l.equipos.includes(equipId));
+  return loan ? loan.responsable : null;
+}
+function condicionBadge(e){
+  if(!e.condicion) return '<span class="badge gray">Sin registro</span>';
+  if(e.condicion==='bueno') return '<span class="badge green">Buen estado</span>';
+  if(e.condicion==='atencion') return '<span class="badge orange">Requiere atención</span>';
+  if(e.condicion==='danado') return '<span class="badge red">Dañado / falla</span>';
+  return '<span class="badge gray">—</span>';
+}
+
+function renderInventario(){
+  const q = (document.getElementById('inv-search').value||'').toLowerCase();
+  const tbody = document.querySelector('#inv-table tbody');
+  tbody.innerHTML='';
+  const list = state.equipment.filter(e=>!q || e.nombre.toLowerCase().includes(q) || (e.codigo||'').toLowerCase().includes(q));
+  document.getElementById('inv-empty').style.display = state.equipment.length? 'none':'block';
+  list.forEach(e=>{
+    const tr=document.createElement('tr');
+    let badge = e.estado==='disponible' ? '<span class="badge green">Disponible</span>'
+      : e.estado==='prestado' ? '<span class="badge blue">Prestado</span>'
+      : e.estado==='revision' ? '<span class="badge red">En revisión / faltante</span>'
+      : '<span class="badge gray">Baja</span>';
+    const holder = currentHolder(e.id);
+    tr.innerHTML = `<td><b>${esc(e.nombre)}</b>${e.codigo?`<div class="small">${esc(e.codigo)}</div>`:''}</td>
+      <td>${esc(e.categoria||'—')}</td>
+      <td>${holder? esc(holder) : '<span class="small">—</span>'}</td>
+      <td>${condicionBadge(e)}</td>
+      <td>${badge}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn outline sm" onclick="openCondicionDetalle('${e.id}')">Ver detalle</button>
+        <button class="btn outline sm" onclick="toggleBaja('${e.id}')">${e.estado==='baja'?'Reactivar':'Dar de baja'}</button>
+        <button class="btn outline sm" style="color:var(--red);border-color:var(--red);" onclick="deleteEquipo('${e.id}')">Eliminar</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function openCondicionDetalle(id){
+  const e = equipmentById(id);
+  if(!e) return;
+  const holder = currentHolder(id);
+  const body = document.getElementById('condicion-body');
+  body.innerHTML = `
+    <p><b>${esc(e.nombre)}</b></p>
+    <p class="small">${esc(e.categoria||'Sin categoría')} ${e.codigo? '· '+esc(e.codigo):''}</p>
+    ${e.descripcion? `<p>${esc(e.descripcion)}</p>` : ''}
+    <p>${condicionBadge(e)} ${e.estadoFisico? `<span class="tag-pill">${esc(e.estadoFisico)}</span>`:''}</p>
+    ${holder? `<p class="small">Responsable actual: <b>${esc(holder)}</b></p>` : ''}
+    ${e.espacioDisponible? `<p class="small">Espacio disponible: ${esc(e.espacioDisponible)}</p>`:''}
+    ${e.comentarioAuditoria? `<p><b>Comentarios de auditoría:</b><br>${esc(e.comentarioAuditoria)}</p>`:''}
+    ${(e.accesoriosTipicos&&e.accesoriosTipicos.length)? `<p><b>Accesorios típicos:</b> ${e.accesoriosTipicos.map(esc).join(', ')}</p>`:''}
+    ${e.fechaAuditoria? `<p class="small">Última revisión: ${fmtDate(e.fechaAuditoria)}</p>`:''}
+    ${e.fotosOriginalesUrl? `<p><a href="${e.fotosOriginalesUrl}" target="_blank" rel="noopener">Ver fotografías originales (Drive) ↗</a></p>`:''}
+  `;
+  openModal('modal-condicion');
+}
+function toggleBaja(id){
+  const e = equipmentById(id);
+  if(!e) return;
+  if(e.estado==='prestado'){ alert('Este equipo está prestado actualmente, no se puede dar de baja.'); return; }
+  e.estado = e.estado==='baja' ? 'disponible' : 'baja';
+  saveState(); renderAll();
+}
+function deleteEquipo(id){
+  const e = equipmentById(id);
+  if(!e) return;
+  if(e.estado==='prestado'){ alert('Este equipo está prestado actualmente, no se puede eliminar.'); return; }
+  const enPrestamos = state.loans.some(l=>l.equipos.includes(id));
+  if(enPrestamos && !confirm(`"${e.nombre}" aparece en el historial de préstamos. Si lo eliminas, esos registros mostrarán "(equipo eliminado)". ¿Continuar de todas formas?`)) return;
+  if(!enPrestamos && !confirm(`¿Eliminar permanentemente "${e.nombre}" del inventario?`)) return;
+  state.equipment = state.equipment.filter(x=>x.id!==id);
+  saveState(); renderAll();
+}
+document.getElementById('inv-search').addEventListener('input', renderInventario);
+document.getElementById('btn-add-equip').addEventListener('click', ()=>{
+  ['eq-nombre','eq-categoria','eq-codigo','eq-serie','eq-activo-fijo','eq-marca','eq-modelo','eq-gmail','eq-accesorios'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  openModal('modal-equip');
+});
+document.getElementById('btn-save-equip').addEventListener('click', ()=>{
+  const nombre = document.getElementById('eq-nombre').value.trim();
+  if(!nombre){ alert('Escribe el nombre del equipo.'); return; }
+  const accesoriosTipicos = document.getElementById('eq-accesorios').value.split(',').map(s=>s.trim()).filter(Boolean);
+  state.equipment.push({
+    id: uid('eq'),
+    nombre,
+    categoria: document.getElementById('eq-categoria').value.trim(),
+    codigo: document.getElementById('eq-codigo').value.trim(),
+    numeroSerie: document.getElementById('eq-serie').value.trim(),
+    activoFijo: document.getElementById('eq-activo-fijo').value.trim(),
+    marca: document.getElementById('eq-marca').value.trim(),
+    modelo: document.getElementById('eq-modelo').value.trim(),
+    cuentaGmail: document.getElementById('eq-gmail').value.trim(),
+    accesoriosTipicos,
+    estado: 'disponible'
+  });
+  saveState();
+  closeModal('modal-equip');
+  renderAll();
+});
+
+// ================= NUEVO PRESTAMO =================
+let npPhotos = {}; // equipId -> {entrega_frente, entrega_atras}
+let npAccesorios = {}; // equipId -> {seleccionados:[], otros:'', cargadorCon:''}
+let npSelected = new Set();
+
+function renderNuevoPrestamo(){
+  const cont = document.getElementById('np-equip-list');
+  cont.innerHTML='';
+  const disponibles = state.equipment.filter(e=>e.estado==='disponible');
+  document.getElementById('np-equip-empty').style.display = disponibles.length? 'none':'block';
+  disponibles.forEach(e=>{
+    const row=document.createElement('div');
+    row.className='equip-pick';
+    row.innerHTML = `<input type="checkbox" id="chk_${e.id}" ${npSelected.has(e.id)?'checked':''}>
+      <div class="meta"><div class="n">${esc(e.nombre)}</div><div class="c">${esc(e.categoria||'Sin categoría')} ${e.codigo? '· '+esc(e.codigo):''}</div></div>`;
+    cont.appendChild(row);
+    row.querySelector('input').addEventListener('change', (ev)=>{
+      if(ev.target.checked){
+        npSelected.add(e.id);
+        npAccesorios[e.id] = { seleccionados: [...(e.accesoriosTipicos||[])], otros:'', cargadorCon:'' };
+      } else {
+        npSelected.delete(e.id); delete npPhotos[e.id]; delete npAccesorios[e.id];
+      }
+      renderNpPhotoBlocks();
+    });
+  });
+  renderNpPhotoBlocks();
+}
+
+function photoSlotHTML(key, label, dataUrl){
+  return `<div class="photo-slot">
+    <div class="lbl2">${label}</div>
+    ${dataUrl ? `<img src="${dataUrl}">` : `<div class="ph-empty">Sin foto</div>`}
+    <input type="file" accept="image/*" capture="environment" id="file_${key}">
+    <button type="button" class="btn outline sm pick-btn" onclick="document.getElementById('file_${key}').click()">${dataUrl?'Cambiar foto':'Tomar / subir foto'}</button>
+  </div>`;
+}
+
+function renderNpPhotoBlocks(){
+  const card = document.getElementById('np-photos-card');
+  const cont = document.getElementById('np-photos-container');
+  cont.innerHTML='';
+  if(npSelected.size===0){ card.style.display='none'; return; }
+  card.style.display='block';
+  npSelected.forEach(id=>{
+    const e = equipmentById(id);
+    if(!e) return;
+    npPhotos[id] = npPhotos[id] || {};
+    npAccesorios[id] = npAccesorios[id] || { seleccionados:[...(e.accesoriosTipicos||[])], otros:'', cargadorCon:'' };
+    const acc = npAccesorios[id];
+    const tipicos = e.accesoriosTipicos || [];
+    const tieneCargador = tipicos.some(a=>/cargador/i.test(a));
+    const block=document.createElement('div');
+    block.className='photo-block';
+    block.innerHTML = `<div class="ph-title">${esc(e.nombre)}</div>
+      <div class="photo-row" id="prow_${id}">
+        ${photoSlotHTML('ent_'+id+'_f','Lado frontal',npPhotos[id].frente)}
+        ${photoSlotHTML('ent_'+id+'_b','Lado trasero',npPhotos[id].atras)}
+      </div>
+      <div style="margin-top:10px;">
+        <div class="ph-title" style="font-size:11.5px;">Accesorios que se llevan</div>
+        ${tipicos.length? tipicos.map((a,i)=>`
+          <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;margin:3px 12px 3px 0;">
+            <input type="checkbox" id="acc_${id}_${i}" ${acc.seleccionados.includes(a)?'checked':''}> ${esc(a)}
+          </label>`).join('') : `<p class="small">Este equipo no tiene accesorios típicos registrados en inventario.</p>`}
+        <div class="field" style="margin-top:6px;">
+          <label>Otros accesorios (opcional)</label>
+          <input id="otros_${id}" value="${esc(acc.otros)}" placeholder="Ej. Memoria SD extra, tripié adicional...">
+        </div>
+        ${tieneCargador? `<div class="field" style="margin-top:6px;">
+          <label>¿Quién se queda con el cargador?</label>
+          <input id="cargador_${id}" value="${esc(acc.cargadorCon)}" placeholder="Ej. Mismo responsable, u otra persona">
+        </div>` : ''}
+      </div>`;
+    cont.appendChild(block);
+    block.querySelector(`#file_ent_${id}_f`).addEventListener('change', async ev=>{
+      if(!ev.target.files[0]) return;
+      npPhotos[id].frente = await compressImage(ev.target.files[0]);
+      renderNpPhotoBlocks();
+    });
+    block.querySelector(`#file_ent_${id}_b`).addEventListener('change', async ev=>{
+      if(!ev.target.files[0]) return;
+      npPhotos[id].atras = await compressImage(ev.target.files[0]);
+      renderNpPhotoBlocks();
+    });
+    tipicos.forEach((a,i)=>{
+      block.querySelector(`#acc_${id}_${i}`).addEventListener('change', ev=>{
+        if(ev.target.checked){ if(!acc.seleccionados.includes(a)) acc.seleccionados.push(a); }
+        else { acc.seleccionados = acc.seleccionados.filter(x=>x!==a); }
+      });
+    });
+    const otrosEl = block.querySelector(`#otros_${id}`);
+    if(otrosEl) otrosEl.addEventListener('input', ()=>{ acc.otros = otrosEl.value; });
+    const cargadorEl = block.querySelector(`#cargador_${id}`);
+    if(cargadorEl) cargadorEl.addEventListener('input', ()=>{ acc.cargadorCon = cargadorEl.value; });
+  });
+}
+
+let currentResponsivaHtml = '';
+function openResponsiva(loanId){
+  const loan = state.loans.find(l=>l.id===loanId);
+  if(!loan || !loan.responsivaHtml) return;
+  currentResponsivaHtml = loan.responsivaHtml;
+  document.getElementById('responsiva-body').innerHTML = loan.responsivaHtml;
+  const btnResp = document.getElementById('btn-avisar-responsable');
+  const btnMel = document.getElementById('btn-avisar-melisa');
+  btnResp.href = buildMailtoResponsableEntrega(loan);
+  btnResp.style.display = loan.correoResponsable? 'inline-block':'none';
+  btnMel.href = buildMailtoAutorizacion(loan);
+  btnMel.style.display = loan.entregaAutorizada? 'none':'inline-block';
+  openModal('modal-responsiva');
+}
+function closeResponsivaModal(){ closeModal('modal-responsiva'); }
+document.getElementById('btn-print-responsiva').addEventListener('click', ()=>{
+  if(currentResponsivaHtml) printResponsiva(currentResponsivaHtml);
+});
+
+function populateEntregadoPorSelect(){
+  const sel = document.getElementById('np-entregado-por');
+  if(!sel || sel.dataset.filled) return;
+  APPROVERS.forEach(a=>{
+    const opt = document.createElement('option');
+    opt.value = a.nombre; opt.textContent = `${a.nombre} (${a.email})`;
+    sel.appendChild(opt);
+  });
+  if(APPROVERS.length===1) sel.value = APPROVERS[0].nombre;
+  sel.dataset.filled = '1';
+}
+
+document.getElementById('btn-save-loan').addEventListener('click', ()=>{
+  const responsable = document.getElementById('np-responsable').value.trim();
+  const correoResponsable = document.getElementById('np-correo-responsable').value.trim();
+  const area = document.getElementById('np-area').value.trim();
+  const empresa = document.getElementById('np-empresa').value.trim();
+  const entregadoPor = document.getElementById('np-entregado-por').value.trim();
+  const fEntrega = document.getElementById('np-fecha-entrega').value;
+  const fRegreso = document.getElementById('np-fecha-regreso').value;
+  const motivo = document.getElementById('np-motivo').value.trim();
+  const notasResponsiva = document.getElementById('np-notas-resp').value.trim();
+  const val = document.getElementById('np-validation');
+  val.textContent='';
+
+  if(!responsable){ val.textContent='Escribe el nombre de la persona que se lleva el equipo.'; return; }
+  if(!correoResponsable || !/^\S+@\S+\.\S+$/.test(correoResponsable)){ val.textContent='Escribe un correo válido de quien se lleva el equipo.'; return; }
+  if(!area){ val.textContent='Indica el área del responsable (se usa en la carta responsiva).'; return; }
+  if(!empresa){ val.textContent='Indica la empresa / razón social del colaborador.'; return; }
+  if(!entregadoPor){ val.textContent='Selecciona quién entrega y autoriza el equipo (Melisa).'; return; }
+  if(!motivo){ val.textContent='Indica el motivo por el cual se lleva el equipo.'; return; }
+  if(npSelected.size===0){ val.textContent='Selecciona al menos un equipo.'; return; }
+  if(!fEntrega){ val.textContent='Indica la fecha en que se lleva el equipo.'; return; }
+  for(const id of npSelected){
+    const p = npPhotos[id]||{};
+    if(!p.frente || !p.atras){
+      val.textContent = `Falta tomar ambas fotos (frente y atrás) de: ${equipmentById(id).nombre}`;
+      return;
+    }
+  }
+  const canvasEntrega = document.getElementById('firma-entrega');
+  const canvasResponsable = document.getElementById('firma-responsable');
+  if(isCanvasBlank(canvasEntrega)){ val.textContent='Falta la firma de quien entrega el equipo.'; return; }
+  if(isCanvasBlank(canvasResponsable)){ val.textContent='Falta la firma de quien recibe el equipo (responsable).'; return; }
+
+  const loan = {
+    id: uid('loan'),
+    responsable, correoResponsable, area, empresa, entregadoPor, motivo, notasResponsiva,
+    equipos: [...npSelected],
+    accesoriosPorEquipo: JSON.parse(JSON.stringify(npAccesorios)),
+    fechaEntrega: fEntrega,
+    fechaRegresoEsperada: fRegreso || null,
+    fechaRegresoReal: null,
+    fotosEntrega: JSON.parse(JSON.stringify(npPhotos)),
+    fotosDevolucion: {},
+    incidencias: {},
+    estado: 'prestado',
+    aprobadoPor: null,
+    fechaAprobacion: null,
+    folio: buildFolio(),
+    firmaEntrega: canvasEntrega.toDataURL('image/png'),
+    firmaResponsable: canvasResponsable.toDataURL('image/png'),
+    entregaAutorizada: false,
+    entregaAutorizadaPor: null,
+    fechaAutorizacionEntrega: null,
+    log: [{fecha: new Date().toISOString(), evento: `Préstamo creado. Equipos entregados a ${responsable}. Carta responsiva firmada por ambas partes. Pendiente de autorización de ${entregadoPor}.`}]
+  };
+  loan.responsivaHtml = generateResponsivaHTML(loan);
+  state.loans.push(loan);
+  npSelected.forEach(id=>{ equipmentById(id).estado='prestado'; });
+  saveState();
+
+  npSelected = new Set(); npPhotos = {}; npAccesorios = {};
+  document.getElementById('np-responsable').value='';
+  document.getElementById('np-correo-responsable').value='';
+  document.getElementById('np-area').value='';
+  document.getElementById('np-empresa').value='';
+  document.getElementById('np-entregado-por').value='';
+  document.getElementById('np-motivo').value='';
+  document.getElementById('np-notas-resp').value='';
+  document.getElementById('np-fecha-regreso').value='';
+  document.getElementById('np-fecha-entrega').value=todayISO();
+  clearSignature('firma-entrega');
+  clearSignature('firma-responsable');
+
+  document.querySelector('nav.tabs button[data-view="activos"]').click();
+  openResponsiva(loan.id);
+});
+
+// ================= PRESTAMOS ACTIVOS =================
+function equipNames(loan){
+  return loan.equipos.map(id=>{ const e=equipmentById(id); return e? e.nombre : '(equipo eliminado)'; }).join(', ');
+}
+function isOverdue(loan){
+  return loan.estado==='prestado' && loan.fechaRegresoEsperada && loan.fechaRegresoEsperada < todayISO();
+}
+
+function renderActivos(){
+  const tbody = document.getElementById('activos-tbody');
+  tbody.innerHTML='';
+  const list = state.loans.filter(l=>l.estado==='prestado');
+  document.getElementById('activos-empty').style.display = list.length? 'none':'block';
+  list.sort((a,b)=> (a.fechaRegresoEsperada||'9999').localeCompare(b.fechaRegresoEsperada||'9999'));
+  list.forEach(l=>{
+    const overdue = isOverdue(l);
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td><b>${esc(l.responsable)}</b>${l.motivo? `<div class="small">${esc(l.motivo)}</div>`:''}</td>
+      <td>${esc(equipNames(l))}</td>
+      <td>${fmtDate(l.fechaEntrega)}</td>
+      <td>${fmtDate(l.fechaRegresoEsperada)} ${overdue? '<span class="badge red">Atrasado</span>':''}</td>
+      <td><span class="badge blue">Prestado</span> ${l.entregaAutorizada? '<span class="badge green">Entrega autorizada</span>' : '<span class="badge orange">Entrega sin autorizar</span>'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn gold sm" onclick="openDevolucion('${l.id}')">Registrar devolución</button>
+        ${l.responsivaHtml? `<button class="btn outline sm" onclick="openResponsiva('${l.id}')">Ver responsiva</button>`:''}
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function openDevolucion(loanId){
+  const loan = state.loans.find(l=>l.id===loanId);
+  if(!loan) return;
+  const body = document.getElementById('devolucion-body');
+  let photosState = {};
+  loan.equipos.forEach(id=>{ photosState[id] = {frente:null, atras:null, noDevuelto:false}; });
+  let dvFecha = todayISO();
+
+  function render(){
+    body.innerHTML = `
+      <div class="field"><label>Fecha de regreso</label><input type="date" id="dv-fecha" value="${dvFecha}"></div>
+      <div id="dv-equip-photos"></div>
+      <div class="small" id="dv-validation" style="color:var(--red);margin-bottom:8px;"></div>
+      <div style="text-align:right;"><button class="btn gold" id="dv-save">Guardar devolución</button></div>
+    `;
+    document.getElementById('dv-fecha').addEventListener('change', ev=>{ dvFecha = ev.target.value; });
+    const cont = document.getElementById('dv-equip-photos');
+    loan.equipos.forEach(id=>{
+      const e = equipmentById(id);
+      const st = photosState[id];
+      const block=document.createElement('div');
+      block.className='photo-block';
+      block.innerHTML = `<div class="ph-title flex-between">
+          <span>${esc(e? e.nombre : '(equipo eliminado)')}</span>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:11.5px;text-transform:none;">
+            <input type="checkbox" id="nodev_${id}" ${st.noDevuelto?'checked':''}> No fue devuelto
+          </label>
+        </div>
+        <div class="photo-row" id="dvrow_${id}" style="${st.noDevuelto?'display:none;':''}">
+          ${photoSlotHTML('dev_'+id+'_f','Lado frontal',st.frente)}
+          ${photoSlotHTML('dev_'+id+'_b','Lado trasero',st.atras)}
+        </div>
+        ${st.noDevuelto? `<div class="field" style="margin-top:8px;"><label>Nota (obligatoria)</label><textarea id="nota_${id}" rows="2" placeholder="Explica qué ocurrió con el equipo...">${st.nota||''}</textarea></div>`:''}
+      `;
+      cont.appendChild(block);
+      const chk = block.querySelector(`#nodev_${id}`);
+      chk.addEventListener('change', ()=>{ st.noDevuelto = chk.checked; render(); });
+      if(!st.noDevuelto){
+        block.querySelector(`#file_dev_${id}_f`).addEventListener('change', async ev=>{
+          if(!ev.target.files[0]) return;
+          st.frente = await compressImage(ev.target.files[0]); render();
+        });
+        block.querySelector(`#file_dev_${id}_b`).addEventListener('change', async ev=>{
+          if(!ev.target.files[0]) return;
+          st.atras = await compressImage(ev.target.files[0]); render();
+        });
+      } else {
+        const notaEl = block.querySelector(`#nota_${id}`);
+        notaEl.addEventListener('input', ()=>{ st.nota = notaEl.value; });
+      }
+    });
+
+    document.getElementById('dv-save').addEventListener('click', ()=>{
+      const fecha = document.getElementById('dv-fecha').value || dvFecha;
+      const val = document.getElementById('dv-validation');
+      if(!fecha){ val.textContent='Indica la fecha de regreso.'; return; }
+      for(const id of loan.equipos){
+        const st = photosState[id];
+        if(st.noDevuelto){
+          if(!st.nota || !st.nota.trim()){ val.textContent = `Agrega una nota para el equipo no devuelto: ${equipmentById(id)?.nombre}`; return; }
+        } else if(!st.frente || !st.atras){
+          val.textContent = `Faltan fotos (frente y atrás) de: ${equipmentById(id)?.nombre}`;
+          return;
+        }
+      }
+      loan.fechaRegresoReal = fecha;
+      loan.fotosDevolucion = {};
+      loan.incidenciasPreliminares = {};
+      loan.equipos.forEach(id=>{
+        const st = photosState[id];
+        loan.fotosDevolucion[id] = { frente: st.frente, atras: st.atras, noDevuelto: st.noDevuelto, notaEntrega: st.nota||'' };
+      });
+      loan.estado='pendiente_aprobacion';
+      loan.log.push({fecha:new Date().toISOString(), evento:`Devolución registrada por ${loan.responsable}. En espera de confirmación.`});
+      saveState();
+      closeModal('modal-devolucion');
+      renderAll();
+      document.querySelector('nav.tabs button[data-view="aprobaciones"]').click();
+    });
+  }
+  render();
+  openModal('modal-devolucion');
+}
+
+// ================= APROBACIONES =================
+function renderApproversList(){
+  const cont = document.getElementById('approvers-list');
+  if(!cont) return;
+  cont.innerHTML = APPROVERS.map(a=>`<span class="tag-pill">${esc(a.nombre)} · <a href="mailto:${a.email}" style="color:inherit;">${esc(a.email)}</a></span>`).join('');
+}
+function renderAutorizaciones(){
+  const tbody = document.getElementById('autorizacion-tbody');
+  if(!tbody) return;
+  tbody.innerHTML='';
+  const list = state.loans.filter(l=>!l.entregaAutorizada && (l.estado==='prestado' || l.estado==='pendiente_aprobacion'));
+  document.getElementById('autorizacion-empty').style.display = list.length? 'none':'block';
+  list.forEach(l=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${esc(l.folio||'—')}</td>
+      <td><b>${esc(l.responsable)}</b></td>
+      <td>${esc(equipNames(l))}</td>
+      <td>${esc(l.entregadoPor||'—')}</td>
+      <td style="white-space:nowrap;">
+        ${l.responsivaHtml? `<button class="btn outline sm" onclick="openResponsiva('${l.id}')">Ver carta</button>`:''}
+        <a class="btn outline sm" style="text-decoration:none;display:inline-block;" href="${buildMailtoAutorizacion(l)}">Avisar por correo</a>
+        <button class="btn gold sm" onclick="autorizarEntrega('${l.id}')">Marcar como autorizada</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+function autorizarEntrega(loanId){
+  const loan = state.loans.find(l=>l.id===loanId);
+  if(!loan) return;
+  if(!confirm(`¿Confirmas que ${loan.entregadoPor||'la persona que entregó el equipo'} autoriza esta carta responsiva? Esto cerrará el trámite de la entrega.`)) return;
+  loan.entregaAutorizada = true;
+  loan.entregaAutorizadaPor = loan.entregadoPor;
+  loan.fechaAutorizacionEntrega = new Date().toISOString();
+  loan.log.push({fecha:new Date().toISOString(), evento:`Carta responsiva autorizada por ${loan.entregadoPor}. Entrega cerrada.`});
+  saveState();
+  renderAll();
+}
+function renderAprobaciones(){
+  renderApproversList();
+  renderAutorizaciones();
+  const tbody = document.getElementById('aprob-tbody');
+  tbody.innerHTML='';
+  const list = state.loans.filter(l=>l.estado==='pendiente_aprobacion');
+  document.getElementById('aprob-empty').style.display = list.length? 'none':'block';
+  list.forEach(l=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td><b>${esc(l.responsable)}</b></td>
+      <td>${esc(equipNames(l))}</td>
+      <td>${fmtDate(l.fechaRegresoReal)}</td>
+      <td><span class="badge orange">Pendiente de aprobación</span></td>
+      <td style="white-space:nowrap;">
+        <button class="btn gold sm" onclick="openAprobacion('${l.id}')">Revisar y confirmar</button>
+        <a class="btn outline sm" style="text-decoration:none;display:inline-block;" href="${buildMailtoNotificacion(l)}">Avisar a Melisa</a>
+        ${l.correoResponsable? `<a class="btn outline sm" style="text-decoration:none;display:inline-block;" href="${buildMailtoResponsableDevolucion(l)}">Avisar al responsable</a>`:''}
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function openAprobacion(loanId){
+  const loan = state.loans.find(l=>l.id===loanId);
+  if(!loan) return;
+  const body = document.getElementById('aprobacion-body');
+  let decisiones = {};
+  loan.equipos.forEach(id=>{
+    const dev = loan.fotosDevolucion[id]||{};
+    decisiones[id] = { tipo: dev.noDevuelto? 'faltante':'ok', nota: dev.notaEntrega||'' };
+  });
+  let apNombre = APPROVERS.length===1? APPROVERS[0].nombre : '';
+
+  function render(){
+    body.innerHTML = `
+      <div class="field">
+        <label>¿Quién confirma esta entrega?</label>
+        <select id="ap-nombre">
+          <option value="">Selecciona...</option>
+          ${APPROVERS.map(a=>`<option value="${a.nombre}" ${apNombre===a.nombre?'selected':''}>${a.nombre} (${a.email})</option>`).join('')}
+        </select>
+      </div>
+      <div id="ap-equip-list"></div>
+      <div class="small" id="ap-validation" style="color:var(--red);margin:8px 0;"></div>
+      <div style="text-align:right;"><button class="btn gold" id="ap-save">Confirmar alta de entrega</button></div>
+    `;
+    document.getElementById('ap-nombre').addEventListener('change', ev=>{ apNombre = ev.target.value; });
+    const cont = document.getElementById('ap-equip-list');
+    loan.equipos.forEach(id=>{
+      const e = equipmentById(id);
+      const ent = loan.fotosEntrega[id]||{};
+      const dev = loan.fotosDevolucion[id]||{};
+      const dec = decisiones[id];
+      const box=document.createElement('div');
+      box.className='incident-box';
+      box.innerHTML = `
+        <div class="top"><b>${esc(e? e.nombre:'(equipo eliminado)')}</b></div>
+        <div class="compare-row">
+          <div class="compare-col"><h4>Entrega — frente</h4>${ent.frente?`<img src="${ent.frente}">`:'<div class="small">Sin foto</div>'}</div>
+          <div class="compare-col"><h4>Entrega — atrás</h4>${ent.atras?`<img src="${ent.atras}">`:'<div class="small">Sin foto</div>'}</div>
+          <div class="compare-col"><h4>Devolución — frente</h4>${dev.noDevuelto? '<div class="small">No devuelto</div>' : (dev.frente?`<img src="${dev.frente}">`:'<div class="small">Sin foto</div>')}</div>
+          <div class="compare-col"><h4>Devolución — atrás</h4>${dev.noDevuelto? '<div class="small">No devuelto</div>' : (dev.atras?`<img src="${dev.atras}">`:'<div class="small">Sin foto</div>')}</div>
+        </div>
+        <div class="radio-group" style="margin-top:10px;">
+          <label class="radio-opt"><input type="radio" name="dec_${id}" value="ok" ${dec.tipo==='ok'?'checked':''}> Recibido en buen estado</label>
+          <label class="radio-opt"><input type="radio" name="dec_${id}" value="danado" ${dec.tipo==='danado'?'checked':''}> Dañado</label>
+          <label class="radio-opt"><input type="radio" name="dec_${id}" value="faltante" ${dec.tipo==='faltante'?'checked':''}> Faltante</label>
+        </div>
+        <div id="notawrap_${id}" style="${dec.tipo==='ok'?'display:none;':''}">
+          <textarea id="nota2_${id}" rows="2" placeholder="Describe la incidencia...">${dec.nota||''}</textarea>
+        </div>
+      `;
+      cont.appendChild(box);
+      box.querySelectorAll(`input[name="dec_${id}"]`).forEach(r=>{
+        r.addEventListener('change', ()=>{ dec.tipo=r.value; render(); });
+      });
+      const notaEl = box.querySelector(`#nota2_${id}`);
+      if(notaEl) notaEl.addEventListener('input', ()=>{ dec.nota=notaEl.value; });
+    });
+
+    document.getElementById('ap-save').addEventListener('click', ()=>{
+      const nombre = document.getElementById('ap-nombre').value || apNombre;
+      const val = document.getElementById('ap-validation');
+      if(!nombre){ val.textContent='Selecciona quién confirma la entrega.'; return; }
+      for(const id of loan.equipos){
+        if(decisiones[id].tipo!=='ok' && !decisiones[id].nota.trim()){
+          val.textContent = `Agrega una nota para: ${equipmentById(id)?.nombre}`;
+          return;
+        }
+      }
+      let hayIncidencia = false;
+      loan.equipos.forEach(id=>{
+        loan.incidencias[id] = decisiones[id];
+        const e = equipmentById(id);
+        if(decisiones[id].tipo==='ok'){
+          if(e) e.estado='disponible';
+        } else {
+          hayIncidencia = true;
+          if(e) e.estado='revision';
+        }
+      });
+      loan.estado = hayIncidencia? 'incompleto' : 'completado';
+      loan.aprobadoPor = nombre;
+      loan.fechaAprobacion = new Date().toISOString();
+      loan.log.push({fecha:new Date().toISOString(), evento: `Entrega confirmada por ${nombre}. Resultado: ${hayIncidencia? 'incidencias reportadas':'todo en buen estado'}.`});
+      saveState();
+      closeModal('modal-aprobacion');
+      renderAll();
+    });
+  }
+  render();
+  openModal('modal-aprobacion');
+}
+
+// ================= HISTORIAL =================
+function statusBadge(estado){
+  if(estado==='prestado') return '<span class="badge blue">Prestado</span>';
+  if(estado==='pendiente_aprobacion') return '<span class="badge orange">Pend. aprobación</span>';
+  if(estado==='completado') return '<span class="badge green">Completado</span>';
+  if(estado==='incompleto') return '<span class="badge red">Incompleto / dañado</span>';
+  return '<span class="badge gray">'+estado+'</span>';
+}
+
+function renderHistorial(){
+  const q = (document.getElementById('hist-search').value||'').toLowerCase();
+  const fEstado = document.getElementById('hist-filter-estado').value;
+  const tbody = document.getElementById('hist-tbody');
+  tbody.innerHTML='';
+  let list = [...state.loans].sort((a,b)=> b.fechaEntrega.localeCompare(a.fechaEntrega));
+  list = list.filter(l=>{
+    const matchQ = !q || l.responsable.toLowerCase().includes(q) || equipNames(l).toLowerCase().includes(q);
+    const matchE = !fEstado || l.estado===fEstado;
+    return matchQ && matchE;
+  });
+  document.getElementById('hist-empty').style.display = list.length? 'none':'block';
+  list.forEach(l=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td><b>${esc(l.responsable)}</b></td>
+      <td>${esc(equipNames(l))}</td>
+      <td>${fmtDate(l.fechaEntrega)}</td>
+      <td>${fmtDate(l.fechaRegresoReal)}</td>
+      <td>${statusBadge(l.estado)}</td>
+      <td>${l.aprobadoPor? esc(l.aprobadoPor) : '—'}</td>
+      <td><button class="btn outline sm" onclick="openDetalle('${l.id}')">Ver</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+document.getElementById('hist-search').addEventListener('input', renderHistorial);
+document.getElementById('hist-filter-estado').addEventListener('change', renderHistorial);
+
+function openDetalle(loanId){
+  const loan = state.loans.find(l=>l.id===loanId);
+  if(!loan) return;
+  const body = document.getElementById('detalle-body');
+  let html = `<p><b>${esc(loan.responsable)}</b> ${loan.motivo? '— '+esc(loan.motivo):''} ${loan.folio? `<span class="tag-pill">Folio ${esc(loan.folio)}</span>`:''}</p>
+    <p class="small">Entregado: ${fmtDate(loan.fechaEntrega)} · Regreso esperado: ${fmtDate(loan.fechaRegresoEsperada)} · Regreso real: ${fmtDate(loan.fechaRegresoReal)}</p>
+    <p>Estado: ${statusBadge(loan.estado)} ${loan.aprobadoPor? `· Confirmado por <b>${esc(loan.aprobadoPor)}</b>`:''}</p>
+    <p class="small">Entregado por: <b>${esc(loan.entregadoPor||'—')}</b> · ${loan.entregaAutorizada? `<span class="badge green">Entrega autorizada</span> el ${loan.fechaAutorizacionEntrega? new Date(loan.fechaAutorizacionEntrega).toLocaleDateString('es-MX'):''}` : '<span class="badge orange">Entrega sin autorizar</span>'}</p>
+    ${loan.responsivaHtml? `<p><button class="btn outline sm" onclick="closeModal('modal-detalle');openResponsiva('${loan.id}')">Ver carta responsiva</button></p>`:''}
+    <h4 style="margin:14px 0 8px;font-size:13px;">Equipos</h4>`;
+  loan.equipos.forEach(id=>{
+    const e = equipmentById(id);
+    const ent = loan.fotosEntrega[id]||{};
+    const dev = loan.fotosDevolucion[id]||{};
+    const inc = loan.incidencias[id];
+    html += `<div class="incident-box">
+      <div class="top"><b>${esc(e? e.nombre:'(equipo eliminado)')}</b> ${inc? (inc.tipo==='ok'? '<span class="badge green">OK</span>' : inc.tipo==='danado' ? '<span class="badge red">Dañado</span>' : '<span class="badge red">Faltante</span>') : ''}</div>
+      ${inc && inc.tipo!=='ok'? `<p class="small"><b>Nota:</b> ${esc(inc.nota)}</p>`:''}
+      <div class="compare-row">
+        <div class="compare-col"><h4>Entrega frente</h4>${ent.frente?`<img src="${ent.frente}">`:'—'}</div>
+        <div class="compare-col"><h4>Entrega atrás</h4>${ent.atras?`<img src="${ent.atras}">`:'—'}</div>
+        <div class="compare-col"><h4>Devolución frente</h4>${dev.frente?`<img src="${dev.frente}">`:(dev.noDevuelto?'No devuelto':'—')}</div>
+        <div class="compare-col"><h4>Devolución atrás</h4>${dev.atras?`<img src="${dev.atras}">`:(dev.noDevuelto?'No devuelto':'—')}</div>
+      </div>
+    </div>`;
+  });
+  html += `<h4 style="margin:14px 0 8px;font-size:13px;">Historial de eventos</h4><ul class="timeline">`;
+  loan.log.forEach(ev=>{
+    html += `<li><b>${new Date(ev.fecha).toLocaleString('es-MX')}</b><br>${esc(ev.evento)}</li>`;
+  });
+  html += `</ul>`;
+  body.innerHTML = html;
+  openModal('modal-detalle');
+}
+
+document.getElementById('btn-export-csv').addEventListener('click', ()=>{
+  const rows = [['Responsable','Motivo','Equipos','Fecha entrega','Fecha regreso esperado','Fecha regreso real','Estado','Aprobado por','Notas de incidencias']];
+  state.loans.forEach(l=>{
+    const notas = Object.values(l.incidencias||{}).filter(i=>i.tipo!=='ok').map(i=>i.nota).join(' | ');
+    rows.push([l.responsable, l.motivo||'', equipNames(l), l.fechaEntrega, l.fechaRegresoEsperada||'', l.fechaRegresoReal||'', l.estado, l.aprobadoPor||'', notas]);
+  });
+  const csv = rows.map(r=>r.map(c=>`"${(c+'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `control_equipos_go_${todayISO()}.csv`;
+  a.click();
+});
+
+// ================= INICIO / DASHBOARD =================
+let chartInstance=null;
+function renderInicio(){
+  const total = state.equipment.filter(e=>e.estado!=='baja').length;
+  const disponibles = state.equipment.filter(e=>e.estado==='disponible').length;
+  const prestados = state.equipment.filter(e=>e.estado==='prestado').length;
+  const enRevision = state.equipment.filter(e=>e.estado==='revision').length;
+  const pendAprob = state.loans.filter(l=>l.estado==='pendiente_aprobacion').length;
+  const atrasados = state.loans.filter(isOverdue).length;
+  const danados = state.equipment.filter(e=>e.condicion==='danado').length;
+  const atencion = state.equipment.filter(e=>e.condicion==='atencion').length;
+
+  const kpiRow = document.getElementById('kpi-row');
+  kpiRow.innerHTML = `
+    <div class="kpi"><div class="num">${total}</div><div class="lbl">Equipos totales</div></div>
+    <div class="kpi good"><div class="num">${disponibles}</div><div class="lbl">Disponibles</div></div>
+    <div class="kpi"><div class="num">${prestados}</div><div class="lbl">Prestados</div></div>
+    <div class="kpi warn"><div class="num">${pendAprob}</div><div class="lbl">Pend. aprobación</div></div>
+    <div class="kpi bad"><div class="num">${atrasados}</div><div class="lbl">Préstamos atrasados</div></div>
+    <div class="kpi bad"><div class="num">${danados + enRevision}</div><div class="lbl">Dañados / faltantes</div></div>
+    <div class="kpi warn"><div class="num">${atencion}</div><div class="lbl">Requieren atención</div></div>
+  `;
+
+  const attList = document.getElementById('attention-list');
+  attList.innerHTML='';
+  const overdueLoans = state.loans.filter(isOverdue);
+  const incompleteLoans = state.loans.filter(l=>l.estado==='incompleto');
+  const danadosEquip = state.equipment.filter(e=>e.condicion==='danado');
+  const atencionEquip = state.equipment.filter(e=>e.condicion==='atencion');
+  if(overdueLoans.length===0 && incompleteLoans.length===0 && danadosEquip.length===0 && atencionEquip.length===0){
+    attList.innerHTML = '<div class="small">Todo en orden. No hay pendientes urgentes.</div>';
+  } else {
+    overdueLoans.forEach(l=>{
+      attList.innerHTML += `<div class="alert-row red"><span><b>${esc(l.responsable)}</b> — ${esc(equipNames(l))} (venció el ${fmtDate(l.fechaRegresoEsperada)})</span></div>`;
+    });
+    incompleteLoans.forEach(l=>{
+      attList.innerHTML += `<div class="alert-row orange"><span><b>${esc(l.responsable)}</b> — incidencia reportada en: ${esc(equipNames(l))}</span></div>`;
+    });
+    danadosEquip.forEach(e=>{
+      const holder = currentHolder(e.id);
+      attList.innerHTML += `<div class="alert-row red"><span><b>${esc(e.nombre)}</b>${holder? ' — con '+esc(holder):''}: ${esc(e.comentarioAuditoria||'Reportado con falla')}</span></div>`;
+    });
+    atencionEquip.forEach(e=>{
+      const holder = currentHolder(e.id);
+      attList.innerHTML += `<div class="alert-row orange"><span><b>${esc(e.nombre)}</b>${holder? ' — con '+esc(holder):''}: ${esc(e.comentarioAuditoria||'Requiere revisión')}</span></div>`;
+    });
+  }
+
+  const activosCont = document.getElementById('inicio-activos-table');
+  const activos = state.loans.filter(l=>l.estado==='prestado');
+  if(activos.length===0){
+    activosCont.innerHTML = '<div class="small">No hay préstamos en curso.</div>';
+  } else {
+    let t = '<table><thead><tr><th>Responsable</th><th>Equipos</th><th>Regreso esperado</th></tr></thead><tbody>';
+    activos.forEach(l=>{
+      t += `<tr><td>${esc(l.responsable)}</td><td>${esc(equipNames(l))}</td><td>${fmtDate(l.fechaRegresoEsperada)} ${isOverdue(l)?'<span class="badge red">Atrasado</span>':''}</td></tr>`;
+    });
+    t+='</tbody></table>';
+    activosCont.innerHTML = t;
+  }
+
+  const ctx = document.getElementById('statusChart');
+  const counts = {
+    'Prestado': state.loans.filter(l=>l.estado==='prestado').length,
+    'Pend. aprobación': state.loans.filter(l=>l.estado==='pendiente_aprobacion').length,
+    'Completado': state.loans.filter(l=>l.estado==='completado').length,
+    'Incompleto/dañado': state.loans.filter(l=>l.estado==='incompleto').length,
+  };
+  if(chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels:Object.keys(counts), datasets:[{ data:Object.values(counts), backgroundColor:['#2f5f8a','#C8873A','#2e7d4f','#b3352c'] }]},
+    options:{ plugins:{ legend:{ position:'bottom', labels:{font:{family:'Montserrat', size:11}} } } }
+  });
+}
+
+// ================= RESPALDO =================
+function renderStorageUsage(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY) || '';
+    const bytes = new Blob([raw]).size;
+    const mb = (bytes/1024/1024).toFixed(2);
+    const pct = Math.min(100, Math.round(bytes/ (5*1024*1024) * 100));
+    document.getElementById('storage-fill').style.width = pct+'%';
+    document.getElementById('storage-lbl').textContent = `${mb} MB usados (estimado, de ~5 MB típicos disponibles por navegador).`;
+  }catch(e){}
+}
+document.getElementById('btn-export-json').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download = `respaldo_control_equipos_go_${todayISO()}.json`;
+  a.click();
+});
+document.getElementById('import-file').addEventListener('change', (ev)=>{
+  const file = ev.target.files[0];
+  if(!file) return;
+  if(!confirm('Esto reemplazará todos los datos actuales por los del archivo. ¿Continuar?')) { ev.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data.equipment || !data.loans) throw new Error('Formato inválido');
+      state = data;
+      saveState();
+      renderAll();
+      alert('Respaldo importado correctamente.');
+    }catch(err){ alert('El archivo no es un respaldo válido.'); }
+  };
+  reader.readAsText(file);
+});
+document.getElementById('btn-wipe').addEventListener('click', ()=>{
+  if(!confirm('Esto borrará TODOS los equipos y préstamos guardados en este navegador. Esta acción no se puede deshacer. ¿Continuar?')) return;
+  if(!confirm('Confirma de nuevo: se perderán todos los datos y fotos. ¿Seguro que deseas borrar todo?')) return;
+  state = { equipment: [], loans: [] };
+  saveState();
+  renderAll();
+});
+
+// ================= INIT =================
+function renderAll(){
+  renderInventario();
+  renderNuevoPrestamo();
+  renderActivos();
+  renderAprobaciones();
+  renderHistorial();
+  renderInicio();
+  renderStorageUsage();
+}
+renderAll();
+setupSignaturePad('firma-entrega');
+setupSignaturePad('firma-responsable');
+populateEntregadoPorSelect();
+</script>
+</body>
+</html>

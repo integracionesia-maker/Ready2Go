@@ -1,7 +1,35 @@
-# Avances Diarios — Control de Presupuestos (Creadores de Contenido)
+# Avances Diarios — Ready2Go (Presupuestos + Control de Equipos)
 
-> Owner: [COMPLETAR NOMBRE]
+> Owner: Damian (marketing) · Supervision: Jose Aguilar
 > Inicio de seguimiento: 2026-07-15
+
+---
+
+## Semana 31 — Julio 2026
+
+### LUN 27/07 — Renombre a Ready2Go + plan quirurgico del modulo Control de Equipos
+
+**Que hice:**
+- Reunion con marketing (Emily Perez, Betzabet Fuentes): pidieron plataforma para el control de prestamo de equipo de grabacion, con carta responsiva firmada, fotos del equipo, y autorizacion de Melisa. Traian una maqueta HTML con localStorage.
+- Repo renombrado: remote reapuntado de `presupuesto_creadores` a `Ready2Go` (misma org, `integracionesia-maker`), carpeta local renombrada, rama `jose-branch` creada y publicada.
+- Actualice las referencias del pool: `OWNERS.md`, `context_proyectos.md`, `playbook_registry.json`, `observatorio/collector/repo_map.py`.
+- Escribi el plan quirurgico completo del modulo nuevo: RBAC aditivo (patron de roles base + paquetes, deny-by-default, 503 en fallo de resolucion), modelo de 11 tablas, maquina de estados del prestamo, 24 endpoints, PDF de responsiva en servidor versionado con hash, notificaciones SMTP con log idempotente y reintentos, y direccion visual liquid glass para toda la app.
+- Pasada adversarial sobre la maqueta y el codigo existente: 22 hallazgos (5 criticos) mitigados en el diseno antes de escribir una linea. Los criticos: doble fuente de verdad de disponibilidad, mismo equipo en dos prestamos abiertos, IDOR en fotos y PDF, aprobacion sin auth (en la maqueta cualquiera elige "Melisa" en un select), y colision de folio.
+- Actualice los 6 archivos de framework + cree `CHANGELOG.md` (no existia).
+
+**Evidencia:**
+- `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md`
+- `docs/maqueta/CONTROL_DE_EQUIPOS_maqueta_mkt.htm` (especificacion funcional de marketing)
+- `git remote -v` → `github.com/integracionesia-maker/Ready2Go`; `jose-branch` publicada
+- `CLAUDE.md`, `context.md`, `status.md`, `BACKLOG.md`, `RISKS.md`, `MVP_BREAKDOWN.md`, `DESIGN_SYSTEM.md`, `CHANGELOG.md`
+
+**MVP:** 40% (10/25 — el denominador crecio al absorber el modulo nuevo; el modulo Presupuestos por si solo va en 77%)
+
+**Bloqueo:** esperando luz verde de Jose para construir. De marketing faltan: usuarios+correos del area, inventario de camaras/luces/tripies, razon social emisora de la responsiva, nombre de dominio y aprobacion firmada del gasto del dominio.
+
+**Siguiente:** con luz verde, WP1 (RBAC aditivo) — pruebas primero, luego motor, luego migracion idempotente.
+
+**Semaforo:** Verde
 
 ---
 
@@ -43,3 +71,4 @@
 | Semana | Semaforo | Bloqueo principal |
 |---|---|---|
 | Sem 29 (15 Jul 2026) | Verde | ninguno |
+| Sem 31 (27 Jul 2026) | Verde | luz verde de build del modulo Equipos |
