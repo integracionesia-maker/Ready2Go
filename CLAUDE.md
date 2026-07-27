@@ -1,8 +1,19 @@
-# Control de Presupuestos — Creadores de Contenido — Grupo Ortiz
+# Ready2Go — Plataforma de Marketing (Presupuestos + Control de Equipos) — Grupo Ortiz
 
 > Conexiones pool: [[CLAUDE]] | [[context_proyectos]] | [[framework_operative_enforcement/CLAUDE]] | [[framework_operative_enforcement/PLAYBOOK]] | [[framework_operative_enforcement/FRAMEWORK]]
 > Recursos compartidos: [[IDENTIDAD DE MARCA/context_design]] (visual)
-> Archivos del proyecto: [[CLAUDE]] | [[context]] | [[status]] | [[BACKLOG]] | [[RISKS]] | [[MVP_BREAKDOWN]] | [[DESIGN_SYSTEM]] | [[avances_diarios]] | [[doc/auth-arquitectura]] | [[doc/auth-manual-usuario]] | [[doc/presupuestos-y-validacion]] | [[doc/gastos-generales-manual]] | [[doc/borrado-tickets]] | [[doc/responsividad-movil]]
+> Archivos del proyecto: [[CLAUDE]] | [[context]] | [[status]] | [[BACKLOG]] | [[RISKS]] | [[MVP_BREAKDOWN]] | [[DESIGN_SYSTEM]] | [[CHANGELOG]] | [[avances_diarios]] | [[docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26]] | [[doc/auth-arquitectura]] | [[doc/auth-manual-usuario]] | [[doc/presupuestos-y-validacion]] | [[doc/gastos-generales-manual]] | [[doc/borrado-tickets]] | [[doc/responsividad-movil]]
+
+## Que es
+
+Dos modulos de negocio, una sola app, un login, un deploy:
+
+- **Presupuestos** (Fase 5, en uso interno): control de presupuesto de creadores de contenido — ciclos, tickets con comprobante, validacion, gastos generales, dashboard.
+- **Control de Equipos** (Fase 3.5, plan aprobado, **sin construir**): prestamo de equipo de grabacion de marketing — inventario, carta responsiva firmada en PDF, fotos antes/despues, autorizacion y confirmacion de la aprobadora (Melisa), notificacion por correo.
+
+Antes se llamaba `presupuesto_creadores`. Renombrado a **Ready2Go** el 27/07/2026 al absorber Control de Equipos (reunion con marketing: Emily Perez, Betzabet Fuentes).
+
+Plan de integracion, RBAC aditivo, modelo de datos y revision adversarial: **`docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md`**. Especificacion funcional original de marketing: `docs/maqueta/CONTROL_DE_EQUIPOS_maqueta_mkt.htm` (maqueta HTML+localStorage — referencia funcional, su implementacion NO se porta; ver §1.3 del plan).
 
 ## Stack
 
@@ -16,7 +27,9 @@ Primer arranque (o para crear el superadmin si no existe): desde `backend/`, `py
 
 ## Reglas criticas
 
-- **Repo git ya inicializado** — rama principal `master`, se trabaja en `dami-branch` (commitear solo ahí; integrar a `master` solo cuando el usuario lo pida explícitamente).
+- **Repo git**: `github.com/integracionesia-maker/Ready2Go` (org de Damian). Rama principal `master`; Damian trabaja en `dami-branch` y mergea su master; **Jose trabaja en `jose-branch`**; Beni en `BeniBranch`. Cada quien commitea SOLO en su rama; integrar a `master` solo cuando el usuario lo pida explícitamente. Rutas explícitas en `git add` — nunca `-A` ni `.`.
+- **Control de Equipos no se construye sin luz verde de Jose.** El plan (`docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md`) está aprobado como diseño, no como orden de build.
+- **Roles aditivos (patron Bruckner)** — cuando entre el RBAC nuevo: `users.role` sigue siendo el rol base y los paquetes aditivos (`APROBADOR_EQUIPO`, `CUSTODIO_EQUIPO`, `AUDITOR`) SOLO abren los `(modulo, accion)` que tienen listados; jamás sustituyen ni amplían el rol base en otro módulo. Deny-by-default. Si la DB falla al resolver permisos → **503**, nunca `{}` (un dict vacío = 403 masivo que parece política). Ver §3 del plan.
 - **Autenticacion obligatoria** — todos los endpoints (excepto `/api/health` y `/api/auth/login`) requieren sesión; los roles son `superadmin`/`admin`/`creador` (ver `doc/auth-arquitectura.md`). Sigue sin haber HTTPS/CSP/HSTS, así que no exponer fuera de `127.0.0.1` sin agregar eso primero (ver RISKS.md #2 residual).
 - **Gestión de usuarios es exclusiva de `superadmin`** (R4) — un `admin` ya no gestiona usuarios en absoluto (ni siquiera los de rol `creador`), recibe 403 en todo `/api/users/*`. Sí gestiona creadores, marcas, ciclos de presupuesto y validación de tickets.
 - La cuenta `superadmin` es **inmutable por API** (ningún endpoint cambia su rol ni la desactiva) — si se pierde su contraseña, usar `backend/reset_superadmin_password.py` (acceso al servidor, no a la app).
@@ -36,7 +49,8 @@ Primer arranque (o para crear el superadmin si no existe): desde `backend/`, `py
 
 Fuente de verdad: `IDENTIDAD DE MARCA/context_design.md` (repo `context_desing_go`).
 Naranja GO `#FB670B` + neutros `#262626` `#535353` `#C5C5C5` `#ECEBE0` `#FFFFFF` ya aplicados en `tailwind.config.js`.
-Tipografia actual: Space Grotesk (display) + Inter (body) + JetBrains Mono — **no** son las fuentes oficiales de marca (Blauer Nue / Conthic); pendiente decidir si se formaliza el cambio (ver DESIGN_SYSTEM.md).
+Tipografia: **decidido 27/07** — Blauer Nue (display/UI) + Conthic (cuerpo) autohospedadas + JetBrains Mono (folios, series, cifras). Space Grotesk/Inter salen en WP7. Cierra el pendiente historico del BACKLOG.
+Direccion visual: **liquid glass** (dark-first, naranja como unico acento). Reglas duras y limites reales (SVG `backdrop-filter` solo Chromium; prohibido cristal en tablas y contenedores con scroll; velo solido detras de todo texto sobre cristal, contraste 4.5:1 medido) en `DESIGN_SYSTEM.md` y §8 del plan.
 
 ## Autenticación
 
