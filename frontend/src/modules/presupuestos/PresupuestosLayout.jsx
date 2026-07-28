@@ -1,21 +1,27 @@
-import { useState, useEffect, useCallback } from "react";
+import { lazy, Suspense, useState, useEffect, useCallback } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
-import Dashboard from "./components/Dashboard";
-import CreatorList from "./components/CreatorList";
-import TransactionTable from "./components/TransactionTable";
-import AdminView from "./components/AdminView";
-import ValidationQueue from "./components/ValidationQueue";
-import GeneralExpensesPage from "./pages/GeneralExpensesPage";
 import UploadTicketModal from "./components/UploadTicketModal";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoadingScreen from "./components/LoadingScreen";
-import HomePage from "./pages/HomePage";
-import ProfilePage from "./pages/ProfilePage";
-import ForbiddenPage from "./pages/ForbiddenPage";
+import { SkeletonShimmer } from "@/design";
 import { useAuth } from "@/context/AuthContext";
 import { fetchCreators, fetchCreatorsKpi, fetchBrands, fetchTickets, isNetworkError } from "@/api";
+
+// React.lazy por ruta (B-I03, I1 commit 4): el dashboard y sus 5 gráficos
+// ApexCharts salen del chunk inicial. LoadingScreen sigue siendo el estado
+// de "cargando datos de la API" (sin cambios); SkeletonShimmer es el nuevo
+// fallback de Suspense mientras el navegador baja el chunk de la ruta.
+const HomePage = lazy(() => import("./pages/HomePage"));
+const Dashboard = lazy(() => import("./components/Dashboard"));
+const CreatorList = lazy(() => import("./components/CreatorList"));
+const TransactionTable = lazy(() => import("./components/TransactionTable"));
+const AdminView = lazy(() => import("./components/AdminView"));
+const ValidationQueue = lazy(() => import("./components/ValidationQueue"));
+const GeneralExpensesPage = lazy(() => import("./pages/GeneralExpensesPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const ForbiddenPage = lazy(() => import("./pages/ForbiddenPage"));
 
 const ADMIN_ROLES = ["admin", "superadmin"];
 
@@ -139,6 +145,7 @@ export default function PresupuestosLayout() {
             </div>
           )}
 
+          <Suspense fallback={<SkeletonShimmer className="h-64 w-full" />}>
           <Routes>
             <Route
               path="/"
@@ -229,6 +236,7 @@ export default function PresupuestosLayout() {
             <Route path="/403" element={<ForbiddenPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </div>
       </main>
 

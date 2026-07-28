@@ -31,4 +31,30 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // B-I03: react-vendor separado del app code (mejor cacheo, cambia
+        // poco); apex agrupa apexcharts + react-apexcharts EN EL MISMO
+        // chunk (separarlos rompe el orden de inicialización, ver
+        // 01-I1-shell.md commit 4); motion aparte para medir su peso real.
+        // Esto reorganiza en qué archivo cae cada dependencia — no decide
+        // CUÁNDO se descarga: eso lo sigue marcando el grafo real de
+        // imports dinámicos (React.lazy por ruta).
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (/node_modules[\\/](react-router|react-dom|react|scheduler)[\\/]/.test(id)) {
+            return "react-vendor";
+          }
+          if (/node_modules[\\/](apexcharts|react-apexcharts)[\\/]/.test(id)) {
+            return "apex";
+          }
+          if (/node_modules[\\/](motion|framer-motion)[\\/]/.test(id)) {
+            return "motion";
+          }
+          return undefined;
+        },
+      },
+    },
+  },
 });
