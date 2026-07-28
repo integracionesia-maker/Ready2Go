@@ -6,3 +6,7 @@ python-multipart>=0.0.19
 pyjwt>=2.9.0
 argon2-cffi>=23.1.0
 email-validator>=2.2.0
+# Control de Equipos: PDF de la carta responsiva (reportlab) y miniaturas +
+# validacion de imagen del modulo media (pillow).
+reportlab>=4.2.0
+pillow>=11.0.0

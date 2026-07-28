@@ -2,3 +2,5 @@
 -r requirements.txt
 pytest>=8.3.0
 httpx>=0.27.0
+# Congelar el reloj en las pruebas de atraso/vencimiento (America/Mexico_City).
+freezegun>=1.5.0
