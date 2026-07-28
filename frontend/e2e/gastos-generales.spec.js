@@ -185,6 +185,10 @@ test.describe.serial("Gastos Generales y borrado de tickets (R12)", () => {
     await page.click('button:has-text("Nuevo Gasto General")');
     const modal = page.locator(".fixed.inset-0");
     await expect(modal.getByText("Nuevo Gasto General")).toBeVisible();
+    // La marca es obligatoria en gastos generales (models.GeneralExpense.brand_id
+    // nullable=False + `required` en el select). Sin seleccionarla, la validación
+    // nativa del navegador bloquea el submit y el modal nunca responde.
+    await modal.locator("select").selectOption({ label: BRAND_NAME });
     await modal.locator("textarea").fill(EXPENSE_DESC_A);
     await modal.locator('input[type="number"]').fill(String(EXPENSE_AMOUNT_A));
     await modal.locator('input[type="file"]').setInputFiles({
@@ -254,6 +258,7 @@ test.describe.serial("Gastos Generales y borrado de tickets (R12)", () => {
 
     await page.click('button:has-text("Nuevo Gasto General")');
     let modal = page.locator(".fixed.inset-0");
+    await modal.locator("select").selectOption({ label: BRAND_NAME });
     await modal.locator("textarea").fill(EXPENSE_DESC_B);
     await modal.locator('input[type="number"]').fill(String(EXPENSE_AMOUNT_B));
     await modal.locator('input[type="file"]').setInputFiles({
