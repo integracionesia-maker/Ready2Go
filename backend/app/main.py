@@ -9,7 +9,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base
+from .errores import registrar_manejadores
 from .routers import auth, creators, brands, tickets, dashboard, users, general_expenses
+from .routers import roles, user_roles
 
 Base.metadata.create_all(bind=engine)
 
@@ -39,6 +41,11 @@ app.add_middleware(
 # El mount estático de /uploads se eliminó: todo comprobante se sirve ahora vía
 # GET /api/tickets/file/{id}, que valida sesión y pertenencia del ticket.
 
+# Sobre de error unico del contrato de Equipos ({detail, codigo}). El manejador
+# por defecto de FastAPI envuelve el detalle y deja `codigo` anidado, asi que el
+# cliente no lo encontraria en la raiz. Ver app/errores.py.
+registrar_manejadores(app)
+
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(creators.router)
@@ -46,6 +53,9 @@ app.include_router(brands.router)
 app.include_router(tickets.router)
 app.include_router(dashboard.router)
 app.include_router(general_expenses.router)
+# Control de Equipos
+app.include_router(roles.router)
+app.include_router(user_roles.router)
 
 
 @app.get("/api/health")
