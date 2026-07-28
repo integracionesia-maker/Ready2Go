@@ -1,0 +1,7 @@
+# Sesión guardada por pantallas.spec.js (storageState) — reusa un solo login
+# para las 20 capturas en vez de repetirlo (rate limit 30/15min por IP).
+e2e/.auth/
+
+# Capturas de pantalla producidas por pantallas.spec.js — evidencia de una
+# corrida local, no código fuente.
+e2e/.screenshots/
