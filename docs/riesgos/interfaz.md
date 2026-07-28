@@ -104,3 +104,32 @@ llega igual.
 Queda como riesgo porque cualquiera que siga la instruccion de clonar con la URL
 `git@github.com:...` de la asignacion se estrella de entrada, sin pista de que la
 causa es la llave y no el repo.
+
+## R-I12 — `index.html` tenia clases de Tailwind muertas pisando los tokens de tema en `<body>` (RESUELTO en I1 commit 5)
+
+Encontrado escribiendo el verificador de contraste de `pantallas.spec.js`: el
+primer intento media 1.06:1 en el nav de modulos (`GlassNav`), muy por debajo
+del 4.5:1 exigido. `getComputedStyle(document.body).color` devolvia
+`rgb(17, 24, 39)` (gray-900 de Tailwind) y `backgroundColor` devolvia
+`rgb(249, 250, 251)` (gray-50), pese a que `--go-text-secondary` resolvia
+correctamente a `#c5c5c5` y `--go-bg` a `#09090b` en `:root`.
+
+Causa: `index.html` traia `<body class="bg-gray-50 text-gray-900
+antialiased">`, heredado del starter de Tailwind y nunca limpiado. Esas
+clases utilitarias (capa `utilities`, mayor prioridad que `@layer base` donde
+vive la regla `body { color: var(--go-text-secondary); ... }` de
+`index.css`, y ademas mayor especificidad por ser selectores de clase contra
+un selector de tipo) pisaban en silencio el tema real en el elemento raiz.
+
+Invisible en cualquier verificacion visual porque cada contenedor de
+Presupuestos fija su propio `background` inline (p.ej. `PresupuestosLayout`
+con `style={{ background: "var(--go-bg)" }}`) — la pantalla se ve correcta
+a simple vista. Pero cualquier elemento que dependa de `color: inherit` para
+llegar hasta `body` (como el `<a>` de `GlassNav`, que no fija color propio y
+lo hereda desde su `<span>` hijo hacia arriba en cascada) terminaba pintado
+con el gray-900 equivocado.
+
+`grep` confirmo cero referencias a esas dos clases en `src/`: no eran
+alcanzadas por ningun estilo ni logica. Se quitaron sin sustituto
+(`<body class="antialiased">`); cero regresion visual, los 47 e2e (25 de
+Presupuestos + 22 del verificador) siguen verdes tras el cambio.
