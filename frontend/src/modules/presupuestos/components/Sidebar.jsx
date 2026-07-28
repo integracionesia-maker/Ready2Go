@@ -89,7 +89,7 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
         }}
       >
         {/* ── Navigation ────────────────────────────────────────────────── */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-2.5 py-4">
+        <nav aria-label="Navegacion de Presupuestos" className="flex-1 space-y-1 overflow-y-auto px-2.5 py-4">
           {visibleItems.map((item) => (
             <NavLink
               key={item.to}

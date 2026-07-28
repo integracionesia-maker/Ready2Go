@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import LoadingScreen from "./LoadingScreen";
 
@@ -50,5 +50,8 @@ export default function ProtectedRoute({ roles, children }) {
     return <Navigate to="/403" replace />;
   }
 
-  return children;
+  // Sin children (uso como layout route del shell): renderiza el Outlet.
+  // Con children (uso existente, por página dentro de PresupuestosLayout):
+  // comportamiento idéntico al de siempre.
+  return children ?? <Outlet />;
 }

@@ -294,6 +294,7 @@ export default function AdminView({ creators, brands, onChange }) {
           Administración
         </h2>
         <nav
+          aria-label="Secciones de Administracion"
           className="flex items-center gap-1 rounded-go p-1"
           style={{ background: "var(--go-surface)" }}
         >

@@ -188,7 +188,7 @@ test.describe.serial("Flujo completo de negocio (R1-R11)", () => {
     await login(page, ADMIN.username, ADMIN.password);
     await changePasswordOnForcedPerfil(page, ADMIN.password, ADMIN.newPassword);
 
-    await expect(page.locator("nav")).toContainText("Validación");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).toContainText("Validación");
     await page.goto("/validacion");
 
     const row = page.locator("tr", { hasText: CREATOR_NAME });

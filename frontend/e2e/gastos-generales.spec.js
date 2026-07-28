@@ -166,7 +166,7 @@ test.describe.serial("Gastos Generales y borrado de tickets (R12)", () => {
     await login(page, CREADOR.username, CREADOR.password);
     await changePasswordOnForcedPerfil(page, CREADOR.password, CREADOR.newPassword);
 
-    await expect(page.locator("nav")).not.toContainText("Gastos Generales");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).not.toContainText("Gastos Generales");
 
     await page.goto("/gastos-generales");
     await expect(page).toHaveURL(/\/403/);
@@ -178,7 +178,7 @@ test.describe.serial("Gastos Generales y borrado de tickets (R12)", () => {
     await login(page, ADMIN.username, ADMIN.password);
     await changePasswordOnForcedPerfil(page, ADMIN.password, ADMIN.newPassword);
 
-    await expect(page.locator("nav")).toContainText("Gastos Generales");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).toContainText("Gastos Generales");
     await page.goto("/gastos-generales");
     await expect(page.getByRole("heading", { name: "Gastos Generales" })).toBeVisible();
 
