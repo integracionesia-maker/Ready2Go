@@ -11,7 +11,7 @@ Mis pendientes. No es el backlog del proyecto.
 | S0 | Costura: enum, re-exports, deps | hecho 2026-07-28 |
 | S1 | RBAC aditivo (WP1) | hecho 2026-07-28 |
 | S2 | Modelo de datos equipos (WP2) | hecho 2026-07-28 |
-| S3 | API inventario (WP3) | pendiente |
+| S3 | API inventario (WP3) | hecho 2026-07-28 |
 | S4 | API prestamos, aprobacion, media (WP4) | pendiente |
 | S5 | Carta responsiva PDF (WP5) | pendiente |
 | S6 | Correo y recordatorios (WP6) | pendiente |

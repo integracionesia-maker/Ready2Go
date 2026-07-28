@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
 from .errores import registrar_manejadores
 from .routers import auth, creators, brands, tickets, dashboard, users, general_expenses
-from .routers import roles, user_roles, empresas
+from .routers import roles, user_roles, empresas, equipos_dashboard, equipment
 
 Base.metadata.create_all(bind=engine)
 
@@ -57,6 +57,10 @@ app.include_router(general_expenses.router)
 app.include_router(roles.router)
 app.include_router(user_roles.router)
 app.include_router(empresas.router)
+# El dashboard va ANTES del router de inventario: comparten prefijo y
+# /{id} se tragaria /dashboard como si fuera un id (contrato §2).
+app.include_router(equipos_dashboard.router)
+app.include_router(equipment.router)
 
 
 @app.get("/api/health")

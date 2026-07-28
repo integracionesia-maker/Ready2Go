@@ -4,6 +4,33 @@ Lo que descubro que puede fallar. No lo que ya esta mitigado en el plan.
 
 ---
 
+## R-SRV-10 — Un equipo dado de baja desaparece de la interfaz por completo
+
+**Sev:** medio. **Estado:** abierto, implementado segun el plan.
+
+`POST /api/equipment/{id}/baja` hace borrado logico (`is_deleted=True`) ademas de
+poner `estado_operativo='baja'`, tal como pide el plan §5 ("Soft delete") y su
+regla de que el listado excluye `is_deleted`.
+
+Consecuencia: el equipo deja de salir en el listado **y su ficha responde 404**
+(contrato §0: `NO_ENCONTRADO` incluye recursos con borrado logico). El registro,
+sus auditorias y su historial siguen en la base, pero no hay endpoint que los
+muestre.
+
+Escenario que lo va a hacer notar: se da de baja un celular robado; tres meses
+despues RH pregunta quien lo tenia la ultima vez. Hoy no hay pantalla que lo
+conteste — hay que ir a la base.
+
+Opciones, todas cambian el contrato:
+
+- Un filtro `?incluir_baja=true` en el listado.
+- Que `GET /api/equipment/{id}` devuelva el equipo dado de baja en vez de 404.
+- Separar "dar de baja" (operativo, sigue visible) de "borrar" (logico, 404).
+
+La tercera es la que mas se parece a lo que el area pidio, pero no la decido yo.
+
+---
+
 ## R-SRV-07 — Un borrador abandonado bloquea su equipo para siempre
 
 **Sev:** alto. **Estado:** abierto, necesita decision de producto.

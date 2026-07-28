@@ -4,6 +4,33 @@ Que agregue, cambie, quite. Orden inverso: lo nuevo arriba.
 
 ---
 
+## 2026-07-28 — S3 API de inventario (WP3)
+
+### Agregado
+
+- `backend/app/schemas_equipment.py` — fila del listado, ficha, alta, edicion,
+  auditoria, baja y dashboard.
+- `backend/app/crud_equipment.py` — listado con filtros, ultima auditoria por
+  equipo en una consulta, alta/edicion, registro de auditoria, baja logica,
+  historial de prestamos del equipo.
+- `backend/app/crud_dashboard_equipos.py` — contadores, distribucion por estado
+  y "requiere atencion". Sin importar `crud_loans`.
+- `backend/app/routers/equipment.py` — `GET /`, `GET /{id}`, `POST /`,
+  `PUT /{id}`, `POST /{id}/auditoria`, `POST /{id}/baja`.
+- `backend/app/routers/equipos_dashboard.py` — `GET /api/equipment/dashboard`.
+- `backend/tests/equipos/test_api_inventario.py` — 31 pruebas.
+
+### Cambiado
+
+- `backend/app/main.py` — include_router de `equipos_dashboard` (primero) y
+  `equipment` (despues).
+
+### Quitado
+
+- Nada.
+
+---
+
 ## 2026-07-28 — S2 Modelo de datos de Equipos (WP2)
 
 ### Agregado

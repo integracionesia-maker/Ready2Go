@@ -4,6 +4,93 @@ Una entrada por dia de trabajo. Que hice, evidencia, bloqueos.
 
 ---
 
+## 2026-07-28 — S3 API de inventario (WP3)
+
+Hecho:
+
+- `backend/app/schemas_equipment.py`, `crud_equipment.py`,
+  `crud_dashboard_equipos.py`.
+- `backend/app/routers/equipment.py` — listado con `q`/`categoria`/`condicion`/
+  `disponible`/`limit`/`offset`, ficha con auditorias e historial, alta,
+  edicion, `POST /auditoria`, `POST /baja`.
+- `backend/app/routers/equipos_dashboard.py` — `GET /api/equipment/dashboard`.
+- `backend/app/main.py` — los dos include_router, dashboard **antes** de
+  inventario.
+- `backend/tests/equipos/test_api_inventario.py` — 31 pruebas.
+
+Evidencia:
+
+```
+$ python -m pytest -q
+345 passed, 1 warning in 385.75s      (169 existentes + 176 nuevas)
+```
+
+Criterios de cierre de S3:
+
+| Criterio | Prueba | Estado |
+|---|---|---|
+| Pruebas de permisos (403) | 4 pruebas de permisos por rol y por aditivo | verde |
+| Conflicto 409 en baja con prestamo abierto | `test_baja_de_equipo_con_prestamo_abierto_es_409` | verde |
+| `/dashboard` antes de `/{id:int}` | `test_el_dashboard_no_lo_traga_la_ruta_por_id` + `test_el_dashboard_existe_como_ruta_propia_en_el_esquema` | verde |
+| `POST /auditoria` registra en `equipment_audit` | `test_la_auditoria_agrega_al_historial_sin_pisar_la_anterior` | verde |
+
+La fila del listado se compara **campo por campo** contra
+`docs/contratos/fixtures/equipos.json` para los 7 equipos libres
+(`test_la_fila_del_listado_tiene_la_forma_del_fixture`). El equipo 1 tiene su
+propia prueba porque en el fixture aparece con prestamo abierto.
+
+### Dos defensas para el mismo error del enrutador
+
+El contrato advierte que `/dashboard` se lo traga `/{id}` si va despues. Puse
+las dos: el dashboard es un router aparte incluido primero, **y** las rutas por
+id usan `{equipment_id:int}`. Cualquiera de las dos basta; las dos juntas
+aguantan que alguien mueva el orden de los `include_router` o quite el `:int`
+para aceptar codigos de equipo.
+
+### Decisiones que el contrato no fija
+
+**I. La fila del listado trae mas campos que el ejemplo del §2.** El ejemplo del
+contrato omite `condicion`, `estado_fisico`, `comentario_auditoria` y
+`fecha_auditoria`, pero `fixtures/equipos.json` **si** los trae. Segui el
+fixture: quitar campos que el fixture tiene rompe a un cliente que mockee contra
+el; agregarlos no rompe a nadie.
+
+**J. La forma de la ficha (`GET /api/equipment/{id}`) no esta congelada.** El
+contrato fija ruta y permiso. Devuelvo la fila del listado + `descripcion`,
+`fotos_originales_url`, `auditorias[]` e `historial[]`. Documentado en
+`app/schemas_equipment.py`.
+
+**K. `por_estado` del dashboard devuelve siempre las 6 llaves**, con 0 donde no
+hay nada. El ejemplo del contrato muestra 4 —justo las que tenian datos—. Un
+mapa de llaves variables hace que una grafica de distribucion cambie de forma
+sola cuando se cierra el ultimo prestamo de un estado.
+
+**L. Definiciones de los contadores del dashboard.** El contrato da los nombres,
+no la definicion. `prestados` = estado `prestado` (no incluye
+`pendiente_confirmacion`, que tiene su propio contador). `atrasados` = en
+`prestado` con fecha vencida; un prestamo ya devuelto y esperando confirmacion
+no cuenta como atrasado, el equipo ya volvio. Escritas en el docstring de
+`crud_dashboard_equipos.py`.
+
+**M. `POST /baja` es borrado logico completo**, como pide el plan §5: pone
+`estado_operativo='baja'` **y** `is_deleted=True`. Consecuencia: el equipo
+desaparece del listado y su ficha responde 404. El registro, sus auditorias y su
+historial se conservan en la base. Ver R-SRV-10: si el area necesita consultar la
+ficha de un equipo retirado, esto hay que cambiarlo.
+
+**N. `estado_operativo` no es editable por `PUT /api/equipment/{id}`.** Se mueve
+solo por sus endpoints (`/baja`, confirmacion de devolucion, cierre de
+incidencia). Dejarlo editable permitiria sacar un equipo de `revision` sin
+cerrar la incidencia, que es justo el hueco que `cerrar-incidencia` tapa.
+
+**O. Codigo `VALOR_INVALIDO` (422)** para condicion o estado fisico fuera del
+vocabulario, y `DUPLICADO` (409) para codigo de equipo repetido. Ninguno esta en
+la tabla del contrato §0.
+
+Bloqueos: ninguno.
+
+---
+
 ## 2026-07-28 — S2 Modelo de datos de Equipos (WP2)
 
 Hecho:
