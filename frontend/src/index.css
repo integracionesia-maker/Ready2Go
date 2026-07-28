@@ -140,6 +140,11 @@
     color: #e53e3e;
     border: 1px solid rgba(229, 62, 62, 0.25);
   }
+  .go-badge-neutral {
+    background: rgba(197, 197, 197, 0.12);
+    color: var(--go-text-secondary);
+    border: 1px solid var(--go-border);
+  }
 
   /* ── GO eyebrow label ─────────────────────────────────────────────── */
   .go-eyebrow {
@@ -269,4 +274,32 @@
 }
 .go-loading-phrase {
   animation: go-phrase-fade 4s ease-in-out;
+}
+
+/* ── SkeletonShimmer (sistema de diseño, src/design/) ─────────────────────
+   Mismo lenguaje visual que LoadingScreen: degradado naranja en movimiento,
+   no un shimmer gris genérico. */
+@keyframes go-skeleton-shimmer {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 150% 0;
+  }
+}
+.go-skeleton-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--go-surface-sunken) 30%,
+    var(--go-orange-tint) 50%,
+    var(--go-surface-sunken) 70%
+  );
+  background-size: 250% 100%;
+  animation: go-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .go-skeleton-shimmer {
+    animation: none;
+    background: var(--go-surface-sunken);
+  }
 }
