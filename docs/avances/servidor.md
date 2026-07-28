@@ -4,6 +4,144 @@ Una entrada por dia de trabajo. Que hice, evidencia, bloqueos.
 
 ---
 
+## 2026-07-28 — S2 Modelo de datos de Equipos (WP2)
+
+Hecho:
+
+- `backend/app/models_equipos.py` — las 10 tablas del plan §4.1 + el indice
+  unico parcial `ux_loan_item_equipo_abierto` + los vocabularios.
+- `backend/app/disponibilidad.py` — formula derivada. No existe
+  `equipment.estado = 'prestado'`.
+- `backend/app/folio.py` — `CE-0001` transaccional, 3 reintentos.
+- `backend/app/tz.py` — America/Mexico_City como zona unica.
+- `backend/app/schemas_empresas.py`, `crud_empresas.py`, `routers/empresas.py`.
+- `backend/migrate_equipos.py` — idempotente, con precondicion y verificacion
+  del indice.
+- `backend/seed_equipos.py` — 8 equipos de la auditoria del 10/06/2026 + 3
+  razones sociales.
+- `backend/seed_prestamo_demo.py` — el prestamo del fixture, con ids fijos y
+  archivos de media reales.
+- `backend/requirements.txt` — `tzdata`.
+- `backend/tests/equipos/` — 65 pruebas.
+
+Evidencia:
+
+```
+$ python -m pytest -q
+314 passed, 1 warning in 347.66s      (169 existentes + 80 rbac + 65 equipos)
+```
+
+Migraciones y seeds de punta a punta sobre una base **limpia** (no la de
+desarrollo), corriendo cada script en su propio proceso:
+
+```
+seed_auth.py -> migrate_rbac_aditivo.py -> migrate_equipos.py
+             -> seed_rbac.py -> seed_equipos.py -> seed_prestamo_demo.py
+
+corrida 1: 10 tablas creadas, indice parcial verificado, 8 equipos,
+           3 empresas, prestamo CE-0007 con 4 archivos de media
+corrida 2: 0 altas en todo
+```
+
+Esa secuencia esta como prueba (`test_la_secuencia_completa_corre_dos_veces_seguidas`),
+no solo como corrida manual.
+
+Criterios de cierre de S2:
+
+| Criterio | Prueba | Estado |
+|---|---|---|
+| Un equipo no puede quedar en dos prestamos abiertos | `test_un_equipo_no_puede_estar_en_dos_prestamos_abiertos` | verde |
+| Folio bajo concurrencia no duplica | `test_concurrencia_real_no_produce_folios_repetidos` (6 hilos, sesiones propias) + 3 pruebas de colision determinista | verde |
+| Migracion idempotente | `test_la_secuencia_completa_corre_dos_veces_seguidas` | verde |
+
+### Lo que encontre trabajando
+
+**1. El folio se atoraba en el mismo numero al reintentar.** El incremento del
+contador estaba **dentro** del SAVEPOINT, asi que el rollback del choque tambien
+deshacia el `UPDATE`: los tres reintentos pedian exactamente el mismo numero y
+fallaban igual. Movido fuera del savepoint. Lo encontro la prueba de contador
+atrasado, no la lectura del codigo.
+
+**2. Tres scripts no arrancaban solos.** `migrate_equipos.py`, `seed_equipos.py`
+y `migrate_rbac_aditivo.py` importaban solo los modelos que usaban, sin
+`app.models`. Dentro de la suite pasaban —`conftest` ya cargo `app.main` y con
+el todos los modelos— y reventaban al ejecutarse de verdad. Por eso ahora hay
+una prueba que corre **cada script en un proceso propio**: es la unica que ve
+este error.
+
+**3. SQLite crea tablas con FK a tablas que no existen.** Corrida sobre una base
+sin `users`, la migracion "funcionaba" y dejaba llaves foraneas apuntando a la
+nada; el error salia mucho despues, en el primer INSERT, con un
+"no such table: users" que no dice que falto un paso. Las dos migraciones ahora
+verifican la precondicion y mandan a `seed_auth.py`.
+
+**4. El indice parcial puede existir mal.** `create_all` no reemplaza un indice
+que ya existe con otra definicion. Si una base vieja tuviera
+`ux_loan_item_equipo_abierto` **sin** el `WHERE devuelto_at IS NULL`, seria un
+unique total sobre `equipment_id`: el equipo no se podria prestar dos veces
+nunca. No se nota hasta el segundo prestamo del mismo equipo. La migracion ahora
+lee el SQL del indice y falla si no es parcial.
+
+**5. `tzdata` no estaba declarada.** En Windows `zoneinfo` no trae la base IANA;
+estaba instalada de transitiva. Un entorno limpio se habria quedado sin zona y
+el calculo de atraso —la razon de ser de `tz.py`— habria reventado. Declarada en
+`requirements.txt`.
+
+### Contradiccion entre el plan y el contrato (decidida, no improvisada)
+
+**El plan §4.3 dice "un borrador no reserva el equipo" y que los renglones se
+insertan al confirmar. El contrato §3 expone `POST /api/loans/{id}/items` sobre
+un borrador y exige `409 EQUIPO_OCUPADO` "si el equipo ya esta en otro prestamo
+abierto", con el indice unico como arbitro.** Las dos cosas no pueden ser
+ciertas: si los renglones existen desde el borrador, reservan.
+
+Segui el **contrato**: esta congelado y hay codigo construyendose contra el.
+Consecuencia: un borrador con renglones marca el equipo como no disponible.
+
+Consecuencia operativa que hay que decidir arriba: **un borrador abandonado
+bloquea su equipo indefinidamente.** No hay caducidad de borradores en el
+contrato. Anotado como riesgo R-SRV-07.
+
+Ademas, la formula de disponibilidad que implemente es la del **contrato §2**
+("sin renglon de prestamo abierto"), no la del plan §4.2 (que enumera
+`loan.estado IN ('prestado','pendiente_confirmacion')`). Razon: la del contrato
+coincide exactamente con la condicion del indice unico. Si la formula fuera mas
+laxa que el indice, la pantalla mostraria disponible un equipo que da 409 al
+pedirlo.
+
+### Otros huecos de contrato
+
+**E. `POST/PUT | /api/empresas/{id}` (§6).** Un POST a un id que no existe no
+tiene sentido. Lo lei como taquigrafia de "los dos verbos de escritura":
+`POST /api/empresas/` crea, `PUT /api/empresas/{id}` edita.
+
+**F. Sobre de listado inconsistente.** §0 dice que los listados responden
+`{items, total}`, pero `fixtures/empresas.json` es un arreglo pelado mientras
+`fixtures/equipos.json` si trae el sobre. Segui los fixtures: empresas devuelve
+arreglo, inventario devolvera sobre. Un cliente que mockee contra
+`empresas.json` se rompe con el sobre.
+
+**G. No hay codigo de error para razon social duplicada.** Uso 409 con
+`codigo: "DUPLICADO"`, que no esta en la tabla del §0. Mantengo la forma del
+sobre; el codigo es nuevo. Si molesta, va a v2.
+
+**H. `GET /api/empresas/` pide solo sesion, no `usuarios:gestionar`.** El
+contrato dice "autenticado" para GET y `usuarios:gestionar` para escritura; lo
+implemente asi. Lo mismo tiene sentido operativo: el wizard de prestamo necesita
+la lista para llenar un `<select>` y solo el superadmin tiene `usuarios:*`.
+
+### Nota sobre el seed demo en la base de desarrollo
+
+`seed_prestamo_demo.py` se detiene en `presupuesto.db` porque `melisa` ya existe
+con id 2 y el fixture del contrato la fija en id 4. **Es el comportamiento
+correcto**: reasignar el id de una cuenta existente para cuadrar un fixture es
+peor que no sembrar. El seed corre limpio en base nueva, que es donde importa
+(la guardia de contrato de S7 usa la base de pruebas). Anotado como R-SRV-08.
+
+Bloqueos: ninguno.
+
+---
+
 ## 2026-07-28 — S1 RBAC aditivo (WP1)
 
 Hecho:

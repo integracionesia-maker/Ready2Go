@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
 from .errores import registrar_manejadores
 from .routers import auth, creators, brands, tickets, dashboard, users, general_expenses
-from .routers import roles, user_roles
+from .routers import roles, user_roles, empresas
 
 Base.metadata.create_all(bind=engine)
 
@@ -56,6 +56,7 @@ app.include_router(general_expenses.router)
 # Control de Equipos
 app.include_router(roles.router)
 app.include_router(user_roles.router)
+app.include_router(empresas.router)
 
 
 @app.get("/api/health")

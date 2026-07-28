@@ -10,7 +10,7 @@ Mis pendientes. No es el backlog del proyecto.
 |---|---|---|
 | S0 | Costura: enum, re-exports, deps | hecho 2026-07-28 |
 | S1 | RBAC aditivo (WP1) | hecho 2026-07-28 |
-| S2 | Modelo de datos equipos (WP2) | pendiente |
+| S2 | Modelo de datos equipos (WP2) | hecho 2026-07-28 |
 | S3 | API inventario (WP3) | pendiente |
 | S4 | API prestamos, aprobacion, media (WP4) | pendiente |
 | S5 | Carta responsiva PDF (WP5) | pendiente |
@@ -41,6 +41,25 @@ Mis pendientes. No es el backlog del proyecto.
 - **Codigo de error para "paquete no asignable".** Hoy reuso `NO_ENCONTRADO`.
   Si el cliente necesita distinguirlo de "usuario no existe", hace falta un
   codigo nuevo en v2.
+- **Resolver la contradiccion borrador/reserva entre el plan §4.3 y el contrato
+  §3.** Segui el contrato: un borrador con renglones reserva el equipo.
+  Consecuencia sin resolver: un borrador abandonado bloquea su equipo para
+  siempre. Ver R-SRV-07 en `docs/riesgos/servidor.md`. Hace falta decidir si hay
+  caducidad de borradores.
+- **`POST/PUT | /api/empresas/{id}` del contrato §6** se lee como taquigrafia.
+  Implemente `POST /api/empresas/` + `PUT /api/empresas/{id}`. Confirmar.
+- **Sobre de listado inconsistente entre §0 y los fixtures.** `empresas.json` es
+  un arreglo pelado, `equipos.json` trae `{items, total}`. Segui los fixtures.
+  Confirmar que es intencional.
+- **Codigo `DUPLICADO` (409) para razon social repetida** no esta en la tabla
+  del contrato §0. Confirmar o cambiar en v2.
+- **Confirmar la razon social emisora** (§14.3 del plan). Hoy
+  `crud_empresas.emisora_por_defecto()` usa una heuristica ("la primera activa
+  con RFC"). Cuando marketing confirme, se vuelve una columna `es_emisora`
+  explicita y deja de adivinar.
+- **Datos que faltan del inventario:** `fotos_originales_url` (carpeta de Drive
+  de la auditoria del 10/06) quedo en NULL para los 8 equipos — no venia en el
+  fixture. Tampoco hay camaras, luces ni tripies (§14.2 del plan).
 
 ## Dependencias externas que me bloquean (no las resuelvo yo)
 

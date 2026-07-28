@@ -4,6 +4,74 @@ Lo que descubro que puede fallar. No lo que ya esta mitigado en el plan.
 
 ---
 
+## R-SRV-07 — Un borrador abandonado bloquea su equipo para siempre
+
+**Sev:** alto. **Estado:** abierto, necesita decision de producto.
+
+El contrato §3 expone `POST /api/loans/{id}/items` sobre un borrador y exige
+`409 EQUIPO_OCUPADO` si el equipo ya esta en otro prestamo abierto, con el
+indice unico como arbitro. Eso significa que **los renglones existen desde el
+borrador y por lo tanto reservan**. (El plan §4.3 dice lo contrario; se siguio el
+contrato, que es el que esta congelado. Ver `docs/avances/servidor.md`.)
+
+Escenario: alguien abre el wizard, agrega el iPhone 17 Pro, se distrae y cierra
+la pestaña. Ese equipo queda no disponible **indefinidamente**. El contrato
+incluso preve recuperar el borrador (`?estado=borrador&mios=1`), asi que los
+borradores estan pensados para persistir.
+
+No hay caducidad de borradores en el contrato ni en el plan. Falta decidir una
+de estas:
+
+- Caducidad automatica: un borrador sin tocar en N horas se cancela y libera.
+- Que un aprobador o custodio pueda cancelar borradores ajenos.
+- Nada, y se vive con el bloqueo (peor opcion: el area no va a saber por que un
+  equipo "prestado" no aparece en ningun prestamo).
+
+No lo decido yo: cualquiera de las tres cambia el contrato o agrega un proceso.
+
+---
+
+## R-SRV-08 — El seed demo no puede correr sobre la base de desarrollo
+
+**Sev:** bajo. **Estado:** abierto, comportamiento intencional.
+
+`seed_prestamo_demo.py` fija ids explicitos (prestamo 7, renglon 11, media
+39-42, evento 21, usuarios 4 y 12) porque
+`docs/contratos/fixtures/prestamo_demo.json` es el criterio de aceptacion del
+payload y el cliente mockea contra la copia literal.
+
+En `presupuesto.db` la cuenta `melisa` ya existe con id 2, asi que el seed se
+detiene con un mensaje explicito en vez de reasignar el id.
+
+Es el comportamiento correcto —sobrescribir la cuenta de una persona para cuadrar
+un fixture es peor que no sembrar— pero conviene saberlo: **el prestamo demo solo
+se puede sembrar en una base limpia**. La guardia de contrato de S7 usa la base
+de pruebas, que se recrea en cada prueba, asi que ahi si corre.
+
+---
+
+## R-SRV-09 — El indice unico parcial no conoce `is_deleted`
+
+**Sev:** medio. **Estado:** mitigado por convencion, sin red de seguridad en la base.
+
+`ux_loan_item_equipo_abierto` bloquea por `devuelto_at IS NULL` y nada mas. La
+formula de disponibilidad ademas excluye prestamos con `is_deleted = 1`.
+
+Si un prestamo se borra logicamente **sin cerrar sus renglones**, los dos dejan
+de coincidir: la pantalla muestra el equipo disponible y `POST /items` da un
+error de integridad. Igual con cancelar.
+
+Convencion que la API tiene que respetar (S4): **toda operacion que libere un
+equipo escribe `devuelto_at`** — cancelar, confirmar devolucion, borrar el
+prestamo. Esta escrita en el docstring de `LoanItem` y hay una prueba que
+documenta el hueco (`test_prestamo_borrado_libera_el_equipo_en_la_formula`).
+
+No se puede cerrar en la base: SQLite no permite un indice parcial que consulte
+otra tabla. La alternativa seria duplicar `is_deleted` en `loan_item`, que es
+justo la doble fuente de verdad que el plan §4.2 elimina.
+
+---
+
 ## R-SRV-04 — `GET /api/auth/me` puede devolver 503 y el cliente tiene que saberlo
 
 **Sev:** alto. **Estado:** abierto, necesita acuerdo con el carril de interfaz.

@@ -4,6 +4,51 @@ Que agregue, cambie, quite. Orden inverso: lo nuevo arriba.
 
 ---
 
+## 2026-07-28 — S2 Modelo de datos de Equipos (WP2)
+
+### Agregado
+
+- `backend/app/models_equipos.py` — 10 tablas (`equipment`, `equipment_audit`,
+  `loan`, `loan_item`, `media_asset`, `responsiva_doc`, `loan_event`,
+  `notification_log`, `empresa`, `folio_counter`), el indice unico parcial
+  `ux_loan_item_equipo_abierto` y los vocabularios del modulo.
+- `backend/app/disponibilidad.py` — formula derivada, `mapa_prestamos_abiertos`
+  en una sola consulta, calculo de atraso en servidor.
+- `backend/app/folio.py` — `CE-0001`, contador transaccional, 3 reintentos,
+  `sincronizar_contador`.
+- `backend/app/tz.py` — America/Mexico_City; `hoy`, `iso_cdmx`, `dias_de_atraso`.
+- `backend/app/schemas_empresas.py`, `backend/app/crud_empresas.py`,
+  `backend/app/routers/empresas.py` — `GET /api/empresas/`,
+  `POST /api/empresas/`, `PUT /api/empresas/{id}`.
+- `backend/migrate_equipos.py` — idempotente, verifica precondicion e indice.
+- `backend/seed_equipos.py` — 8 equipos de la auditoria del 10/06/2026 y las
+  3 razones sociales, con ids fijos del fixture.
+- `backend/seed_prestamo_demo.py` — prestamo `CE-0007` con ids fijos y archivos
+  de media reales (2 fotos + 2 firmas, con sha256).
+- `backend/tests/equipos/` — `__init__.py`, `conftest.py` y 65 pruebas en
+  4 archivos, incluidas las que corren cada script en un proceso propio.
+
+### Cambiado
+
+- `backend/requirements.txt` — `tzdata>=2024.1`. En Windows `zoneinfo` no trae
+  la base IANA; estaba entrando de transitiva.
+- `backend/app/main.py` — import e `include_router` de `empresas`.
+- `backend/migrate_rbac_aditivo.py` — import explicito de `app.models` y
+  precondicion de que exista la tabla `users`.
+
+### Corregido
+
+- `app/folio.py` — el incremento del contador estaba dentro del SAVEPOINT: el
+  rollback del choque lo deshacia y los 3 reintentos pedian el mismo numero.
+- `migrate_equipos.py`, `seed_equipos.py`, `migrate_rbac_aditivo.py` — les
+  faltaba `import app.models`; no arrancaban fuera de pytest.
+
+### Quitado
+
+- Nada.
+
+---
+
 ## 2026-07-28 — S1 RBAC aditivo (WP1)
 
 ### Agregado

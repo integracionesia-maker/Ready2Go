@@ -10,3 +10,7 @@ email-validator>=2.2.0
 # validacion de imagen del modulo media (pillow).
 reportlab>=4.2.0
 pillow>=11.0.0
+# zoneinfo no trae la base IANA en Windows: sin tzdata, ZoneInfo("America/Mexico_City")
+# revienta y el calculo de atraso se queda sin zona. En Linux/macOS suele estar en
+# el sistema, pero se declara para que un entorno limpio no dependa de la suerte.
+tzdata>=2024.1

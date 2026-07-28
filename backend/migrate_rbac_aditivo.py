@@ -18,7 +18,10 @@ asi que los endpoints de Presupuestos funcionan sin ellas.
 """
 
 from app.database import Base, SessionLocal, engine
-from app import crud_rbac, rbac_catalog  # noqa: F401  (importa el catalogo)
+
+# `app.models` se importa aunque no se use directo: `user_role_grants` tiene FK a
+# `users`, y sin ese import la tabla no esta en `Base.metadata`.
+from app import crud_rbac, models, rbac_catalog  # noqa: F401
 from app.models_rbac import Role, RolePermission, UserRoleGrant
 
 TABLAS = [Role.__table__, RolePermission.__table__, UserRoleGrant.__table__]
@@ -35,6 +38,20 @@ def crear_tablas() -> None:
             print(f"  + tabla {tabla} creada")
         else:
             print(f"  = tabla {tabla} ya existia")
+
+
+def exigir_esquema_base() -> None:
+    """`users` tiene que existir antes: `user_role_grants` la referencia.
+
+    SQLite **crea igual** una tabla con FK a una tabla inexistente. El error no
+    aparece en la migracion sino mucho despues, en el primer INSERT, con un
+    "no such table: users" que no dice que falto correr el paso anterior.
+    """
+    if "users" not in _tablas_existentes():
+        raise SystemExit(
+            "Falta la tabla 'users'. Esta migracion es aditiva sobre el esquema\n"
+            "existente, no lo crea. Corre primero: python seed_auth.py"
+        )
 
 
 def _tablas_existentes() -> list[str]:
@@ -63,6 +80,9 @@ def sembrar() -> None:
 
 
 def main() -> None:
+    print("=== Precondiciones ===")
+    exigir_esquema_base()
+    print("  = tabla users presente")
     print("=== Tablas ===")
     crear_tablas()
     print("=== Catalogo ===")
