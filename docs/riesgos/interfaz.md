@@ -105,6 +105,66 @@ Queda como riesgo porque cualquiera que siga la instruccion de clonar con la URL
 `git@github.com:...` de la asignacion se estrella de entrada, sin pista de que la
 causa es la llave y no el repo.
 
+## R-I09 — `request()` de `src/api/client.js` descarta `status` y `codigo`
+
+Verificado en disco, `frontend/src/api/client.js:62-74`:
+
+```js
+export async function request(path, options = {}) {
+  const res = await fetchWithAuthRetry(path, {...});
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Error ${res.status}: ${res.statusText}`);
+  }
+  return res.json();
+}
+```
+
+Solo sobrevive el texto de `detail`. El contrato de Equipos
+(`docs/contratos/API_EQUIPOS_v1.md` §0) define un sobre de error con
+`codigo` estable (`SIN_PERMISO`, `PERMISOS_NO_DISPONIBLES`, `EQUIPO_OCUPADO`,
+`TRANSICION_INVALIDA`, `MEDIA_INVALIDA`, `MEDIA_MUY_GRANDE`,
+`NO_ENCONTRADO`) precisamente para que el cliente **no** tenga que adivinar
+por el texto del mensaje. Con `request()` tal como esta hoy, pintar los
+cinco codigos feos (regla dura del pool: `503` nunca desloguea,
+`409 EQUIPO_OCUPADO` vs `409 TRANSICION_INVALIDA` son UI distintas) exigiria
+parsear `error.message` con texto libre — fragil y se rompe si el backend
+cambia la redaccion de `detail` sin tocar `codigo`.
+
+Se arregla en **I3 commit 1** con una `ApiError` que conserve `status` y
+`codigo` ademas del mensaje. Se reporta aqui como riesgo, no como pedido:
+es archivo mio (`src/api/`), lo resuelvo yo cuando le toque.
+
+## R-I10 — `fixtures/equipos.json` trae 3 campos fuera del contrato congelado
+
+Verificado en disco: `docs/contratos/fixtures/equipos.json` incluye
+`estado_fisico`, `comentario_auditoria` y `fecha_auditoria` en cada equipo.
+Ninguno de los tres aparece en la forma de fila que documenta
+`docs/contratos/API_EQUIPOS_v1.md` §2 (`id`, `codigo`, `nombre`, `categoria`,
+`marca`, `modelo`, `numero_serie`, `activo_fijo`, `cuenta_gmail`,
+`espacio_disponible`, `estado_operativo`, `condicion`, `accesorios_tipicos`,
+`disponible`, `tenedor_actual`, `fecha_regreso_esperada`, `atrasado`,
+`dias_atraso`).
+
+`docs/contratos/` es de solo lectura para mi — no me toca decidir cual de
+los dos manda. Mientras no haya respuesta de quien congelo el contrato o del
+carril de servidor: en I3/I4 estos tres campos se pintan **solo si vienen**
+en la respuesta real, nunca se asumen ni se inventan en el mock.
+
+## R-I11 — La razon social emisora de la responsiva sigue "pendiente de confirmar"
+
+Verificado en disco: `docs/contratos/fixtures/empresas.json`, tercer
+registro (`SERVICIOS CORPORATIVOS QUANTUM DE OCCIDENTE, S.C.`) trae
+`"_nota":"emisora de la carta responsiva — PENDIENTE que marketing confirme
+que es la correcta"`.
+
+No bloquea la UI de Equipos: la lista de empresas sale de
+`GET /api/empresas/` en tiempo real (§6 del contrato), nunca hardcodeada, asi
+que cual sea la razon social final no exige tocar codigo del cliente. Si
+bloquea el PDF final de la carta responsiva (WP5, no es mio) si se genera
+antes de que marketing confirme cual empresa es la correcta. De marketing/
+Jose, no de mi carril — se menciona una vez aqui y se sigue.
+
 ## R-I12 — `index.html` tenia clases de Tailwind muertas pisando los tokens de tema en `<body>` (RESUELTO en I1 commit 5)
 
 Encontrado escribiendo el verificador de contraste de `pantallas.spec.js`: el

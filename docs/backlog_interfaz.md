@@ -82,6 +82,11 @@
 - [ ] **B-I06 — Semilla de demo usable para capturas.** Hoy hay que aprobar los
       355 tickets por la API despues de sembrar (R-I04). Deberia existir un paso
       documentado, o pedir que el seed del backend deje datos que si pinten.
+      Sigue sin existir el helper generico `e2e/helpers/sembrar-demo.mjs`
+      pedido en la asignacion — lo que hay hoy es un bootstrap ad-hoc *dentro*
+      de `e2e/pantallas.spec.js` (crea 1 creador + 1 marca + 1 ticket via API
+      real, el ticket de superadmin se auto-aprueba) que sirve de precedente
+      pero no es reusable por otros specs todavia.
 - [ ] **B-I07 — Promover `useMobile` a un lugar compartido** cuando el modulo de
       equipos lo necesite. Quedo dentro de `modules/presupuestos/hooks/` por I0;
       es infra generica, no del modulo. Al moverlo, corregir tambien la ruta que
@@ -100,3 +105,12 @@
       No bloqueo I1 (R-I06): cerro con la pila de respaldo autohospedada
       (`210e735`) y el nombre de marca primero en `src/design/fonts.css`.
       Cuando lleguen los woff2, es cambiar ese unico archivo.
+- [ ] **B-I11 — Preguntar cual manda**: `fixtures/equipos.json` trae
+      `estado_fisico`, `comentario_auditoria` y `fecha_auditoria`, ausentes en
+      `API_EQUIPOS_v1.md` §2. Ver R-I10. Mientras no haya respuesta, en I3/I4
+      esos tres campos se pintan solo si vienen, nunca se asumen.
+- [ ] **B-I12 — Seguir la confirmacion de marketing** sobre la razon social
+      emisora de la responsiva (`fixtures/empresas.json` trae
+      "Quantum de Occidente" marcada `PENDIENTE`). Ver R-I11. No bloquea mi
+      carril; bloquea el PDF final (WP5, no es mio). Mencionar una vez por
+      reporte mientras siga abierto.
