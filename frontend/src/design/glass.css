@@ -1,0 +1,34 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Grupo Ortiz — Cristal (liquid glass)
+   Receta única — DESIGN_SYSTEM.md. No improvisar variantes.
+   Prohibido aplicar .glass / .glass--refract en filas de tabla, listas
+   largas o contenedores con scroll (regla dura, cuesta GPU/compositing).
+   Máximo 3-4 superficies de cristal simultáneas en pantalla.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--glass-highlight), var(--glass-rim), var(--glass-shadow);
+  border-radius: var(--glass-radius);
+}
+
+/* Refracción real (borde que dobla la luz): filtro SVG feImage +
+   feDisplacementMap + feSpecularLighting, montado una sola vez por
+   <GlassFilterDefs id="go-glass-refract"> en el shell (nav + hero).
+   SVG como backdrop-filter SOLO funciona en Chromium — Safari y Firefox
+   ignoran silenciosamente backdrop-filter: url(#id), así que va siempre
+   detrás de @supports y nunca reemplaza a .glass fuera del shell. */
+@supports (backdrop-filter: url(#go-glass-refract)) {
+  .glass--refract {
+    backdrop-filter: url(#go-glass-refract) blur(20px) saturate(180%);
+  }
+}
+
+/* Velo sólido detrás de todo texto sobre cristal. Alpha 1 siempre: si sale
+   translúcido, la regla de contraste medido (4.5:1) queda violada. */
+.veil {
+  background: var(--veil-bg);
+  border-radius: inherit;
+}
