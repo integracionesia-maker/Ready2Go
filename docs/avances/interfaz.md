@@ -89,10 +89,13 @@ Bloqueos resueltos, con su causa, para que no se vuelvan a descubrir a golpes:
 - **`auth.spec.js` no es idempotente**: rota la contraseña del superadmin en su
   test 2. Necesita DB recien sembrada con `seed_auth.py`.
 
-### Bloqueo abierto
+### Cierre de sesion
 
-**Push sin probar.** La llave SSH `id_ed25519`
-(`SHA256:eMeepbSTJV6UM4k8g0ThUk4wv4toJh195ZPuCLKfLMQ`) no esta autorizada en la
-org: `git@github.com: Permission denied (publickey)`. El clon se hizo por HTTPS.
-Si el push sale rechazado, se para y se reporta — sin `pull` pelado, sin `reset`,
-sin force.
+Push a `BeniBranch` limpio: `281f10b..012ef13`, fast-forward, 0 commits detras
+del remoto. Tres commits: `1568ff6` (arreglo del spec), `d602e00` (I0),
+`012ef13` (estos reportes).
+
+La llave SSH `id_ed25519` sigue sin autorizar en la org, asi que el clon y el
+push van por HTTPS con Git Credential Manager. Ya no bloquea, pero el comando de
+clonado que da la asignacion (`git@github.com:...`) falla de entrada para quien
+lo copie tal cual. Ver R-I08.

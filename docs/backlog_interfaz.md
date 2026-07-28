@@ -65,7 +65,9 @@
 - [ ] **B-I08 — Corregir `CLAUDE.md:39`**: dice que `general_expenses` va sin
       `brand_id` y `models.py` dice `nullable=False`. Ver R-I02. Esa
       contradiccion ya costo un e2e rojo.
-- [ ] **B-I09 — Autorizar la llave SSH** o confirmar que el push por HTTPS
-      funciona. Ver R-I08.
+- [ ] **B-I09 — Autorizar la llave SSH.** Ya no bloquea: el push por HTTPS
+      funciona y quedo verificado el 28/07. Queda pendiente porque el comando de
+      clonado de la asignacion usa `git@github.com:...` y falla de entrada.
+      Ver R-I08.
 - [ ] **B-I10 — Los woff2 de Blauer Nue y Conthic** desde `context_desing_go`.
       Bloquea el cierre visual de I1 (R-I06).

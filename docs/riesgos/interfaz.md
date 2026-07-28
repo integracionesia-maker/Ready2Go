@@ -91,9 +91,16 @@ Riesgo real de que alguien vuelva a clonar el repo ahi y pierda medio dia
 peleando con el gestor de paquetes en vez de con el codigo. Se trabaja en
 `C:\dev\Ready2Go`.
 
-## R-I08 — Push sin verificar
+## R-I08 — SSH sin autorizar (mitigado, no resuelto)
 
 La llave SSH `id_ed25519` no esta autorizada en la org
-(`SHA256:eMeepbSTJV6UM4k8g0ThUk4wv4toJh195ZPuCLKfLMQ`). El clon va por HTTPS con
-Git Credential Manager. Hasta que un push cierre bien, el trabajo local no cuenta
-como entregado.
+(`SHA256:eMeepbSTJV6UM4k8g0ThUk4wv4toJh195ZPuCLKfLMQ`):
+`git@github.com: Permission denied (publickey)`.
+
+Mitigado: el clon y el push van por HTTPS con Git Credential Manager, y el push
+de cierre del 28/07 entro limpio (`281f10b..012ef13`, fast-forward). El trabajo
+llega igual.
+
+Queda como riesgo porque cualquiera que siga la instruccion de clonar con la URL
+`git@github.com:...` de la asignacion se estrella de entrada, sin pista de que la
+causa es la llave y no el repo.
