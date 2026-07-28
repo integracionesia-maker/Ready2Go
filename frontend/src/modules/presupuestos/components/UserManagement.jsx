@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { createUser, fetchUsers, resetUserPassword, setUserActive, updateUser } from "../api";
-import { useAuth } from "../context/AuthContext";
+import { createUser, fetchUsers, resetUserPassword, setUserActive, updateUser } from "@/api";
+import { useAuth } from "@/context/AuthContext";
 import Modal from "./Modal";
 import RowActions from "./RowActions";
 import { SortableHeaderCell } from "./SortableHeader";

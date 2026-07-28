@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { createGeneralExpense } from "../api";
+import { createGeneralExpense } from "@/api";
 
 const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".pdf"];
 const ALLOWED_MIME = [

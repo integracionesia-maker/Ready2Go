@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { changePassword, fetchCreators, updateMe } from "../api";
+import { useAuth } from "@/context/AuthContext";
+import { changePassword, fetchCreators, updateMe } from "@/api";
 
 const ROLE_LABELS = {
   superadmin: "Superadministrador",

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { createCreator, updateCreator, createBrand, updateBrand, fetchCreatorCycles } from "../api";
-import { useAuth } from "../context/AuthContext";
+import { createCreator, updateCreator, createBrand, updateBrand, fetchCreatorCycles } from "@/api";
+import { useAuth } from "@/context/AuthContext";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import Modal from "./Modal";
 import UserManagement from "./UserManagement";

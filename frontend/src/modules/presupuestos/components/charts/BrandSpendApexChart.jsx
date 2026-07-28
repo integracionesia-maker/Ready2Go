@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import Chart from "react-apexcharts";
 import { createApexOptions, formatChartCurrency, GO_CHART_COLORS } from "./apexTheme";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useMobile } from "../../hooks/useMobile";
 
 export default function BrandSpendApexChart({ data, forceTheme }) {

@@ -1,8 +1,8 @@
-import { useTheme } from "../context/ThemeContext";
-import imagotipoBlanco from "../assets/logos/imagotipo-go-blanco.png";
-import imagotipoNaranja from "../assets/logos/imagotipo-go-naranja.png";
-import isotipoBlanco from "../assets/logos/isotipo-go-blanco.png";
-import isotipoNaranja from "../assets/logos/isotipo-go-naranja.png";
+import { useTheme } from "@/context/ThemeContext";
+import imagotipoBlanco from "@/assets/logos/imagotipo-go-blanco.png";
+import imagotipoNaranja from "@/assets/logos/imagotipo-go-naranja.png";
+import isotipoBlanco from "@/assets/logos/isotipo-go-blanco.png";
+import isotipoNaranja from "@/assets/logos/isotipo-go-naranja.png";
 
 const SOURCES = {
   imagotipo: { dark: imagotipoBlanco, light: imagotipoNaranja },

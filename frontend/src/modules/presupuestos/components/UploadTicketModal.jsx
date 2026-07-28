@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { uploadTicket } from "../api";
-import { useAuth } from "../context/AuthContext";
+import { uploadTicket } from "@/api";
+import { useAuth } from "@/context/AuthContext";
 
 const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".pdf"];
 const ALLOWED_MIME = [

@@ -5,7 +5,7 @@ import SpendTrendChart from "../charts/SpendTrendChart";
 import GeneralExpensesChart from "../charts/GeneralExpensesChart";
 import KpiCard from "../KpiCard";
 import { PRIORITY_LABELS, sortByPriority } from "../../utils/priority";
-import isotipoNaranja from "../../assets/logos/isotipo-go-naranja.png";
+import isotipoNaranja from "@/assets/logos/isotipo-go-naranja.png";
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("es-MX", {

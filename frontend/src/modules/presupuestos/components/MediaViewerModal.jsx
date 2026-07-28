@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ticketFileUrl } from "../api";
+import { ticketFileUrl } from "@/api";
 
 const ZOOM_STEPS = [1, 1.5, 2, 2.5];
 

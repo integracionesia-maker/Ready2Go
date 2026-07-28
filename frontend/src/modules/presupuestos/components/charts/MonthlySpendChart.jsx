@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import Chart from "react-apexcharts";
 import { createApexOptions, formatChartCurrency, GO_CHART_COLORS } from "./apexTheme";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useMobile } from "../../hooks/useMobile";
 
 const MONTHS_ES = [
@@ -15,7 +15,7 @@ function monthLabel(ym) {
   return `${MONTHS_ES[parseInt(m, 10) - 1]} ${y}`;
 }
 
-export default function GeneralExpensesChart({ data, forceTheme }) {
+export default function MonthlySpendChart({ data, forceTheme }) {
   const { theme: ctxTheme } = useTheme();
   const theme = forceTheme || ctxTheme;
   const isMobile = useMobile();
@@ -47,17 +47,9 @@ export default function GeneralExpensesChart({ data, forceTheme }) {
         style: { fontSize: "10px", colors: ["var(--go-text-secondary)"] },
       },
       tooltip: {
-        y: {
-          formatter: (v, opts) => {
-            const amount = `$${v.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
-            const count = (data || [])[opts?.dataPointIndex]?.count;
-            if (count === undefined || count === null) return amount;
-            const label = count === 1 ? "1 gasto" : `${count} gastos`;
-            return `${amount} · ${label}`;
-          },
-        },
+        y: { formatter: (v) => `$${v.toLocaleString("es-MX", { minimumFractionDigits: 2 })}` },
       },
-      colors: [GO_CHART_COLORS[0]], // go-orange
+      colors: [GO_CHART_COLORS[1]], // turquoise
     }, theme);
   }, [data, theme]);
 
@@ -73,7 +65,7 @@ export default function GeneralExpensesChart({ data, forceTheme }) {
   if (!data || data.length === 0) {
     return (
       <p className="py-10 text-center font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
-        Sin gastos generales en este periodo.
+        Sin transacciones en este período.
       </p>
     );
   }

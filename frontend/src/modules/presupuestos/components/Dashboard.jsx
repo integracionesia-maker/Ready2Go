@@ -8,14 +8,14 @@ import SpendTrendChart from "./charts/SpendTrendChart";
 import GeneralExpensesChart from "./charts/GeneralExpensesChart";
 import DashboardPdfTemplate from "./PdfReport/DashboardPdfTemplate";
 import { generateDashboardPdf } from "./PdfReport/generateDashboardPdf";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import {
   fetchDashboardSummary,
   fetchMonthlySpend,
   fetchCreatorUsage,
   fetchBrandSpendBreakdown,
   fetchGeneralExpensesMonthly,
-} from "../api";
+} from "@/api";
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("es-MX", {

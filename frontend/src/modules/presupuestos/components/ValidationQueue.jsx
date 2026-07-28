@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { approveTicket, fetchTickets, hardDeleteTicket, rejectTicket, softDeleteTicket } from "../api";
+import { approveTicket, fetchTickets, hardDeleteTicket, rejectTicket, softDeleteTicket } from "@/api";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import MediaViewerModal from "./MediaViewerModal";

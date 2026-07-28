@@ -1,4 +1,4 @@
-import isotipoNaranja from "../../assets/logos/isotipo-go-naranja.png";
+import isotipoNaranja from "@/assets/logos/isotipo-go-naranja.png";
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("es-MX", {

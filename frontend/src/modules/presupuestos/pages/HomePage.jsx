@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { fetchTickets } from "../api";
+import { useAuth } from "@/context/AuthContext";
+import { fetchTickets } from "@/api";
 
 const ADMIN_SECTIONS = [
   {
