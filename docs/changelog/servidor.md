@@ -4,6 +4,45 @@ Que agregue, cambie, quite. Orden inverso: lo nuevo arriba.
 
 ---
 
+## 2026-07-28 — S4 API de prestamos, aprobacion y media (WP4)
+
+### Agregado
+
+- `backend/app/loan_state.py` — maquina de estados pura: tabla de transiciones,
+  guarda de `entrega_autorizada` contra el estado destino, y las dos unicas
+  acciones que escriben `devuelto_at`.
+- `backend/app/media_manager.py` — magic bytes (PNG 8 bytes, JPEG SOI de 3),
+  limites por kind, sha256 de los bytes originales, miniatura de 96px al vuelo,
+  reemplazo con borrado del archivo anterior, freno a la bomba de descompresion.
+- `backend/app/schemas_loans.py` — `LoanDetail` (espejo del fixture), `LoanRow`,
+  cuerpos de entrada.
+- `backend/app/crud_loans.py` — serializacion, listado con scoping, las seis
+  transiciones, versionado de responsiva, filas del CSV.
+- `backend/app/routers/loans.py` — `POST /`, `GET /`, `GET /export`,
+  `GET /by-folio/{folio}`, `GET /{id}`, `POST /{id}/items`,
+  `DELETE /{id}/items/{item_id}`, `POST /{id}/media`, `POST /{id}/confirmar`,
+  `POST /{id}/cancelar`, `POST /{id}/devolucion`.
+- `backend/app/routers/approvals.py` — `/autorizar-entrega`,
+  `/confirmar-devolucion`, `/cerrar-incidencia`.
+- `backend/app/routers/media.py` — `GET /api/media/{id}` con `?tamano=thumb`.
+- `backend/tests/equipos/test_loan_state.py`, `test_api_prestamos.py`,
+  `test_media.py`, `test_aprobacion.py` — 148 pruebas.
+
+### Cambiado
+
+- `backend/app/main.py` — include_router de `loans`, `approvals` y `media`.
+- `backend/tests/equipos/conftest.py` — fixture autouse que manda media y
+  responsivas a un temporal, y helpers `png_bytes`, `jpeg_bytes`, `subir`.
+
+### No hecho a proposito
+
+- `PUT /api/loans/{id}`, `?version=` en la responsiva, endpoint de regeneracion
+  y endpoint de borrado de prestamo: ninguno esta en el contrato v1.
+- Validacion de participacion en las escrituras: el contrato no la pide. Ver
+  R-SRV-11 (critico) en `docs/riesgos/servidor.md`.
+
+---
+
 ## 2026-07-28 — S3 API de inventario (WP3)
 
 ### Agregado

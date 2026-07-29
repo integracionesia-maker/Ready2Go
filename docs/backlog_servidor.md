@@ -12,7 +12,7 @@ Mis pendientes. No es el backlog del proyecto.
 | S1 | RBAC aditivo (WP1) | hecho 2026-07-28 |
 | S2 | Modelo de datos equipos (WP2) | hecho 2026-07-28 |
 | S3 | API inventario (WP3) | hecho 2026-07-28 |
-| S4 | API prestamos, aprobacion, media (WP4) | pendiente |
+| S4 | API prestamos, aprobacion, media (WP4) | hecho 2026-07-28 |
 | S5 | Carta responsiva PDF (WP5) | pendiente |
 | S6 | Correo y recordatorios (WP6) | pendiente |
 | S7 | Guardias de contrato | pendiente |
@@ -60,6 +60,28 @@ Mis pendientes. No es el backlog del proyecto.
 - **Datos que faltan del inventario:** `fotos_originales_url` (carpeta de Drive
   de la auditoria del 10/06) quedo en NULL para los 8 equipos — no venia en el
   fixture. Tampoco hay camaras, luces ni tripies (§14.2 del plan).
+- **CRITICO — cerrar la escritura en prestamos ajenos.** Ver R-SRV-11. El
+  contrato pide solo `equipos_prestamos:solicitar` para agregar equipos, subir
+  firmas y confirmar: cualquiera del area puede hacerlo sobre el prestamo de
+  otro. Necesita decision de contrato antes de tocarlo.
+- **`equipos_prestamos:cancelar` no lo concede ningun paquete** del catalogo
+  congelado; solo el comodin de `superadmin`. Como un borrador con renglones ya
+  reserva sus equipos, un borrador abandonado solo lo puede liberar el
+  superadmin. Arreglo natural: sumar `cancelar` a `colaborador_mkt` y/o `admin`
+  en `permisos_catalogo.json`, que es contrato.
+- **Falta `PUT /api/loans/{id}`.** Sin el, un borrador no se puede editar despues
+  de creado: el wizard tiene que mandar los datos del paso 1 en el POST inicial.
+  Confirmar si el cliente lo necesita.
+- **Confirmar la forma de la fila del listado de prestamos y las columnas del
+  CSV.** Ninguna de las dos esta en el contrato. Propuestas en
+  `schemas_loans.LoanRow` y `crud_loans.COLUMNAS_CSV`.
+- **Corregir dos ejemplos del contrato que contradicen los fixtures:** §3 dice
+  `equipment_id: 3` en el prestamo demo y §2 dice `id: 3` para el iPhone gris
+  (Jeziel); los fixtures dicen `1` en los dos casos. Implemente segun los
+  fixtures, que son el criterio de aceptacion. Va en el mismo v2.
+- **Los tres endpoints del §4 llevan segmentos en español** (`/autorizar-entrega`
+  y compañia) aunque el §0 diga "rutas en ingles, sin excepcion". Copie las
+  cadenas literales del §4. Asentarlo en `CHANGELOG_CONTRATO.md`.
 
 ## Dependencias externas que me bloquean (no las resuelvo yo)
 

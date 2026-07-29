@@ -4,6 +4,143 @@ Una entrada por dia de trabajo. Que hice, evidencia, bloqueos.
 
 ---
 
+## 2026-07-28 — S4 API de prestamos, aprobacion y media (WP4)
+
+Hecho:
+
+- `backend/app/loan_state.py` — maquina de estados aislada y pura: no importa
+  base de datos ni FastAPI, se prueba sin levantar la app.
+- `backend/app/media_manager.py` — magic bytes, 3 MB / 250 KB, sha256,
+  miniatura de 96px, reemplazo, `uploads/equipos/`.
+- `backend/app/schemas_loans.py`, `crud_loans.py`.
+- `backend/app/routers/loans.py` — alta, listado, ficha, by-folio, items, media,
+  confirmar, cancelar, devolucion, export CSV.
+- `backend/app/routers/approvals.py` — los tres endpoints del §4.
+- `backend/app/routers/media.py` — `GET /api/media/{id}` con `?tamano=thumb`.
+- `backend/tests/equipos/` — `test_loan_state.py` (47 + 1 skip),
+  `test_api_prestamos.py` (41), `test_media.py` (34), `test_aprobacion.py` (25).
+
+Evidencia:
+
+```
+$ python -m pytest -q
+492 passed, 1 skipped, 1 warning in 503.30s (0:08:23)
+```
+
+169 existentes + 323 nuevas. La saltada es un caso parametrizado de la maquina de
+estados cuyo destino depende de las decisiones y se cubre en pruebas aparte.
+
+Criterios de cierre de S4:
+
+| Criterio | Prueba | Estado |
+|---|---|---|
+| Maquina de estados completa **incluidas las transiciones invalidas** | `test_loan_state.py`: 6 estados x 5 acciones = 30 pares, 5 validos y **25 invalidos**, ninguno sin cubrir | verde |
+| Un usuario no descarga media de un prestamo ajeno (403) | `test_un_extrano_no_descarga_media_de_un_prestamo_ajeno` | verde |
+
+### La lentitud que resulto ser un bug de las pruebas
+
+`test_aprobacion.py` tardo **2 horas 27 minutos** en su primera corrida, con un
+fallo que no se reproducia. Causa: las pruebas escribian los archivos de media en
+`backend/uploads/equipos/`, que vive dentro del repo y por lo tanto dentro de la
+carpeta sincronizada con Drive. Cada archivo disparaba una sincronizacion; con
+348 archivos acumulados la contencion de disco hacia que alguna peticion
+devolviera error en vez del payload.
+
+Arreglo: fixture autouse que apunta los directorios de media y responsivas a un
+temporal. **48 segundos** y el fallo desaparecio. De paso, la suite ya no deja
+basura en el arbol de trabajo. Vale para cualquiera que agregue pruebas de
+archivos en este repo.
+
+### Decisiones sobre lo que el contrato no define
+
+**P. "Participante" no esta definido en el contrato**, y se usa cuatro veces
+(§3 y §5). Adopte: el id de la sesion aparece en `responsable_user_id`,
+`entregado_por_user_id`, `created_by_user_id`, `entrega_autorizada_por_user_id` o
+`confirmada_por_user_id`. Es un conjunto que **crece**: quien autoriza entra al
+autorizar. Consecuencia verificada en prueba: la aprobadora **no** es
+participante antes de autorizar, asi que entra por `ver_global` — que su paquete
+aditivo si le da. Sin eso no podria ver lo que tiene que aprobar.
+
+**Q. 403 vs 404.** Prestamo inexistente o borrado: 404. Prestamo que existe y no
+es suyo: 403. Riesgo aceptado y declarado: el 403 confirma que ese id existe.
+
+**R. `POST /devolucion` NO escribe `devuelto_at`; `cancelar` y
+`confirmar-devolucion` SI.** Es la consecuencia dura de que la disponibilidad se
+derive del renglon abierto. Si `/devolucion` lo escribiera, el equipo se
+ofreceria como disponible antes de que el aprobador lo revise, y uno marcado
+`no_devuelto` (perdido) volveria a ser prestable. Lo que retiene a un equipo con
+incidencia es `estado_operativo='revision'`, no el renglon.
+
+**S. Todo `ok` sin autorizacion de entrega → 409 antes de escribir nada.** §4
+dice "todas ok -> completado" sin condicion; §3 dice que sin autorizacion no se
+llega a `completado`. Manda §3. Las alternativas son peores: guardar las
+decisiones y quedarse en `pendiente_confirmacion` con 200 es un exito falso —el
+cliente pinta "confirmado" y el prestamo no cerro—; degradar a `incompleto`
+dispara "requiere atencion" y el correo de incidencias cuando no hubo ninguna, y
+su unica salida esta bloqueada por la misma guarda. La guarda se evalua contra el
+estado **destino**: con alguna incidencia el destino es `incompleto` y la
+operacion procede sin autorizacion, que es lo que evita el punto muerto.
+
+**T. `autorizar-entrega` se acepta desde `prestado`, `pendiente_confirmacion` e
+`incompleto`.** Que `incompleto` entre es lo menos obvio y lo mas importante: sin
+eso, un prestamo que llego a incompleto sin autorizacion no se podria cerrar
+nunca. Idempotente.
+
+**U. Confirmar exige al menos un equipo.** El contrato no pone minimo, asi que
+"2 fotos por equipo" se cumple de forma vacia con cero equipos: se confirmaria un
+prestamo sin nada, quemando un folio y generando una responsiva en blanco. La
+maqueta si lo exigia ("Selecciona al menos un equipo").
+
+**V. La media solo se sube en el estado que corresponde:** entrega y firmas en
+`borrador`, devolucion en `prestado`. El contrato no lo dice. Se aplica porque no
+hay flujo legitimo que suba una foto de entrega a un prestamo completado, y
+permitirlo deja reescribir la evidencia detras de una responsiva firmada.
+
+**W. Re-subir el mismo `kind` reemplaza** (borra fila y archivo anterior). El
+payload expone un solo id por kind, asi que dos filas no tienen representacion, y
+"Cambiar foto" es flujo normal en la maqueta.
+
+**X. Se cuentan kinds distintos, no filas,** al validar `/confirmar`. Con
+`COUNT(*) = 2` un renglon con dos fotos de frente y cero de atras pasaria: el
+indice de media no es unico y la base lo permite.
+
+**Y. Forma de la fila del listado y columnas del CSV.** El contrato define la
+ficha pero **nunca** la fila del listado (§3), ni columnas, separador o
+codificacion del CSV. Ambas propuestas estan en `schemas_loans.LoanRow` y
+`crud_loans.COLUMNAS_CSV` (18 columnas, BOM para que Excel no destroce acentos).
+Hay que confirmarlas con el cliente.
+
+**Z. Atraso de un prestamo ya cerrado.** Comparar contra hoy diria "atrasado 90
+dias" de algo cerrado hace tres meses. Se compara contra `fecha_regreso_real`; si
+el estado es terminal y no hay fecha real, no hay atraso.
+
+**AA. Codigos nuevos fuera del §0:** `EQUIPO_NO_DISPONIBLE` (409, equipo en
+revision o baja — `EQUIPO_OCUPADO` diria algo falso) y `VALOR_INVALIDO` (422,
+vocabulario o cuerpo mal formado), que ya venia de S3.
+
+### Lo que NO implemente por no improvisar
+
+- **No hay `PUT /api/loans/{id}`.** El contrato no lo tiene. Consecuencia real:
+  un borrador no se puede editar despues de creado — el wizard tiene que mandar
+  los datos del paso 1 en el `POST /api/loans/`. Si el cliente necesita editar,
+  es cambio de contrato. `crud_loans.actualizar` esta escrito y sin exponer,
+  esperando esa decision.
+- **No hay `?version=` en la responsiva** (el plan §5 lo menciona, el contrato
+  no) ni endpoint para regenerarla.
+- **No hay endpoint de borrado de prestamo**, aunque `loan.is_deleted` existe en
+  el modelo y la formula de disponibilidad lo filtra. O sobra la columna o falta
+  el endpoint.
+- **No agregue la validacion de participacion en las escrituras.** El contrato
+  pide solo el permiso `equipos_prestamos:solicitar` para `POST /items`,
+  `POST /media` y `/confirmar`. Tal cual esta escrito, **cualquier
+  `colaborador_mkt` puede agregar equipos, subir firmas y confirmar el borrador
+  de otra persona.** Es la misma clase de agujero que §10.4. No lo cerre por
+  cuenta propia porque endurecer de un solo lado rompe al cliente: ver R-SRV-11.
+
+Bloqueos: ninguno.
+
+---
+
 ## 2026-07-28 — S3 API de inventario (WP3)
 
 Hecho:

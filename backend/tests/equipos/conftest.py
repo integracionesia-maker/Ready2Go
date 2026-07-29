@@ -34,6 +34,28 @@ PASSWORD_MKT = "MarketingClave123!"
 HOY_CONGELADO = date(2026, 7, 28)
 
 
+@pytest.fixture(autouse=True)
+def _uploads_aislados(tmp_path, monkeypatch):
+    """Las pruebas escriben media y PDFs en un temporal, nunca en `uploads/`.
+
+    No es solo higiene. `uploads/` vive dentro del repo, que a su vez esta en una
+    carpeta sincronizada con Drive: cada archivo que una prueba escribia ahi
+    disparaba una sincronizacion. Con 348 archivos acumulados, la suite de
+    aprobacion paso de segundos a **dos horas y media**. Ademas dejaba basura en
+    el arbol de trabajo entre corridas.
+    """
+    import seed_prestamo_demo
+    from app import crud_loans, media_manager
+
+    monkeypatch.setattr(media_manager, "DIRECTORIO", tmp_path / "equipos")
+    monkeypatch.setattr(crud_loans, "DIRECTORIO_RESPONSIVAS", tmp_path / "responsivas")
+    monkeypatch.setattr(seed_prestamo_demo, "DIRECTORIO_MEDIA", tmp_path / "seed_equipos")
+    monkeypatch.setattr(
+        seed_prestamo_demo, "DIRECTORIO_RESPONSIVAS", tmp_path / "seed_responsivas"
+    )
+    yield
+
+
 @pytest.fixture
 def fixture_equipos() -> dict:
     return json.loads((DIR_FIXTURES / "equipos.json").read_text(encoding="utf-8"))
@@ -127,6 +149,38 @@ def agregar_item(db, prestamo: Loan, equipo: Equipment, *, devuelto_at: datetime
     db.commit()
     db.refresh(item)
     return item
+
+
+def png_bytes(ancho: int = 40, alto: int = 30, color=(200, 200, 200)) -> bytes:
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (ancho, alto), color).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def jpeg_bytes(ancho: int = 40, alto: int = 30, color=(180, 180, 180)) -> bytes:
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (ancho, alto), color).save(buffer, format="JPEG")
+    return buffer.getvalue()
+
+
+def subir(cliente, loan_id: int, kind: str, loan_item_id: int | None = None, contenido=None):
+    """POST multipart a /api/loans/{id}/media, como lo hace el wizard."""
+    datos = {"kind": kind}
+    if loan_item_id is not None:
+        datos["loan_item_id"] = str(loan_item_id)
+    return cliente.post(
+        f"/api/loans/{loan_id}/media",
+        data=datos,
+        files={"file": ("foto.png", contenido if contenido is not None else png_bytes(), "image/png")},
+    )
 
 
 def crear_empresa(db, *, razon_social="EMPRESA DE PRUEBA SA DE CV", **extra) -> Empresa:

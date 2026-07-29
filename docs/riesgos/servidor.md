@@ -4,6 +4,59 @@ Lo que descubro que puede fallar. No lo que ya esta mitigado en el plan.
 
 ---
 
+## R-SRV-11 — CRITICO: cualquiera del area puede escribir en el prestamo de otro
+
+**Sev:** critico. **Estado:** abierto. **Decision de contrato, no la tomo yo.**
+
+El contrato §3 y §5 piden **solo el permiso** `equipos_prestamos:solicitar` para
+`POST /api/loans/{id}/items`, `POST /api/loans/{id}/media` y
+`POST /api/loans/{id}/confirmar`. No exigen participacion en el prestamo.
+
+Ese permiso lo tiene **todo** `colaborador_mkt`. Tal cual esta escrito el
+contrato, cualquiera del area de marketing puede, poniendo el id ajeno en la
+ruta: agregar equipos al prestamo de otra persona, **subir la firma de otro**, y
+**confirmar** el prestamo generando una carta responsiva a su nombre.
+
+Es la misma clase de agujero que el hallazgo §10.4 del plan (CRITICO: "firma sin
+auth; cualquiera elige Melisa en un `<select>` y aprueba"), pero por la puerta de
+escritura en vez de la de aprobacion. La lectura si esta protegida —el contrato
+si exige "participante o ver_global" en los GET— asi que el hueco es asimetrico y
+por eso pasa desapercibido leyendo la tabla.
+
+**No lo cerre por mi cuenta**, aunque el arreglo es de tres lineas: endurecer un
+solo lado es el modo tipico de falla de este reparto (un 403 que el cliente no
+espera). Propuesta concreta para v1.1: exigir en esas tres rutas participante
+(creador o responsable) **o** `equipos_prestamos:ver_global`.
+
+Ojo con el efecto colateral antes de aprobarlo: `POST /media` es tambien la ruta
+por la que se suben las fotos de devolucion, y quien recibe fisicamente el equipo
+no siempre es el responsable. Si se exige participacion, esa persona necesita
+`ver_global` o quedarse fuera.
+
+---
+
+## R-SRV-12 — Las pruebas escribian dentro de la carpeta sincronizada con Drive
+
+**Sev:** medio. **Estado:** cerrado, pero vale para todo el repo.
+
+`backend/uploads/` vive dentro del repo, y el repo vive dentro de una carpeta
+sincronizada con Drive. Las pruebas de media escribian ahi: cada archivo
+disparaba una sincronizacion.
+
+Sintoma: `test_aprobacion.py` tardo **2 h 27 min** en su primera corrida (contra
+48 s ahora) y una prueba fallo con un error que no se reproducia — una peticion
+devolvio error en vez de payload por contencion de disco.
+
+Mitigado con una fixture autouse que apunta los directorios de media y de
+responsivas a un temporal (`backend/tests/equipos/conftest.py`).
+
+Lo que queda abierto para el proyecto: **cualquier prueba nueva que escriba
+archivos tiene que usar `tmp_path`**. Y en produccion conviene que `uploads/`
+NO quede dentro de una carpeta sincronizada — el Mac mini del deploy no deberia
+tener Drive sincronizando los comprobantes ni las fotos de los prestamos.
+
+---
+
 ## R-SRV-10 — Un equipo dado de baja desaparece de la interfaz por completo
 
 **Sev:** medio. **Estado:** abierto, implementado segun el plan.
