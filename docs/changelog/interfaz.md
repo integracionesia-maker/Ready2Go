@@ -1,5 +1,39 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I4c — Wizard de nuevo préstamo — modo 09-ejecutar-todo)
+
+### Agregado
+
+- `frontend/src/modules/equipos/components/SignaturePad.jsx` — firma en
+  canvas (Pointer Events, `devicePixelRatio`, deshacer, detección de
+  vacío real, `ref.getBlob()`/`ref.isEmpty()`).
+- `frontend/src/modules/equipos/components/PhotoCapture.jsx` — foto con
+  compresión cliente (900px/0.72), preview, reintento por foto.
+- `frontend/src/modules/equipos/components/AccesoriosPicker.jsx` —
+  accesorios típicos + libres + `cargador_con` condicional.
+
+### Cambiado
+
+- `frontend/src/modules/equipos/pages/NuevoPrestamoPage.jsx` — de
+  placeholder (I4a) al wizard real de 4 pasos.
+- `frontend/src/modules/equipos/api/mock/media.js` — `uploadMedia()`
+  ahora adjunta el media al ítem/firma en la misma llamada (antes solo lo
+  guardaba); preserva el `checkInjection("SESION_EXPIRADA")` que vivía en
+  la función huérfana que se quitó.
+- `frontend/src/modules/equipos/api/mock/state.js` — `clone()` ahora se
+  exporta (antes era un helper interno solo para el seed inicial).
+- `frontend/src/modules/equipos/api/mock/loans.js` — cada función
+  exportada clona el préstamo/ítem justo antes de devolverlo (nunca
+  dentro del helper interno `findLoan`, que sigue devolviendo la
+  referencia viva a propósito para que el resto de esas mismas funciones
+  la muten).
+
+### Quitado
+
+- `frontend/src/modules/equipos/api/mock/loans.js` — `addLoanMedia()`:
+  código muerto de I3 (ningún dispatcher lo exponía), superado por el fix
+  de `uploadMedia()`.
+
 ## 2026-07-29 (I4b — Inventario de Equipos — modo 09-ejecutar-todo)
 
 ### Agregado

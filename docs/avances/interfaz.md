@@ -505,7 +505,156 @@ mismo mecanismo).
 `RowActions.jsx` se agregó como continuación de R-I03 (mismo commit que lo
 originó, `d602e00`), no como un riesgo nuevo.
 
-#### Commits I4c..I4g — pendientes, ver entradas mas abajo en esta misma sesion conforme se cierren.
+#### Commit I4c — Nuevo préstamo: wizard de 4 pasos (cerrado)
+
+El sub-paquete más delicado del paquete, tal como lo marcaba
+`06-I4-modulo-equipos.md`. 4 pasos — **Datos → Equipos → Fotos → Firmas**
+— sobre `/equipos/nuevo`, contra el mock de I3 (`VITE_EQUIPOS_MOCK=1`).
+
+**Componentes nuevos** (`src/modules/equipos/components/`):
+`SignaturePad.jsx` (canvas + Pointer Events, escalado por
+`devicePixelRatio`, deshacer por trazo completo, detección de vacío real
+por diagonal del bounding box de los trazos — un tap no pasa como firma;
+API imperativa `ref.getBlob()`/`ref.isEmpty()`, nunca base64 en el estado,
+exporta PNG y rechaza si pasa de 250 KB); `PhotoCapture.jsx`
+(`capture="environment"`, compresión en cliente a 900px/calidad 0.72 vía
+canvas, preview con `URL.createObjectURL`, reintento por foto sin
+re-pedir el archivo, rechaza si sigue pasando de 3 MB tras comprimir);
+`AccesoriosPicker.jsx` (checkboxes de `accesorios_tipicos` + libre +
+`cargador_con` obligatorio solo si el equipo declara "cargador").
+
+**Responsable no es un campo libre**: el contrato exige `user_id` real
+(`fixtures/prestamo_demo.json` lo confirma: `{user_id, nombre, email}`) y
+no hay ningún endpoint de búsqueda de usuarios en el contrato de Equipos
+— se auto-llena con la sesión actual (`useAuth().user`), de solo lectura
+en el paso 1. Improvisar un buscador de usuarios habría sido inventar un
+endpoint que no existe.
+
+**Decisión de diseño reportada, no adivinada**: el contrato solo tiene
+`POST /loans/{id}/items` para dar de alta un equipo — no existe un
+endpoint para *editar* accesorios después. El prompt describe "paso 2:
+equipos" y "paso 3: accesorios" como si fueran llamadas separadas, pero
+eso exigiría un endpoint de actualización que el contrato no tiene. Se
+resolvió combinando la selección del equipo y sus accesorios en una sola
+interacción del paso 2 (se abre un panel de accesorios inline al elegir
+un equipo; "Confirmar" dispara un único `POST /items` con todo junto) —
+el paso 3 queda exclusivamente para fotos, que sí dependen de que el ítem
+ya exista (`loan_item_id`). Mismo comportamiento observable que pedía el
+prompt (409 `EQUIPO_OCUPADO` se maneja ahí, no se pierde la selección
+previa), sin inventar un PUT que no está en `API_EQUIPOS_v1.md`.
+
+**Recuperación de borrador**: `GET /loans/?estado=borrador&mios=1` al
+entrar a `/equipos/nuevo`; si hay uno, se ofrece continuar (salta al paso
+correcto según qué le falta) o descartar (`cancelLoan` + empezar limpio).
+El mock ignora `mios` (I3 ya lo dejó anotado como decisión de I4) — en
+desarrollo solo hay un borrador a la vez, así que no hay ambigüedad
+práctica; documentado como limitación conocida, no oculta.
+
+**401 a mitad del wizard**: se prueba con el conmutador de I3
+(`SESION_EXPIRADA`). Un helper (`conManejoDeSesion`) envuelve cada llamada
+que muta: si `e.status === 401`, llama `useAuth().logout()` (mismo camino
+que un 401 real de `fetchWithAuthRetry`) y deja que `ProtectedRoute`
+mande a `/login` — el borrador y las fotos ya subidas siguen en el
+servidor (mock o real), se recuperan al volver a entrar.
+
+**Tres bugs reales encontrados y arreglados, los tres por la misma causa
+raíz**: el mock (I3) devuelve **referencias vivas** a su estado interno en
+vez de copias — ningún backend real hace esto (cada respuesta HTTP es una
+deserialización fresca), pero nadie lo había notado porque I4a/I4b nunca
+mutaban un objeto y luego lo re-leían en el mismo flujo.
+
+1. `mock/media.js`: `uploadMedia()` guardaba el archivo pero **nunca
+   adjuntaba el `mediaId` al ítem/firma del préstamo** — esa mitad del
+   contrato vivía huérfana en una función `addLoanMedia` de `mock/loans.js`
+   que ningún dispatcher exponía (verificado con grep: cero referencias en
+   todo el repo). Contra el mock, ningún préstamo podía llegar nunca a
+   `confirmar` — `confirmLoan` exige fotos y firmas que jamás quedaban
+   registradas. Arreglado adjuntando inline dentro de `uploadMedia`
+   (mismo contrato atómico que `real/media.js`: un solo POST multipart
+   sube Y adjunta), y se borró `addLoanMedia` por muerto. De paso se
+   preservó ahí el `checkInjection("SESION_EXPIRADA")` que antes vivía en
+   la función huérfana.
+2. Mi propio código: tras un `addLoanItem` exitoso, yo hacía
+   `setLoan(prev => ({...prev, items: [...prev.items, item]}))` — pero el
+   mock YA había empujado ese mismo `item` al array que `prev.items`
+   referenciaba (la misma referencia viva), así que mi `[...prev.items,
+   item]` lo duplicaba. Verificado en pantalla real: un solo "+ Agregar"
+   dejaba DOS renglones idénticos en "En este préstamo" (React además
+   avisaba con "two children with the same key"). Arreglado: en vez de
+   reconstruir el array a mano, el wizard ahora refresca con
+   `fetchLoanById(loan.id)` después de cada mutación (agregar/quitar
+   ítem, subir foto) — más robusto también contra un backend real, donde
+   la fuente de verdad siempre es el servidor.
+3. Con el fix anterior aplicado, apareció un tercer síntoma de la MISMA
+   causa: el botón "Siguiente" del paso 3 nunca se habilitaba aunque las
+   dos fotos ya se hubieran subido (confirmado con `PhotoCapture`
+   mostrando "Reemplazar foto" en ambas, o sea que sí subieron). Causa:
+   `fetchLoanById` devolvía la MISMA referencia de objeto en cada llamada
+   (mutada en el sitio), así que el segundo `setLoan(fresh)` recibía un
+   valor **idéntico por referencia** al estado actual — React usa
+   `Object.is` para decidir si re-renderiza y, al ser la misma identidad,
+   se lo saltaba en silencio. La UI de `PhotoCapture` (estado local,
+   genuinamente nuevo en cada `setState`) sí se actualizaba; la del
+   wizard padre, no. **Arreglo de raíz, no un parche por función**: se
+   exportó `clone()` de `state.js` y se aplicó en la frontera pública de
+   **cada** función exportada de `mock/loans.js` que devuelve un préstamo
+   o ítem (`fetchLoans`, `fetchLoanById`, `fetchLoanByFolio`, `createLoan`,
+   `addLoanItem`, `confirmLoan`, `cancelLoan`, `returnLoan`,
+   `authorizeDelivery`, `confirmReturnDecision`, `closeIncident`) —
+   nunca dentro del helper interno `findLoan` (ese sigue devolviendo la
+   referencia viva a propósito: el resto de esas mismas funciones la usan
+   para mutar `state.loans` antes de clonar al final). Esto deja al mock
+   comportándose como un backend real para **todo** el módulo de
+   préstamos, no solo para el wizard — I4d-g heredan la corrección sin
+   tener que recordar "usar fetchLoanById en vez de anexar a mano".
+
+**Evidencia**
+
+```
+npm run build verde. index-*.js 16.63 -> 16.64 kB gz, CSS 6.99 -> 7.06 kB
+gz. Payload de /login: 122.80 kB gz (anterior: 122.72 kB gz), contra el
+techo de 250. NuevoPrestamoPage-*.js (chunk lazy): 17.68 kB / 5.50 kB gz.
+dist/ grep sigue sin rastro de mock/harness/permisos-demo — los cambios
+de mock/loans.js y mock/media.js son código muerto en producción, como
+todo el resto del mock.
+```
+
+Flujo completo verificado en pantalla real (`VITE_EQUIPOS_MOCK=1`,
+1280x800, superadmin): paso 1 con responsable de solo lectura desde la
+sesión; paso 2 agrega un equipo con sus accesorios en una sola
+interacción (409 `EQUIPO_OCUPADO` deja el resto de la selección intacta,
+solo se probó por code review — el fixture no trae hoy un segundo usuario
+compitiendo por el mismo equipo); paso 3 con 2 fotos subidas y el botón
+"Siguiente" habilitándose correctamente tras el fix del bug #3; paso 4
+con las 2 firmas capturadas (detección de vacío real, no solo "¿hubo
+click?"); `confirmar` genera folio real (`CE-0008`) y navega a
+`/equipos/prestamo/{folio}`.
+
+Los 4 e2e de Presupuestos: `auth.spec.js` 7/7,
+`presupuesto-flujo-completo.spec.js` 9/9, `gastos-generales.spec.js` 9/9,
+`pantallas.spec.js` 23/23 (48/48). Además, re-verificados tras los tres
+fixes al mock: `contrato-fixtures.spec.js` 6/6 y `equipos-errores.spec.js`
+6/6 (los cinco códigos feos, incluida la propia inyección
+`SESION_EXPIRADA` cuya lógica se movió de `addLoanMedia` a `uploadMedia`)
+— sin regresión.
+
+**No verificado en pantalla real**: 409 `EQUIPO_OCUPADO` en el paso 2 (el
+fixture no trae hoy dos usuarios compitiendo por el mismo equipo en
+simultáneo — revisado por lectura de código, no por clic); el 401 a
+mitad del wizard con el conmutador del mock (la lógica se comparte con
+`equipos-errores.spec.js`, que sí lo prueba contra `confirmLoan`, pero no
+se repitió manualmente dentro del wizard real); recuperación de un
+borrador huérfano tras cerrar la pestaña (probado por lectura de código:
+`fetchLoans({estado:"borrador"})` + salto de paso, no con una sesión de
+navegador cerrada y reabierta de verdad).
+
+**Riesgo nuevo**: ninguno con número propio — los tres bugs se
+encontraron y arreglaron dentro de este mismo commit. El límite de
+`mios` sin resolver en el mock (heredado de I3) queda anotado arriba como
+limitación conocida, no como riesgo nuevo (ya estaba documentado en
+`mock/loans.js` desde I3).
+
+#### Commits I4d..I4g — pendientes, ver entradas mas abajo en esta misma sesion conforme se cierren.
 
 ## 2026-07-28 (sesion 2)
 

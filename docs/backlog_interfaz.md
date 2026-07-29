@@ -80,7 +80,26 @@
         encontrado: `CLAUDE.md` apunta a una ruta vieja de `RowActions.jsx`
         (continuación de R-I03, mismo commit `d602e00`). Bundle: 122.36 →
         122.72 kB gz. Los 4 e2e de Presupuestos: 48/48.
-  - [ ] **I4c — Wizard de nuevo prestamo (4 pasos).**
+  - [x] **I4c — Wizard de nuevo prestamo (4 pasos).** `SignaturePad`
+        (canvas + Pointer Events, deteccion de vacio real por bounding
+        box, API imperativa, nunca base64 en estado), `PhotoCapture`
+        (compresion 900px/0.72, reintento sin re-pedir archivo),
+        `AccesoriosPicker`. Responsable de solo lectura desde la sesion
+        (el contrato exige `user_id` real, no hay buscador de usuarios).
+        Accesorios se combinan con la seleccion del equipo en un solo
+        `POST /items` (reportado: no hay endpoint para editarlos despues,
+        ver avances). Tres bugs reales de la misma causa raiz (el mock
+        devuelve referencias vivas, no copias) encontrados y arreglados:
+        `uploadMedia` nunca adjuntaba el media al item/firma
+        (`addLoanMedia` vivia huerfana, sin dispatcher); un item se
+        duplicaba al agregarlo (fix: refrescar con `fetchLoanById` en vez
+        de anexar a mano); y por eso mismo un `setLoan` con la misma
+        referencia no re-renderizaba (fix de raiz: `clone()` exportado de
+        `state.js`, aplicado en la frontera publica de cada funcion de
+        `mock/loans.js` — beneficia a I4d-g tambien). Bundle: 122.72 →
+        122.80 kB gz. Los 4 e2e de Presupuestos: 48/48;
+        `contrato-fixtures`/`equipos-errores` re-verificados sin
+        regresion (18/18).
   - [ ] **I4d — Prestamos activos.**
   - [ ] **I4e — Aprobaciones.**
   - [ ] **I4f — Historial.**

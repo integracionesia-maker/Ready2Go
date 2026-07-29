@@ -3,8 +3,14 @@ import prestamoDemoFixture from "./fixtures/prestamo_demo.json";
 import empresasFixture from "./fixtures/empresas.json";
 
 // Copia profunda: las mutaciones del mock no deben tocar el objeto importado
-// del fixture (Vite puede compartirlo por referencia entre módulos/HMR).
-function clone(x) {
+// del fixture (Vite puede compartirlo por referencia entre módulos/HMR), Y
+// (uso más amplio, ver loans.js) todo lo que el mock DEVUELVE a un
+// consumidor debe ser una copia, nunca la referencia viva de `state` — un
+// backend real siempre deserializa una respuesta fresca; si el mock
+// entrega la misma referencia dos veces, un `setState(freshLoan)` en React
+// puede ser un no-op silencioso (misma identidad de objeto) aunque el
+// contenido ya haya cambiado por otra mutación mientras tanto.
+export function clone(x) {
   return JSON.parse(JSON.stringify(x));
 }
 

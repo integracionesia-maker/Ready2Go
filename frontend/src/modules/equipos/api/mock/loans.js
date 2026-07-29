@@ -1,8 +1,14 @@
 import { ApiError } from "@/api";
-import { state, equipoTieneAbiertoUnLoan } from "./state";
+import { state, equipoTieneAbiertoUnLoan, clone } from "./state";
 import { checkGlobalInjection, checkInjection } from "./errorInjection";
 import { throwFixtureError, throwNotFound } from "./mockErrors";
 
+// Referencia VIVA a propósito (nunca clonada aquí): las funciones públicas
+// de abajo llaman a `findLoan` y LUEGO mutan el resultado esperando que esa
+// mutación se refleje en `state.loans` — clonar aquí dejaría cada mutación
+// escribiendo sobre una copia desechable que nunca vuelve a `state`. El
+// clon vive solo en la frontera pública (cada `export async function`
+// abajo clona justo antes de devolver, no antes).
 function findLoan(id) {
   const loan = state.loans.find((l) => l.id === id);
   if (!loan) throwNotFound(`Préstamo ${id} no encontrado.`);
@@ -27,19 +33,19 @@ export async function fetchLoans({ estado, q, limit = 50, offset = 0 } = {}) {
     );
   }
   const total = items.length;
-  return { items: items.slice(offset, offset + limit), total };
+  return { items: items.slice(offset, offset + limit).map(clone), total };
 }
 
 export async function fetchLoanById(id) {
   checkGlobalInjection();
-  return findLoan(id);
+  return clone(findLoan(id));
 }
 
 export async function fetchLoanByFolio(folio) {
   checkGlobalInjection();
   const loan = state.loans.find((l) => l.folio === folio);
   if (!loan) throwNotFound(`Folio ${folio} no encontrado.`);
-  return loan;
+  return clone(loan);
 }
 
 export async function createLoan(data = {}) {
@@ -73,7 +79,7 @@ export async function createLoan(data = {}) {
     ],
   };
   state.loans.push(loan);
-  return loan;
+  return clone(loan);
 }
 
 export async function addLoanItem(loanId, { equipmentId, accesoriosSeleccionados, accesoriosOtros, cargadorCon } = {}) {
@@ -101,29 +107,13 @@ export async function addLoanItem(loanId, { equipmentId, accesoriosSeleccionados
     media: { foto_entrega_frente: null, foto_entrega_atras: null, foto_dev_frente: null, foto_dev_atras: null },
   };
   loan.items.push(item);
-  return item;
+  return clone(item);
 }
 
 export async function removeLoanItem(loanId, itemId) {
   checkGlobalInjection();
   const loan = findLoan(loanId);
   loan.items = loan.items.filter((it) => it.id !== itemId);
-  return { ok: true };
-}
-
-export async function addLoanMedia(loanId, { kind, loanItemId, mediaId } = {}) {
-  checkGlobalInjection();
-  // 401 a mitad del wizard: subir fotos (paso 3) es exactamente donde el
-  // plan pide simular la sesión caída sin que se pierdan fotos ya subidas.
-  checkInjection("SESION_EXPIRADA");
-  const loan = findLoan(loanId);
-  if (kind === "firma_entrega" || kind === "firma_responsable") {
-    loan.firmas[kind] = mediaId;
-  } else {
-    const item = loan.items.find((it) => it.id === loanItemId);
-    if (!item) throwNotFound("Item de préstamo no encontrado.");
-    item.media[kind] = mediaId;
-  }
   return { ok: true };
 }
 
@@ -152,7 +142,7 @@ export async function confirmLoan(loanId) {
     detalle: "Préstamo confirmado. Carta responsiva firmada por ambas partes.",
     created_at: ahora(),
   });
-  return loan;
+  return clone(loan);
 }
 
 export async function cancelLoan(loanId) {
@@ -160,7 +150,7 @@ export async function cancelLoan(loanId) {
   const loan = findLoan(loanId);
   if (loan.estado !== "borrador") throwFixtureError("TRANSICION_INVALIDA");
   loan.estado = "cancelado";
-  return loan;
+  return clone(loan);
 }
 
 export async function returnLoan(loanId, { decisionesPorItem = [] } = {}) {
@@ -182,7 +172,7 @@ export async function returnLoan(loanId, { decisionesPorItem = [] } = {}) {
   }
   loan.estado = "pendiente_confirmacion";
   loan.fecha_regreso_real = new Date().toISOString().slice(0, 10);
-  return loan;
+  return clone(loan);
 }
 
 export async function authorizeDelivery(loanId) {
@@ -191,7 +181,7 @@ export async function authorizeDelivery(loanId) {
   loan.entrega_autorizada = true;
   loan.entrega_autorizada_por = "Melisa Avendano";
   loan.fecha_autorizacion_entrega = ahora();
-  return loan;
+  return clone(loan);
 }
 
 export async function confirmReturnDecision(loanId, decisiones = []) {
@@ -225,7 +215,7 @@ export async function confirmReturnDecision(loanId, decisiones = []) {
   loan.estado = todasOk ? "completado" : "incompleto";
   loan.confirmada_por = "Melisa Avendano";
   loan.fecha_confirmacion = ahora();
-  return loan;
+  return clone(loan);
 }
 
 export async function closeIncident(loanId, nota) {
@@ -240,7 +230,7 @@ export async function closeIncident(loanId, nota) {
   }
   loan.estado = "completado";
   loan.eventos.push({ id: Date.now(), tipo: "incidencia_cerrada", actor: "Melisa Avendano", detalle: nota, created_at: ahora() });
-  return loan;
+  return clone(loan);
 }
 
 export function loanResponsivaUrl(loanId) {
