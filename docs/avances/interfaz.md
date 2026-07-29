@@ -341,7 +341,87 @@ servidor.
 **Riesgo nuevo**: R-I14 (bodies de escritura sin ejemplo en el contrato,
 patrón detrás de R-I13 — ver arriba y `docs/riesgos/interfaz.md`).
 
-### ISSUE I4 — en progreso, ver entradas mas abajo en esta misma sesion.
+### ISSUE I4 — Módulo Equipos, 7 sub-commits (I4a..I4g)
+
+#### Commit I4a — Rutas, esqueleto y vista Inicio (cerrado)
+
+`frontend/src/shell/navItems.js`: se quita `disabled: true` del tab
+"Equipos" (I1/I2 lo dejaron deshabilitado a propósito hasta que hubiera
+algo detrás). `App.jsx`: 7 rutas nuevas bajo `/equipos` (`EquiposLayout`
+como layout route, hijas con `React.lazy`: `/equipos` (Inicio),
+`/inventario`, `/nuevo`, `/activos`, `/aprobaciones`, `/historial`,
+`/prestamo/:folio`) — declaradas como hermanas de `/*` (PresupuestosLayout);
+React Router v6 rankea por especificidad de segmento, no por orden de
+declaración, así que un path estático (`/equipos`) siempre gana sobre el
+wildcard sin importar dónde se escriba (mismo patrón ya probado por las
+rutas dev de I3/I5). `EquiposLayout.jsx` (chrome: `EquiposSubNav` +
+`Outlet`, `pt-16` para no chocar con el GlassNav de módulos del shell) y
+`EquiposSubNav.jsx` (filtra las 6 pestañas por `usePermisos().puede(...)`,
+oculta las que el rol no tiene — la UI solo pinta, cada endpoint valida su
+propio permiso).
+
+**Vista real: `InicioPage.jsx`** — `fetchEquipmentDashboard()` +
+`KpiTile` x4 (Prestados/Disponibles planos, Atrasados/Pend. confirmación
+con `glass`) + `StatusDonut` con leyenda por `estado` + lista "Requiere
+atención" enlazando a `/equipos/prestamo/{folio}`. Estados explícitos:
+loading (`SkeletonShimmer` x4), `PERMISOS_NO_DISPONIBLES` (503, UI de
+reintento — nunca "sin acceso", nunca desloguea), error genérico, vacío.
+Las otras 6 páginas son placeholder (`EmptyState` con "Este módulo se
+construye en I4x") — I4a es el esqueleto de rutas, no las 7 vistas.
+
+**Bug real encontrado — `npm run build` rojo de fábrica.**
+`src/modules/equipos/api/real/loans.js` y `real/media.js` (I3) importan
+`BASE` y `throwApiError` desde `@/api`, pero `src/api/index.js` (I3) los
+importaba de `./client` para uso interno y nunca los re-exportaba en su
+`export { ... }` — nadie lo notó en I3/I5/I6 porque nada consumía esos dos
+nombres desde `@/api` hasta que I4a conectó `real/*.js` al árbol de build
+real (antes solo lo tocaba el harness dev, fuera del grafo de producción).
+Un solo `export` con dos nombres agregados, cero cambio de comportamiento.
+
+**Bug real encontrado — subnav ilegible en 390px.** `GlassNav` (I1) está
+pensado para 2 pastillas (tabs de módulo); `EquiposSubNav` le mete 6. Sin
+manejo de overflow, `justify-center` recortaba la mitad de las pestañas
+fuera del viewport en móvil — "Inicio" (la pestaña activa, la que carga por
+default) quedaba completamente invisible y sin forma de llegar a ella
+(no hay scroll, solo clipping). Mismo patrón que las tablas con overflow
+horizontal: envuelto en `go-table-scroll-wrapper` (fade a la derecha) +
+`overflow-x-auto go-table-scroll` en el contenedor real. Verificado en
+pantalla real a 390x844: "Inicio" visible y activo, el resto alcanzable
+con scroll horizontal.
+
+**Evidencia**
+
+```
+npm run build verde. index-*.js sube de 14.88 a 16.31 kB gz (rutas +
+EquiposSubNav + catálogo de permisos entran al chunk eager de App.jsx,
+igual que PresupuestosLayout ya lo hacía) — CSS 6.89 -> 6.95 kB gz. Payload
+real de /login: 16.31 + 52.97 (react-vendor) + 45.03 (motion) + 1.10
+(LoginPage) + 6.95 (CSS) = 122.36 kB gz, contra el techo de 250 (anterior:
+~120.87 kB gz). dist/ grep confirma cero rastro de PermisosDemo/
+DevMockHarness/fallbackPorRol/mock — el chunk de mocks sigue sin entrar a
+producción.
+```
+
+Los 4 e2e de Presupuestos (uvicorn reiniciado + DB fresca antes de cada
+uno, por tocar `App.jsx` y `src/api/index.js`, archivos compartidos):
+`auth.spec.js` 7/7, `presupuesto-flujo-completo.spec.js` 9/9,
+`gastos-generales.spec.js` 9/9, `pantallas.spec.js` 23/23 (48/48 total).
+
+Capturas reales (`VITE_EQUIPOS_MOCK=1`, sesión de superadmin, datos del
+fixture de mock) en 1280x800 y 390x844 de `/equipos` (Inicio con KPIs y
+donut reales) y de una página placeholder (`/equipos/prestamo/PR-0001` →
+"Ficha de préstamo"), más las 7 rutas navegadas sin crash. Guardadas en
+scratchpad de la sesión.
+
+**No verificado en pantalla real**: las 6 páginas placeholder son
+`EmptyState` sin lógica — no hay nada que verificar hasta I4b-g. Tampoco se
+probó `InicioPage` contra el backend real de Equipos (no existe todavía;
+solo contra el mock del contrato).
+
+**Riesgo nuevo**: ninguno con número propio — los dos bugs de arriba se
+encontraron y arreglaron el mismo commit.
+
+#### Commits I4b..I4g — pendientes, ver entradas mas abajo en esta misma sesion conforme se cierren.
 
 ## 2026-07-28 (sesion 2)
 

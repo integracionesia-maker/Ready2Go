@@ -15,7 +15,7 @@ import { BASE, fetchWithAuthRetry, request, throwApiError } from "./client";
 // distinguir los cinco códigos feos del contrato sin parsear `message` a mano.
 // `refreshSession` NO se re-exporta a proposito: es interno del reintento por
 // 401 y ningun consumidor debe dispararlo a mano.
-export { isNetworkError, setAuthFailureHandler, fetchWithAuthRetry, request, ApiError, esCodigo } from "./client";
+export { isNetworkError, setAuthFailureHandler, fetchWithAuthRetry, request, ApiError, esCodigo, BASE, throwApiError } from "./client";
 
 /* ── Auth ────────────────────────────────────────────────────────────────── */
 

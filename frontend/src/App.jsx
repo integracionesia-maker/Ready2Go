@@ -3,8 +3,17 @@ import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./modules/presupuestos/components/ProtectedRoute";
 import PresupuestosLayout from "./modules/presupuestos/PresupuestosLayout";
 import AppShell from "./shell/AppShell";
+import EquiposLayout from "./modules/equipos/EquiposLayout";
+import { SkeletonShimmer } from "@/design";
 
 const LoginPage = lazy(() => import("./modules/presupuestos/pages/LoginPage"));
+const InicioPage = lazy(() => import("./modules/equipos/pages/InicioPage"));
+const InventarioPage = lazy(() => import("./modules/equipos/pages/InventarioPage"));
+const NuevoPrestamoPage = lazy(() => import("./modules/equipos/pages/NuevoPrestamoPage"));
+const ActivosPage = lazy(() => import("./modules/equipos/pages/ActivosPage"));
+const AprobacionesPage = lazy(() => import("./modules/equipos/pages/AprobacionesPage"));
+const HistorialPage = lazy(() => import("./modules/equipos/pages/HistorialPage"));
+const FichaPrestamoPage = lazy(() => import("./modules/equipos/pages/FichaPrestamoPage"));
 // Panel de diagnóstico TEMPORAL de I3 (ver DevMockHarness.jsx) — solo en
 // desarrollo, `import.meta.env.DEV` es una constante de build: en
 // `npm run build` (producción) esta rama es código muerto y Rollup la
@@ -51,6 +60,22 @@ export default function App() {
               }
             />
           )}
+          <Route
+            path="/equipos"
+            element={
+              <Suspense fallback={<SkeletonShimmer className="h-64 w-full" />}>
+                <EquiposLayout />
+              </Suspense>
+            }
+          >
+            <Route index element={<InicioPage />} />
+            <Route path="inventario" element={<InventarioPage />} />
+            <Route path="nuevo" element={<NuevoPrestamoPage />} />
+            <Route path="activos" element={<ActivosPage />} />
+            <Route path="aprobaciones" element={<AprobacionesPage />} />
+            <Route path="historial" element={<HistorialPage />} />
+            <Route path="prestamo/:folio" element={<FichaPrestamoPage />} />
+          </Route>
           <Route path="/*" element={<PresupuestosLayout />} />
         </Route>
       </Route>

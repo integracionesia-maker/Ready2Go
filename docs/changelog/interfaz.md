@@ -1,5 +1,35 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I4a — Rutas, esqueleto y vista Inicio de Equipos — modo 09-ejecutar-todo)
+
+### Agregado
+
+- `frontend/src/modules/equipos/EquiposLayout.jsx` — chrome del módulo
+  (`EquiposSubNav` + `Outlet`).
+- `frontend/src/modules/equipos/EquiposSubNav.jsx` — sub-nav horizontal
+  filtrada por `usePermisos().puede(...)`, con `overflow-x-auto`
+  (`go-table-scroll-wrapper`/`go-table-scroll`) para no recortar pestañas
+  en móvil.
+- `frontend/src/modules/equipos/pages/InicioPage.jsx` — vista real:
+  `fetchEquipmentDashboard()`, `KpiTile` x4, `StatusDonut` con leyenda,
+  lista "Requiere atención"; estados de loading/503/error/vacío explícitos.
+- `frontend/src/modules/equipos/pages/{InventarioPage,NuevoPrestamoPage,
+  ActivosPage,AprobacionesPage,HistorialPage,FichaPrestamoPage}.jsx` —
+  placeholders `EmptyState` hasta su propio sub-commit (I4b..I4g).
+- `App.jsx` — 7 rutas lazy bajo `/equipos` (layout route + 6 hijas),
+  hermanas de `/*` (PresupuestosLayout).
+
+### Cambiado
+
+- `frontend/src/shell/navItems.js` — se quita `disabled: true` del tab
+  "Equipos" (ya tiene rutas detrás).
+- `frontend/src/api/index.js` — **bug de I3**: `BASE` y `throwApiError` se
+  importaban de `./client` para uso interno pero nunca se reexportaban;
+  `real/loans.js` y `real/media.js` (I3) ya los importaban de `@/api` y
+  nadie lo notó hasta que I4a conectó `real/*.js` al grafo de build de
+  producción (antes solo lo tocaba el harness dev). Un `export` con los
+  dos nombres agregados.
+
 ## 2026-07-29 (I6 — e2e de Equipos + B-I06, 1 commit — modo 09-ejecutar-todo)
 
 ### Agregado

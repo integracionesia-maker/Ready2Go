@@ -47,9 +47,31 @@
       capturas reales mostrando cada codigo — sustituido cuando I4 tenga
       vistas propias. Riesgo nuevo: R-I13 (body de `/devolucion` sin ejemplo
       en el contrato, se adivino la forma en `real/loans.js`).
-- [ ] **I4 — Modulo Equipos (WP8).** 7 vistas. `SignaturePad`, `PhotoCapture`,
-      `AccesoriosPicker`, `EquipmentCard` en `modules/equipos/components/`; solo
-      `Timeline` es generico y vive en `src/design/`.
+- [ ] **I4 — Modulo Equipos (WP8).** 7 vistas, 7 sub-commits (I4a..I4g).
+      `SignaturePad`, `PhotoCapture`, `AccesoriosPicker`, `EquipmentCard` en
+      `modules/equipos/components/`; solo `Timeline` es generico y vive en
+      `src/design/`.
+  - [x] **I4a — Rutas, esqueleto y vista Inicio.** `App.jsx`: 7 rutas lazy
+        bajo `/equipos` (`EquiposLayout` + `EquiposSubNav` filtrada por
+        `usePermisos`). `InicioPage.jsx` real (KPIs + `StatusDonut` +
+        "Requiere atención"); las otras 6 son placeholder `EmptyState`
+        hasta su propio sub-commit. Dos bugs reales encontrados y
+        arreglados en el mismo commit: `src/api/index.js` (I3) nunca
+        reexportaba `BASE`/`throwApiError` que `real/loans.js` y
+        `real/media.js` ya importaban de `@/api` — build rojo de fabrica,
+        invisible hasta que I4a conecto `real/*.js` al grafo de produccion;
+        y `GlassNav` (pensado para 2 pastillas) recortaba "Inicio" fuera
+        del viewport en 390px con 6 pestañas — arreglado con el mismo
+        patron `go-table-scroll-wrapper`/`go-table-scroll` de las tablas.
+        Bundle: index-*.js 14.88 → 16.31 kB gz, payload de /login
+        ~120.87 → 122.36 kB gz (techo 250). Los 4 e2e de Presupuestos:
+        48/48 (auth 7/7, flujo 9/9, gastos-generales 9/9, pantallas 23/23).
+  - [ ] **I4b — Inventario.**
+  - [ ] **I4c — Wizard de nuevo prestamo (4 pasos).**
+  - [ ] **I4d — Prestamos activos.**
+  - [ ] **I4e — Aprobaciones.**
+  - [ ] **I4f — Historial.**
+  - [ ] **I4g — Ficha de prestamo.**
 - [x] **I5 — Permisos en la UI.** Commit de este issue (modo 09-ejecutar-todo,
       1 commit por issue). `src/modules/equipos/permisos/`: `catalogo.js`
       (import directo de la copia congelada de I3), `fallbackPorRol.js`
