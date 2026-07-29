@@ -4,6 +4,37 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 
 ---
 
+## 2026-07-27 (tarde) — Integracion a master, contrato de API v1 y reparto en carriles
+
+### Agregado
+- `docs/contratos/` — **contrato de API v1, congelado.** Es la frontera entre los dos carriles de trabajo: HTTP, no un archivo.
+  - `API_EQUIPOS_v1.md`: 24 endpoints con permiso, request, response de ejemplo y codigos de error; maquina de estados del prestamo; reglas de fecha y atraso; limites y validacion de media.
+  - `permisos_catalogo.json`: 7 modulos, sus acciones, los 8 paquetes del RBAC aditivo y las reglas del motor.
+  - `auth_me.json`: forma exacta de `GET /api/auth/me` con el campo `permisos`.
+  - `tokens_marca.md`: colores y fuentes para el PDF del servidor.
+  - `fixtures/`: 8 equipos de la auditoria del 10/06, 3 razones sociales, un prestamo demo como criterio de aceptacion del payload, y los codigos de error feos (409, 403, 503, 413, 422, 401).
+  - `CHANGELOG_CONTRATO.md`: lo que se aparta del plan y por que.
+- `docs/ASIGNACION_EQUIPOS.md` en cada rama de trabajo — tareas ordenadas y atomicas, rutas propias, rutas fuera de alcance, como se reporta y definicion de terminado. Cada rama lleva solo la suya.
+
+### Actualizado
+- `master` = integracion del plan (`--no-ff`) + contrato v1. Replicado a las tres ramas.
+- `status.md` — Fase 5 Build, sin bloqueo, carriles declarados.
+
+### Decisiones
+- **Corte del trabajo por capa**, frontera en el contrato HTTP. Interseccion de codigo entre carriles: cero archivos. De 47 archivos en disputa, 41 se resuelven por pertenencia de capa; los 6 de gobernanza pasan a integracion.
+- **Rutas de la API unificadas en ingles** (`/api/equipment/dashboard`, no `/api/equipos/dashboard`): mezclar idiomas en el mismo recurso garantiza un bug de cliente.
+- Tres huecos del plan cerrados en el contrato: miniatura de 96px generada en servidor (sin ella el inventario baja 3 MB por thumb), recuperar borrador propio (`?estado=borrador&mios=1`), y busqueda por folio (la ficha se navega por folio, la API solo hablaba por id).
+- El listado de inventario devuelve `tenedor_actual`, `fecha_regreso_esperada`, `atrasado` y `dias_atraso` en la propia fila: la pantalla los pinta sin un segundo request.
+- **Los documentos de estado de la raiz quedan congelados para los carriles.** Cada uno reporta en sus propios archivos bajo `docs/`; la consolidacion es de la integracion. Evita el conflicto de merge garantizado en markdown de linea por fila.
+
+### Pendiente asentado
+- `openapi_equipos_v1.json` no existe todavia: se genera del servidor cuando existan los primeros endpoints y se congela. Hasta entonces manda `API_EQUIPOS_v1.md` y la prueba guardia va en `skip` con el motivo escrito.
+
+### Limpieza
+- Rama remota basura `origin` eliminada (cero commits propios, respaldada con tag y bundle antes de borrar). El remoto queda con master y las tres ramas de trabajo.
+
+---
+
 ## 2026-07-27 — Renombre a Ready2Go + plan de integracion de Control de Equipos (Fase 3.5)
 
 ### Agregado

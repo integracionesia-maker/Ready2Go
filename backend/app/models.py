@@ -18,6 +18,9 @@ class UserRole(str, enum.Enum):
     SUPERADMIN = "superadmin"
     ADMIN = "admin"
     CREADOR = "creador"
+    # Rol base del area de marketing (Control de Equipos). No abre nada de
+    # presupuestos: su paquete vive en rbac_catalog.py, no aqui.
+    COLABORADOR_MKT = "colaborador_mkt"
 
 
 class CyclePeriod(str, enum.Enum):
@@ -228,3 +231,10 @@ class AuditLog(Base):
     details = Column(Text, nullable=True)
     ip_address = Column(String(45), nullable=True)
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
+# Re-export al final, no arriba: los modulos de abajo referencian tablas de este
+# archivo por nombre de cadena, nunca por import, para no cerrar un ciclo.
+# Importarlos aqui es lo que registra sus tablas en Base.metadata.
+from .models_rbac import *  # noqa: E402,F401,F403
+from .models_equipos import *  # noqa: E402,F401,F403

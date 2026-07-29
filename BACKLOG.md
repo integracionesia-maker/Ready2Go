@@ -1,28 +1,27 @@
 # BACKLOG — Ready2Go (Presupuestos + Control de Equipos)
 
 > Plataforma interna del area de marketing de Grupo Ortiz. Dos modulos, una app.
-> Fase actual: **3.5 Planeacion Quirurgica** (modulo Control de Equipos) · Presupuestos en Fase 5.
-> Plan de referencia: `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md`
+> Fase actual: **5 Build** (modulo Control de Equipos, arranca 27/07) · Presupuestos en Fase 5.
+> Plan de referencia: `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md` · Contrato congelado: `docs/contratos/`
+> El trabajo esta repartido en carriles con interseccion de archivos cero. Cada carril tiene su lista de tareas
+> en su propia rama (`docs/ASIGNACION_EQUIPOS.md`); las tareas E1-E17 de abajo son el mapa global de la fase.
 
 ---
 
-## Bloqueado por decision
+## Cierres de fin de proyecto — NINGUNO bloquea el arranque
 
-| # | Tarea | Fase | Prioridad | Bloqueado por |
-|---|---|---|---|---|
-| 0 | **Luz verde de build del modulo Control de Equipos** | 3.5 | Critica | Jose — revision del plan quirurgico |
+Cada uno tiene su plan B ya definido, por eso el build corre sin ellos. Se cierran antes del piloto, no antes de escribir codigo.
 
-## Pendientes de terceros (marketing)
-
-| # | Tarea | De quien | Bloquea |
+| # | Pendiente | De quien | Plan B mientras tanto |
 |---|---|---|---|
-| T1 | Tabla de nombres + correos GO del area de marketing | Emily | Alta de usuarios (WP1) / piloto |
-| T2 | Inventario de camaras, luces y tripies con nombre completo | Emily / Betzabet | Seed de inventario (WP2) |
-| T3 | Confirmar razon social emisora de la carta responsiva | Marketing / RH | PDF (WP5) |
-| T4 | Nombre de dominio deseado | Emily / Melisa | Deploy (WP9) |
-| T5 | Aprobacion firmada del costo del dominio (~11 USD/ano) | Melisa | Deploy (WP9) |
-| T6 | Credenciales de la cuenta SMTP emisora | Jose / Sistemas | Notificaciones (WP6) |
-| T7 | Fuentes Blauer Nue / Conthic en woff2 | `context_desing_go` | Shell visual (WP7) |
+| T1 | Nombres + correos GO del area | Emily | Usuarios de prueba sembrados |
+| T2 | Inventario de camaras, luces y tripies | Emily / Betzabet | Seed con los 8 equipos ya auditados |
+| T3 | Razon social emisora de la responsiva | Marketing / RH | Sale de la tabla `empresa`, nunca hardcode |
+| T4 | Nombre de dominio | Emily / Melisa | **Diferido por Jose 27/07: no es necesario para desarrollo** |
+| T6 | Credenciales SMTP | Jose / Sistemas | `NOTIF_ENABLED=false` |
+| T7 | Fuentes Blauer Nue / Conthic en woff2 | `context_desing_go` | Pila de respaldo con `font-display: swap` |
+
+T5 (aprobacion del costo del dominio) — **cerrado 27/07, Melisa aprobo por correo.**
 
 ## Pendientes — modulo Control de Equipos (por WP del plan)
 

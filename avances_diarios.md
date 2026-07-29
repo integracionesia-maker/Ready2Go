@@ -64,6 +64,30 @@
 
 **Semaforo:** Verde
 
+### LUN 27/07 (tarde) — Integracion a master, contrato de API v1 y arranque de los dos carriles
+
+**Que hice:**
+- Integre `jose-branch` a master con `--no-ff` siguiendo el protocolo del pool: lock tomado, 4 tags `pre-integracion` y bundle pusheados antes de tocar nada, precheck de divergencia en las dos direcciones por rama.
+- Verifique que `dami-branch` y `BeniBranch` no tenian trabajo propio sin integrar: las dos estaban exactamente en el mismo commit que master. Lo unico que subio fue el plan.
+- Borre la rama remota basura `origin` (cero commits propios, respaldada con tag y bundle antes). De paso diagnostique por que rompia el loop de integracion: `%(refname:short)` acorta `refs/remotes/origin/HEAD` a `origin`, no a `HEAD`.
+- Parti el trabajo en dos carriles con **interseccion de codigo cero**: la frontera es el contrato HTTP, no un archivo. De 47 archivos que se habrian disputado, 41 quedan con dueno unico por pertenencia de capa.
+- Escribi y publique el **contrato de API v1 congelado** en `docs/contratos/`: 24 endpoints, catalogo de permisos, forma de `/auth/me`, tokens de marca para el PDF, y fixtures con los codigos de error feos, no solo el camino feliz.
+- Replique master a las tres ramas con FF puro y sembre en cada una **solo su** documento de asignacion, con el mismo nombre de archivo y el mismo mensaje de commit para que ni la forma delate el reparto.
+- Doble loop de cero perdida en verde y lock liberado.
+
+**Evidencia:**
+- master `865a81b` (plan + contrato) · `dami-branch` `d735723` · `BeniBranch` `281f10b` · `jose-branch` `865a81b`
+- `docs/contratos/` (7 archivos) · `docs/ASIGNACION_EQUIPOS.md` en cada rama de trabajo
+- Loop 1: los 4 tags `pre-integracion` sin un solo commit fuera de master. Loop 2: cada rama sobra exactamente su propia asignacion.
+
+**MVP:** 40% (10/25). Sin cambio: hoy no se cerro ningun entregable de construccion.
+
+**Bloqueo:** ninguno. Los dos carriles pueden trabajar desde hoy sin depender uno del otro ni de pendientes de marketing.
+
+**Siguiente:** cada carril arranca por su tarea 0 (mecanica, aislada). Generar y congelar `openapi_equipos_v1.json` cuando existan los primeros endpoints.
+
+**Semaforo:** Verde
+
 ---
 
 ## Historial de semaforos
