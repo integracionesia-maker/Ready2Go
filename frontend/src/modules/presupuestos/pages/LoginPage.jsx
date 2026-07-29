@@ -54,7 +54,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="go-card space-y-4">
+        {/* Única superficie de cristal de /login — pantalla sola, sin
+            competir con el presupuesto de 3-4 del shell. */}
+        <form onSubmit={handleSubmit} className="glass relative">
+        <div className="veil space-y-4 p-6">
           <div>
             <label className="go-eyebrow mb-1.5 block">Usuario o correo</label>
             <input
@@ -103,6 +106,7 @@ export default function LoginPage() {
               "Iniciar sesión"
             )}
           </button>
+        </div>
         </form>
       </div>
     </div>

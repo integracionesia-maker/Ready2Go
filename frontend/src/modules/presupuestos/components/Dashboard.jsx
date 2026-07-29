@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import KpiCard from "./KpiCard";
+import { KpiTile } from "@/design";
 import DateRangeFilter from "./DateRangeFilter";
 import MonthlySpendChart from "./charts/MonthlySpendChart";
 import CreatorUsageChart from "./charts/CreatorUsageChart";
@@ -24,6 +24,15 @@ function formatCurrency(amount) {
     minimumFractionDigits: 2,
   }).format(amount);
 }
+
+// Mismos 4 acentos que tenía KpiCard, ahora como color sólido (coincide con
+// GO_CHART_COLORS de apexTheme.js) para el borde de KpiTile.
+const ACCENTS = {
+  orange: "#FB670B",
+  turquoise: "#14B8A6",
+  sky: "#38BDF8",
+  violet: "#A78BFA",
+};
 
 function fmtDateParam(d) {
   if (!d) return undefined;
@@ -184,57 +193,67 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
         <>
           {/* ── KPI row 1: Cumulative ─────────────────────────────────── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              title="Presupuesto Total"
-              value={kpi ? formatCurrency(kpi.total_budget) : "—"}
-              subtitle={`${kpi?.active_creators ?? 0} creadores activos`}
-              accent="orange"
+            <KpiTile
+              label="Presupuesto Total"
+              value={kpi ? kpi.total_budget : "—"}
+              format={formatCurrency}
+              hint={`${kpi?.active_creators ?? 0} creadores activos`}
+              accentColor={ACCENTS.orange}
             />
-            <KpiCard
-              title="Total Gastado"
-              value={kpi ? formatCurrency(kpi.total_spent) : "—"}
-              subtitle={`${spentPct.toFixed(1)}% ejecutado`}
-              accent="turquoise"
+            {/* Las dos cifras "de un vistazo" llevan cristal — el resto se
+                queda plano para no pasar de 3 superficies de cristal en
+                pantalla junto con el nav de módulos del shell. */}
+            <KpiTile
+              label="Total Gastado"
+              value={kpi ? kpi.total_spent : "—"}
+              format={formatCurrency}
+              hint={`${spentPct.toFixed(1)}% ejecutado`}
+              accentColor={ACCENTS.turquoise}
+              glass
             />
-            <KpiCard
-              title="Total Disponible"
-              value={kpi ? formatCurrency(kpi.total_remaining) : "—"}
-              subtitle={`${remainingPct.toFixed(1)}% restante`}
-              accent="sky"
+            <KpiTile
+              label="Total Disponible"
+              value={kpi ? kpi.total_remaining : "—"}
+              format={formatCurrency}
+              hint={`${remainingPct.toFixed(1)}% restante`}
+              accentColor={ACCENTS.sky}
+              glass
             />
-            <KpiCard
-              title="Marcas Activas"
+            <KpiTile
+              label="Marcas Activas"
               value={summary?.active_brands ?? "—"}
-              subtitle="con gastos en el período"
-              accent="violet"
+              hint="con gastos en el período"
+              accentColor={ACCENTS.violet}
             />
           </div>
 
           {/* ── KPI row 2: Period-specific ────────────────────────────── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              title="Gastado en el Período"
-              value={summary ? formatCurrency(summary.total_spent) : "—"}
-              subtitle="según filtro de fechas"
-              accent="orange"
+            <KpiTile
+              label="Gastado en el Período"
+              value={summary ? summary.total_spent : "—"}
+              format={formatCurrency}
+              hint="según filtro de fechas"
+              accentColor={ACCENTS.orange}
             />
-            <KpiCard
-              title="Tickets"
+            <KpiTile
+              label="Tickets"
               value={summary?.ticket_count ?? "—"}
-              subtitle={`Promedio ${summary ? formatCurrency(summary.avg_ticket) : "—"} por ticket`}
-              accent="turquoise"
+              hint={`Promedio ${summary ? formatCurrency(summary.avg_ticket) : "—"} por ticket`}
+              accentColor={ACCENTS.turquoise}
             />
-            <KpiCard
-              title="Creadores Activos"
+            <KpiTile
+              label="Creadores Activos"
               value={creatorUsage.filter((c) => c.spent > 0).length}
-              subtitle="con gastos en el período"
-              accent="sky"
+              hint="con gastos en el período"
+              accentColor={ACCENTS.sky}
             />
-            <KpiCard
-              title="Gastos Generales"
-              value={formatCurrency(generalExpensesTotal)}
-              subtitle={`${generalExpensesCount} ${generalExpensesCount === 1 ? "gasto" : "gastos"} en el periodo`}
-              accent="orange"
+            <KpiTile
+              label="Gastos Generales"
+              value={generalExpensesTotal}
+              format={formatCurrency}
+              hint={`${generalExpensesCount} ${generalExpensesCount === 1 ? "gasto" : "gastos"} en el periodo`}
+              accentColor={ACCENTS.orange}
             />
           </div>
 

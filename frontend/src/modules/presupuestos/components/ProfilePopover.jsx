@@ -90,47 +90,44 @@ export default function ProfilePopover() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-52 overflow-hidden rounded-go-lg border"
-          style={{
-            background: "var(--go-surface-raised)",
-            borderColor: "var(--go-border)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
-          }}
+          className="glass absolute right-0 top-[calc(100%+0.5rem)] z-50 w-52 overflow-hidden"
         >
-          <div className="border-b px-4 py-3" style={{ borderColor: "var(--go-border)" }}>
-            <p className="truncate font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
-              {user.full_name}
-            </p>
-            <p className="truncate font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
-              {ROLE_LABELS[user.role] || user.role}
-            </p>
+          <div className="veil">
+            <div className="border-b px-4 py-3" style={{ borderColor: "var(--go-border)" }}>
+              <p className="truncate font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
+                {user.full_name}
+              </p>
+              <p className="truncate font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                {ROLE_LABELS[user.role] || user.role}
+              </p>
+            </div>
+            <button
+              role="menuitem"
+              onClick={() => navigate("/perfil")}
+              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
+              style={{ color: "var(--go-text-primary)" }}
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Mi perfil
+            </button>
+            <button
+              role="menuitem"
+              onClick={() => logout()}
+              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
+              style={{ color: "var(--go-error)" }}
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              Cerrar sesión
+            </button>
           </div>
-          <button
-            role="menuitem"
-            onClick={() => navigate("/perfil")}
-            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
-            style={{ color: "var(--go-text-primary)" }}
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            Mi perfil
-          </button>
-          <button
-            role="menuitem"
-            onClick={() => logout()}
-            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
-            style={{ color: "var(--go-error)" }}
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-            Cerrar sesión
-          </button>
         </div>
       )}
     </div>

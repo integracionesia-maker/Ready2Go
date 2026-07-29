@@ -8,16 +8,30 @@ import GlassPanel from "./GlassPanel";
  * DESIGN_SYSTEM.md es 3-4 superficies de cristal simultáneas en pantalla. Un
  * consumidor puede pedir `glass` para un tile único destacado (hero), pero
  * el default no puede violar el límite solo por vivir en src/design/.
+ *
+ * `value` puede no ser numérico todavía (p.ej. "—" mientras el dato no ha
+ * cargado, un caso real de Dashboard.jsx): en ese caso se pinta tal cual, sin
+ * animar ni pasar por `format` (que asume número).
  */
-export default function KpiTile({ label, value, format = (v) => v, icon, glass = false, className = "" }) {
+export default function KpiTile({
+  label,
+  value,
+  hint,
+  format = (v) => v,
+  icon,
+  glass = false,
+  accentColor,
+  className = "",
+}) {
   const reduceMotion = useReducedMotion();
-  const [display, setDisplay] = useState(() => (reduceMotion ? value : 0));
-  const prevValue = useRef(reduceMotion ? value : 0);
+  const isNumeric = typeof value === "number" && Number.isFinite(value);
+  const [display, setDisplay] = useState(() => (isNumeric && !reduceMotion ? 0 : value));
+  const prevValue = useRef(isNumeric ? value : 0);
 
   useEffect(() => {
-    if (reduceMotion) {
+    if (!isNumeric || reduceMotion) {
       setDisplay(value);
-      prevValue.current = value;
+      prevValue.current = isNumeric ? value : 0;
       return undefined;
     }
     const from = prevValue.current;
@@ -30,7 +44,7 @@ export default function KpiTile({ label, value, format = (v) => v, icon, glass =
       },
     });
     return () => controls.stop();
-  }, [value, reduceMotion]);
+  }, [value, isNumeric, reduceMotion]);
 
   const body = (
     <div className="flex flex-col gap-2">
@@ -45,20 +59,32 @@ export default function KpiTile({ label, value, format = (v) => v, icon, glass =
         )}
       </div>
       <span className="font-display text-2xl font-bold tabular-nums" style={{ color: "var(--go-text-primary)" }}>
-        {format(Math.round(display))}
+        {typeof display === "number" ? format(Math.round(display)) : display}
       </span>
+      {hint && (
+        <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+          {hint}
+        </span>
+      )}
     </div>
   );
 
+  // El acento vive en el borde del contenedor exterior (igual que KpiCard
+  // original), no en el body: así no se agrega un padding extra que
+  // desalinee el tile respecto de uno sin accentColor.
+  const accentStyle = accentColor ? { borderLeftWidth: "3px", borderLeftColor: accentColor } : undefined;
+
   if (glass) {
     return (
-      <GlassPanel className={`p-5 ${className}`} veilClassName="p-0">
+      <GlassPanel className={`p-5 ${className}`} veilClassName="p-0" style={accentStyle}>
         {body}
       </GlassPanel>
     );
   }
 
   return (
-    <div className={`go-card ${className}`.trim()}>{body}</div>
+    <div className={`go-card ${className}`.trim()} style={accentStyle}>
+      {body}
+    </div>
   );
 }

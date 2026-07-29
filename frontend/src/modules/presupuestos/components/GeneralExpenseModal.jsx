@@ -125,17 +125,12 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
   /* ── Render ──────────────────────────────────────────────────────────── */
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} onClick={submitting ? undefined : onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--go-overlay)" }} onClick={submitting ? undefined : onClose}>
       <div
-        className="relative w-full max-w-lg overflow-hidden"
-        style={{
-          background: "var(--go-surface)",
-          borderRadius: "var(--go-radius-lg)",
-          border: "1px solid var(--go-border)",
-          boxShadow: "0 25px 50px rgba(0,0,0,0.5)",
-        }}
+        className="glass relative w-full max-w-lg overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
+      <div className="veil">
         {/* ── Header ──────────────────────────────────────────────── */}
         <div
           className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4"
@@ -349,6 +344,7 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );

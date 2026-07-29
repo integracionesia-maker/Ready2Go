@@ -22,19 +22,14 @@ export default function MediaViewerModal({ ticket, onClose }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
+      style={{ background: "var(--go-overlay)" }}
       onClick={onClose}
     >
       <div
-        className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden"
-        style={{
-          background: "var(--go-surface)",
-          borderRadius: "var(--go-radius-lg)",
-          border: "1px solid var(--go-border)",
-          boxShadow: "0 25px 50px rgba(0,0,0,0.5)",
-        }}
+        className="glass relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
+      <div className="veil flex max-h-[90vh] flex-col">
         {/* ── Header ──────────────────────────────────────────────── */}
         <div
           className="flex items-center justify-between px-6 py-4"
@@ -122,6 +117,7 @@ export default function MediaViewerModal({ ticket, onClose }) {
             </p>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

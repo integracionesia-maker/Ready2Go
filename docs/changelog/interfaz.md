@@ -1,5 +1,47 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I2 — piel de Presupuestos, 1 commit — modo 09-ejecutar-todo)
+
+### Cambiado
+
+- `frontend/src/modules/presupuestos/components/Modal.jsx` — superficie
+  sólida manual reemplazada por `.glass` + `.veil` (glass.css de I1). API y
+  nombres accesibles sin cambio: `AdminView`, `UserManagement`,
+  `ValidationQueue`, `GeneralExpensesExportModal` y `DeleteConfirmModal`
+  heredan el cristal sin tocarse.
+- `frontend/src/modules/presupuestos/components/Dashboard.jsx` — sus 8
+  `KpiCard` pasan a `KpiTile` (`@/design`); 2 (`Total Gastado`, `Total
+  Disponible`) con `glass`, el resto plano. Cálculos (`spentPct`,
+  `remainingPct`, etc.) sin tocar, solo cambia qué componente pinta el
+  resultado.
+- `frontend/src/modules/presupuestos/components/ProfilePopover.jsx`,
+  `UploadTicketModal.jsx`, `GeneralExpenseModal.jsx`, `MediaViewerModal.jsx`
+  — mismo patrón `.glass`+`.veil` en su overlay.
+- `frontend/src/modules/presupuestos/pages/LoginPage.jsx` — el formulario
+  pasa de `go-card` a `.glass`+`.veil` (única superficie de cristal de esa
+  pantalla, sin conflicto de presupuesto).
+- `frontend/src/design/KpiTile.jsx` — dos props nuevas, no rompen el uso
+  existente (nadie más lo consumía todavía): `hint` (subtítulo, lo que
+  `KpiCard` llamaba `subtitle`) y `accentColor` (borde izquierdo, lo que
+  `KpiCard` llamaba `accent`). `value` ahora tolera un string no numérico
+  (p.ej. `"—"` mientras el dato no ha cargado): se pinta tal cual, sin
+  animar ni pasar por `format`.
+- `frontend/e2e/pantallas.spec.js` — el chequeo de contraste ahora corre en
+  `/` **y** `/dashboard` (antes solo `/`): las 2 KpiTile nuevas de Dashboard
+  son cristal que el verificador de I1 no visitaba.
+
+### Sin cambio (verificado, no solo asumido)
+
+- `frontend/src/modules/presupuestos/components/KpiCard.jsx` — intacto:
+  sigue siendo lo que usa `DashboardPdfTemplate.jsx` (intocable en piel).
+- `apexTheme.js`, `components/PdfReport/*`, `Header.jsx`, `Sidebar.jsx`,
+  `ThemeToggle.jsx`, `BrandLogo.jsx`, tablas (`TransactionTable`,
+  `ValidationQueue`, `CreatorList`, `SortableHeader`, `RowActions`),
+  `DateRangeFilter`, los 5 charts, `HomePage.jsx`, `ProfilePage.jsx`,
+  `ForbiddenPage.jsx`, `GeneralExpensesPage.jsx`, `AdminView.jsx`,
+  `UserManagement.jsx` — ya usaban los tokens de `--go-*` desde antes de I1
+  y no entran en la lista de "va cristal"; verificados, no tocados.
+
 ## 2026-07-28 (I1 — shell liquid glass, 5 commits)
 
 ### Agregado

@@ -15,9 +15,20 @@
       commit 1. Cerrado con capturas reales en 1280x800 y 390x844 (20, via
       `e2e/pantallas.spec.js`) y el contraste **medido** (>= 4.5:1, 22/22 en el
       verificador).
-- [ ] **I2 — Migracion visual de Presupuestos (WP7-B).** Solo piel sobre los ~40
-      archivos ya movidos. Rutas sin cambio. Cero llamadas a API y cero
-      condiciones de negocio en el diff.
+- [x] **I2 — Migracion visual de Presupuestos (WP7-B).** Commit de este issue
+      (ver `git log` — modo 09-ejecutar-todo, 1 commit por issue). Solo piel:
+      `Modal.jsx` se apoya en `.glass`+`.veil` (API intacta, cubre 5
+      consumidores gratis); `Dashboard.jsx` cambia sus 8 `KpiCard` por
+      `KpiTile` (2 con `glass`, el resto plano — presupuesto de 3-4
+      superficies de cristal ya casi lleno con el nav del shell);
+      `ProfilePopover`, `UploadTicketModal`, `GeneralExpenseModal`,
+      `MediaViewerModal` y `LoginPage` con la misma receta. `KpiCard.jsx`
+      **sin tocar** (lo sigue usando `DashboardPdfTemplate.jsx`, intocable en
+      piel — html2canvas no rasteriza `backdrop-filter`). Diff verificado
+      vacio contra el grep de `fetch/request/@api/useEffect/budget_cycle/
+      is_deleted/status===/role===/ADMIN_ROLES`. `e2e/pantallas.spec.js`
+      ganó un segundo chequeo de contraste en `/dashboard` (las 2 KpiTile
+      nuevas no estaban cubiertas por el de `/`). 25/25 + 23/23.
 - [ ] **I3 — Mocks propios.** `src/modules/equipos/api/mock/` con
       `VITE_EQUIPOS_MOCK=1`, copia literal de `docs/contratos/fixtures/*.json`.
       Los cinco codigos feos: 409, 403, 503, 413 y 401 a mitad del wizard.

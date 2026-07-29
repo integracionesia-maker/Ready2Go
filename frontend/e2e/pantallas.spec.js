@@ -141,47 +141,53 @@ test.describe.serial("Verificador de pantallas (B-I05)", () => {
     }
   }
 
-  test("contraste medido: velo de cada superficie de cristal del shell >= 4.5:1", async ({ browser }) => {
-    const context = await browser.newContext({
-      storageState: STORAGE_STATE_PATH,
-      viewport: { width: 1280, height: 800 },
-    });
-    const page = await context.newPage();
-    await page.goto("/", { waitUntil: "networkidle" });
-
-    const glassSurfaces = await page.locator(".glass").all();
-    expect(glassSurfaces.length, "Ninguna superficie .glass montada en /").toBeGreaterThan(0);
-
-    for (const glass of glassSurfaces) {
-      // El velo puede ser hijo (GlassPanel/GlassModal/Toast) o hermano en
-      // capa de fondo (GlassNav, con -z-10) — se busca dentro del propio
-      // contenedor .glass, no se asume una relación padre-hijo fija.
-      const { veilBg, textColor } = await glass.evaluate((el) => {
-        const veil = el.querySelector(".veil") || el;
-        // El nodo que de verdad pinta el texto visible es el más profundo
-        // con un nodo de texto propio — un <a> que envuelve un <span> con
-        // color explícito matchea el selector primero por orden de
-        // documento, pero su color computado no es el que se ve en pantalla.
-        const candidates = Array.from(el.querySelectorAll("span, p, h1, h2, h3, button, a")).reverse();
-        const leaf = candidates.find((node) =>
-          Array.from(node.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())
-        );
-        const textEl = leaf || el;
-        return {
-          veilBg: getComputedStyle(veil).backgroundColor,
-          textColor: getComputedStyle(textEl).color,
-        };
+  // "/" tiene el nav de módulos del shell; "/dashboard" agrega las 2 KpiTile
+  // con glass=true (I2) — cristal nuevo que este mismo verificador todavía
+  // no habia visitado. Medir ahi tambien, no solo asumir que el patron de "/"
+  // se sostiene en toda pantalla que use .glass.
+  for (const ruta of ["/", "/dashboard"]) {
+    test(`contraste medido en ${ruta}: velo de cada superficie de cristal >= 4.5:1`, async ({ browser }) => {
+      const context = await browser.newContext({
+        storageState: STORAGE_STATE_PATH,
+        viewport: { width: 1280, height: 800 },
       });
+      const page = await context.newPage();
+      await page.goto(ruta, { waitUntil: "networkidle" });
 
-      expect(alphaDe(veilBg), `Velo translúcido (alpha != 1): ${veilBg}`).toBe(1);
+      const glassSurfaces = await page.locator(".glass").all();
+      expect(glassSurfaces.length, `Ninguna superficie .glass montada en ${ruta}`).toBeGreaterThan(0);
 
-      const contraste = ratio(textColor, veilBg);
-      expect(
-        contraste,
-        `Contraste ${contraste.toFixed(2)}:1 insuficiente — texto ${textColor} sobre velo ${veilBg}`
-      ).toBeGreaterThanOrEqual(4.5);
-    }
+      for (const glass of glassSurfaces) {
+        // El velo puede ser hijo (GlassPanel/GlassModal/Toast) o hermano en
+        // capa de fondo (GlassNav, con -z-10) — se busca dentro del propio
+        // contenedor .glass, no se asume una relación padre-hijo fija.
+        const { veilBg, textColor } = await glass.evaluate((el) => {
+          const veil = el.querySelector(".veil") || el;
+          // El nodo que de verdad pinta el texto visible es el más profundo
+          // con un nodo de texto propio — un <a> que envuelve un <span> con
+          // color explícito matchea el selector primero por orden de
+          // documento, pero su color computado no es el que se ve en pantalla.
+          const candidates = Array.from(el.querySelectorAll("span, p, h1, h2, h3, button, a")).reverse();
+          const leaf = candidates.find((node) =>
+            Array.from(node.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())
+          );
+          const textEl = leaf || el;
+          return {
+            veilBg: getComputedStyle(veil).backgroundColor,
+            textColor: getComputedStyle(textEl).color,
+          };
+        });
 
-    await context.close();
-  });
+        expect(alphaDe(veilBg), `Velo translúcido (alpha != 1): ${veilBg}`).toBe(1);
+
+        const contraste = ratio(textColor, veilBg);
+        expect(
+          contraste,
+          `Contraste ${contraste.toFixed(2)}:1 insuficiente — texto ${textColor} sobre velo ${veilBg}`
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+
+      await context.close();
+    });
+  }
 });

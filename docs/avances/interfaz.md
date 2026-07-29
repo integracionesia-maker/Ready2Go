@@ -1,5 +1,96 @@
 # Avances — interfaz
 
+## 2026-07-29 (sesion 3 — modo 09-ejecutar-todo, cinco issues sin push)
+
+### ISSUE I2 — Piel de Presupuestos (cerrada, 1 commit)
+
+Decisión central: el "va cristal" de `02-I2-piel-presupuestos.md` (paneles,
+modales, KPI tiles, popover de perfil) choca con el límite duro de 3-4
+superficies simultáneas de DESIGN_SYSTEM.md en cuanto se aplica literal a los
+8 KPI de Dashboard — así que solo 2 de 8 (`Total Gastado`, `Total
+Disponible`) llevan `glass`; el resto queda plano. Con el nav de módulos del
+shell (1, siempre presente) + esas 2, quedan 3 superficies simultáneas en
+`/dashboard`, dentro del límite.
+
+`KpiCard.jsx` se dejó **sin tocar** a propósito: `DashboardPdfTemplate.jsx`
+(intocable en piel, regla dura del pool) todavía lo importa directamente, y
+html2canvas no sabe rasterizar `backdrop-filter` — meterle cristal ahí
+habría reventado el PDF. `Dashboard.jsx` (la vista en vivo) migró a
+`KpiTile` (`@/design`); el PDF sigue con `KpiCard` intacto.
+
+`Modal.jsx` pasó a `.glass`+`.veil` conservando su API exacta
+(`{title, onClose, submitting, children}`): sus 5 consumidores
+(`AdminView`, `UserManagement`, `ValidationQueue`,
+`GeneralExpensesExportModal`, `DeleteConfirmModal`) heredan el cristal sin
+que se les tocara una línea — confirmado por el diff (`git diff --stat`
+no los lista). Los 3 modales con wrapper propio
+(`UploadTicketModal`, `GeneralExpenseModal`, `MediaViewerModal`) y
+`ProfilePopover` recibieron el mismo patrón a mano. `LoginPage` es la única
+pantalla que lleva cristal en su propia superficie (nada más compite por el
+presupuesto ahí).
+
+**Autoverificación obligatoria (02-I2 §"La regla que define el paquete")**:
+
+```
+git diff --stat -- frontend/src
+git diff -U0 -- frontend/src | grep -nE "^[+-].*(fetch\(|request\(|from \"@/api\"|from '@/api'|useEffect|budget_cycle|is_deleted|status ===|role ===|ADMIN_ROLES)"
+```
+
+8 archivos en el diff; el grep salió **vacío** — cero llamadas a API, cero
+condición de negocio tocada.
+
+**Verificado, no solo asumido**: el chequeo de contraste de
+`pantallas.spec.js` (heredado de I1) solo visitaba `/` — las 2 KpiTile
+nuevas de `/dashboard` habrían quedado sin medir. Se agregó un segundo
+recorrido (`/` y `/dashboard`) al mismo test; ambas rutas miden >= 4.5:1 real
+(no una suposición porque "ya se midió en I1").
+
+**Evidencia**
+
+```
+npm run build verde.
+dist/assets/index-*.js       47.25 kB  gzip: 14.79 kB
+dist/assets/index-*.css      29.80 kB  gzip:  6.88 kB
+Payload real de /login (medido con Playwright contra vite preview, los
+mismos 4 chunks eager que en I1): index + react-vendor + motion + LoginPage
+= 14.79 + 52.97 + 45.03 + 1.10 = 113.89 kB gz de JS + 6.88 kB gz de CSS
+≈ 120.8 kB gz total (techo: 250 kB gz, I1 cerró en ~118.3 kB gz).
+`motion` subió de 42.51 a 45.03 kB gz: Dashboard (lazy) ahora también usa
+`animate()` vía KpiTile, y manualChunks agrupa TODO framer-motion en un
+único chunk que ya era eager por GlassNav — el codigo nuevo de animate()
+se vuelve eager aunque solo lo use una vista lazy. Con ~129 kB de margen
+todavía no hace falta LazyMotion+domAnimation, pero I4 (mas vistas, mas
+motion) es donde esto se puede apretar.
+```
+
+3 e2e de Presupuestos + pantallas.spec.js, cada uno con DB propia recién
+sembrada y uvicorn reiniciado entre archivos:
+
+| Spec | Resultado |
+|---|---|
+| `auth.spec.js` | 7/7 |
+| `presupuesto-flujo-completo.spec.js` | 9/9 (incluye el PDF del dashboard — confirma que `KpiCard`/`DashboardPdfTemplate` siguen intactos — y el popover de perfil) |
+| `gastos-generales.spec.js` | 9/9 |
+| `pantallas.spec.js` | 23/23 (20 pantallas + bootstrap + 2 contraste: `/` y `/dashboard`) |
+
+Capturas reales (1280x800 y 390x844 donde aplica) en
+`C:\dev\prompts-interfaz\respaldos\I2\`: `login`, `home`, `dashboard` (ambos
+anchos), `profile-popover` (ambos anchos), y una de `modal-nuevo-ticket`
+(1280x800) que alcanzó a salir antes de que un bug de mi propio script de
+captura (no del producto — el guion repetía navegaciones a "/" en una
+secuencia que un botón del Sidebar no toleraba; los 25 e2e reales sí hacen
+ese mismo click sin problema) me hiciera abandonar esa captura específica en
+los demás anchos.
+
+**No verificado en pantalla real**: todo lo anterior es Playwright headless
+(Chrome real vía CDP, no un ojo humano) — sigue sin haber verificación
+manual en un navegador con usuario.
+
+**Riesgo nuevo**: ninguno. El `motion` chunk creciendo por goteo (arriba) no
+es un riesgo nuevo, es continuación de lo ya anotado en I1 commit 4.
+
+### ISSUE I3, I5, I6, I4 — en progreso, ver entradas mas abajo en esta misma sesion.
+
 ## 2026-07-28 (sesion 2)
 
 ### I1 — Shell liquid glass (WP7-A), absorbiendo I7 (cerrada): 5 commits
