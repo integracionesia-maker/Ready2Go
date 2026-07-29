@@ -94,7 +94,16 @@ export default function PhotoCapture({ label, existingMediaId, onUpload }) {
         {preview ? (
           <img src={preview} alt={label} className="h-full w-full object-cover" />
         ) : existingUrl ? (
-          <img src={existingUrl} alt={label} className="h-full w-full object-cover" />
+          // I8 lote 3 (hallazgo): si el archivo ya no existe en el servidor
+          // (borrado, id viejo), sin este `onError` quedaba el ícono roto
+          // nativo del navegador dentro de la caja — se cae al mismo "Sin
+          // foto" de abajo.
+          <img
+            src={existingUrl}
+            alt={label}
+            className="h-full w-full object-cover"
+            onError={() => setExistingUrl(null)}
+          />
         ) : (
           <span className="font-body text-xs" style={{ color: "var(--go-text-muted)" }}>
             Sin foto

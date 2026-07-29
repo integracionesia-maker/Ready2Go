@@ -194,7 +194,24 @@
         insuficientes, nunca mas de 6 prestamos/8 equipos). Regresion
         completa sin romper nada: 70/70 (48 Presupuestos + 22 Equipos
         mock). Build verde, sin cambio de tamano real.
-  - [ ] **Lote 3 — Media y responsiva contra el servidor real.**
+  - [x] **Lote 3 — Media y responsiva contra el servidor real.** 422
+        MEDIA_INVALIDA y 413 MEDIA_MUY_GRANDE (foto y firma, limites
+        independientes) reales. Compresion de cliente verificada con peso
+        de red real: 2000x1400 ruido -> 900x630/~245KB. ?tamano=thumb
+        real (1083B vs 249729B del original, mismo id); confirmado por
+        codigo que Miniatura pide thumb y FotoCompleta pide el original.
+        Hallazgo 3.1: <img> sin onError mostraba el icono roto nativo con
+        un id inexistente -> arreglado en los 3 lugares que pintan
+        foto/firma existente (mismo placeholder "Sin foto" que ya
+        existia). Hallazgo 3.2 (ambiente, no codigo): GET .../
+        responsiva.pdf devolvia 404 para TODO prestamo confirmado porque
+        reportlab (ya declarado en requirements.txt desde S5) nunca se
+        instalo en este entorno -- el catch de ImportError pensado para
+        "S5 no ha aterrizado" atrapaba tambien el ModuleNotFoundError
+        real. Instalado (dependencia ya declarada, no nueva) y confirmado
+        con un prestamo nuevo: PDF real en disco, headers correctos,
+        razon social confirmada por codigo que sale de la tabla empresa
+        (nunca hardcode). Regresion completa sin romper nada: 70/70.
   - [ ] **Lote 4 — Despertar equipos-flujo-completo.spec.js.**
   - [ ] **Lote 5 — B-I14: retirar fallbackPorRol.js.**
   - [ ] **Lote 6 — Cierre e integracion.**

@@ -59,6 +59,25 @@
   (regresión propia: el lote 1 cambió el caller a mandar esas llaves y el
   mock se quedó esperando el `responsable` anidado viejo).
 
+## 2026-07-29/30 (I8 lote 3 — Media y responsiva contra el servidor real)
+
+### Cambiado
+
+- `frontend/src/modules/equipos/pages/FichaPrestamoPage.jsx` — `Miniatura`
+  y `FotoCompleta` caen al placeholder "Sin foto"/"No disponible" en vez
+  del ícono roto nativo cuando `<img onError>` dispara (id inexistente o
+  archivo borrado del servidor).
+- `frontend/src/modules/equipos/components/PhotoCapture.jsx` — mismo
+  fallback para `existingUrl` cuando la foto ya subida deja de resolver.
+
+### Ambiente (no código)
+
+- `reportlab>=5.0.0` (declarado en `backend/requirements.txt` desde S5)
+  instalado en el entorno local — no estaba, y `crud_loans.generar_
+  responsiva` lo confundía en silencio con "S5 no ha aterrizado", dejando
+  todo `GET /loans/{id}/responsiva.pdf` en 404 pese a que el registro en
+  base ya existía.
+
 ## 2026-07-29 (I4g — Ficha de préstamo — modo 09-ejecutar-todo, cierre de I4)
 
 ### Agregado

@@ -36,9 +36,11 @@ function Dato({ label, children }) {
 
 function Miniatura({ mediaId, label, onExpand }) {
   const [url, setUrl] = useState(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
+    setError(false);
     if (mediaId) {
       mediaUrl(mediaId, { tamano: "thumb" }).then((u) => {
         if (!cancelado) setUrl(u);
@@ -49,13 +51,18 @@ function Miniatura({ mediaId, label, onExpand }) {
     };
   }, [mediaId]);
 
-  if (!mediaId) {
+  // I8 lote 3 (hallazgo): sin este `onError`, un id de media que ya no
+  // resuelve (archivo borrado del disco, id inventado) dejaba el ícono roto
+  // nativo del navegador dentro del botón — no truena nada, pero desentona
+  // del resto de la UI. Mismo placeholder "Sin foto" que ya se usa para
+  // `mediaId` ausente.
+  if (!mediaId || error) {
     return (
       <div
         className="flex h-24 w-24 shrink-0 items-center justify-center rounded-go border font-body text-[10px]"
         style={{ borderColor: "var(--go-border)", background: "var(--go-surface)", color: "var(--go-text-muted)" }}
       >
-        Sin foto
+        {error ? "No disponible" : "Sin foto"}
       </div>
     );
   }
@@ -68,7 +75,7 @@ function Miniatura({ mediaId, label, onExpand }) {
       style={{ borderColor: "var(--go-border)", background: "var(--go-surface)" }}
       aria-label={`Ampliar ${label}`}
     >
-      {url && <img src={url} alt={label} className="h-full w-full object-cover" />}
+      {url && <img src={url} alt={label} className="h-full w-full object-cover" onError={() => setError(true)} />}
     </button>
   );
 }
@@ -297,6 +304,7 @@ export default function FichaPrestamoPage() {
 
 function FotoCompleta({ mediaId, label }) {
   const [url, setUrl] = useState(null);
+  const [error, setError] = useState(false);
   useEffect(() => {
     let cancelado = false;
     mediaUrl(mediaId).then((u) => {
@@ -307,6 +315,20 @@ function FotoCompleta({ mediaId, label }) {
     };
   }, [mediaId]);
 
+  if (error) {
+    return (
+      <p className="py-12 text-center font-body text-sm" style={{ color: "var(--go-text-muted)" }}>
+        No se pudo cargar la imagen.
+      </p>
+    );
+  }
   if (!url) return <SkeletonShimmer className="h-64 w-full" />;
-  return <img src={url} alt={label} className="max-h-[70vh] w-full rounded-go object-contain" />;
+  return (
+    <img
+      src={url}
+      alt={label}
+      className="max-h-[70vh] w-full rounded-go object-contain"
+      onError={() => setError(true)}
+    />
+  );
 }

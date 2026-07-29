@@ -213,6 +213,64 @@ commit y quedaron cubiertos por la regresión existente; ninguno tiene
 prueba automatizada propia todavía (quedan para I8 lote 4, que sí ejerce
 la UI real de punta a punta).
 
+### Lote 3 — Media y responsiva contra el servidor real (cerrado)
+
+Multipart real contra `POST /loans/{id}/media`: 422 `MEDIA_INVALIDA` real
+(archivo de texto con extensión `.jpg`, magic bytes rechazados), 413
+`MEDIA_MUY_GRANDE` real tanto para foto (>3 MB) como para firma (>250 KB,
+límite independiente confirmado), compresión de cliente verificada con
+peso real de red: una foto de 2000x1400 px de ruido (~8+ MB sin comprimir)
+subió a 900x630 px / ~245 KB tras pasar por `PhotoCapture.jsx`
+(`naturalWidth`/`naturalHeight` medidos en el DOM, no asumidos).
+`?tamano=thumb` confirmado real y barato: 1083 bytes contra 249 729 del
+original (misma imagen, mismo id) — y confirmado por código que
+`Miniatura` (grid) pide `thumb` mientras `FotoCompleta` (modal de
+ampliar) pide el original, nunca al revés.
+
+**Hallazgo 3.1 — `<img>` sin `onError` mostraba el ícono roto nativo del
+navegador con un id inexistente/borrado.** No crashea nada, pero
+desentona del resto de la UI (bordes, texto sin estilo, layout que se
+sale de la caja). Reproducido reemplazando el `src` de una firma real por
+un id inventado en la ficha ya renderizada. Arreglado en los tres lugares
+que pintan una foto/firma existente por id (`Miniatura` y `FotoCompleta`
+de `FichaPrestamoPage.jsx`, `existingUrl` de `PhotoCapture.jsx`) con el
+mismo placeholder "Sin foto"/"No disponible" que ya existía para
+`mediaId` ausente.
+
+**Hallazgo 3.2 (ambiente, no código) — `GET /loans/{id}/responsiva.pdf`
+devolvía 404 ("el archivo ya no está en disco") para TODO préstamo
+confirmado**, incluido `CE-0007`. Causa: `reportlab` (declarado en
+`requirements.txt` desde S5, con un comentario explícito sobre por qué el
+piso subió a `>=5.0.0`) nunca se había instalado en este entorno —
+`crud_loans.generar_responsiva` atrapa `ImportError` a propósito para el
+caso "S5 no ha aterrizado todavía", y un `ModuleNotFoundError` real (que
+hereda de `ImportError`) cae en la misma rama sin distinguirlos: se
+registra la fila en `responsiva_doc` con versión y URL, pero nunca se
+escribe el PDF. Confirmado con `python -c "import reportlab"` (falla) y
+`uploads/responsivas/` vacío pese a tener registros para `CE-0007`/
+`CE-0008` en la base. **No es un bug de código** (el fallback está
+documentado y es correcto para su caso real: S5 pendiente); es un hueco
+de entorno — se corrió `pip install "reportlab>=5.0.0"` (dependencia ya
+declarada, no una nueva) y se reinició uvicorn. Confirmado con un
+préstamo nuevo (`CE-0013`): PDF real en disco (firma `%PDF-1.4`, 4791
+bytes), headers correctos (`Content-Disposition: inline`, `ETag`,
+`Cache-Control: private`). La razón social emisora se confirmó por
+código que sale de la tabla `empresa` (`crud_empresas.emisora_por_defecto`,
+con fallo explícito `EmisoraNoConfigurada` si falta) y por API que la
+tabla trae 3 empresas reales, una con RFC — no se extrajo el texto
+renderizado del PDF byte a byte (el stream usa `ASCII85Decode` +
+`FlateDecode` anidados y no hay librería de lectura de PDF instalada;
+agregar una solo para esta verificación puntual no se justificó).
+
+**Evidencia**: `npm run build` verde. Regresión completa sin romper nada:
+`equipos-errores.spec.js` 6/6, `contrato-fixtures.spec.js` 6/6,
+`paridad-bodies-equipos.spec.js` 10/10, 4 suites de Presupuestos 48/48.
+
+**Riesgo nuevo**: ninguno de código. Riesgo de ambiente cerrado en este
+mismo lote (reportlab instalado); si el entorno de otra persona tampoco
+lo tiene, el mismo síntoma (404 silencioso en "Ver responsiva") se
+repetirá hasta que corra `pip install -r requirements.txt`.
+
 ## 2026-07-29 (sesion 3 — modo 09-ejecutar-todo, cinco issues sin push)
 
 ### ISSUE I2 — Piel de Presupuestos (cerrada, 1 commit)
