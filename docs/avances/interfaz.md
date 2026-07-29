@@ -265,7 +265,83 @@ contra usuarios sinteticos via `userOverride`.
 se encontraron y arreglaron el mismo dia, dentro del mismo commit, sin
 quedar expuestos en ninguna captura de cierre.
 
-### ISSUE I6, I4 — en progreso, ver entradas mas abajo en esta misma sesion.
+### ISSUE I6 — e2e de Equipos + B-I06 (cerrada, 1 commit)
+
+`e2e/helpers/imagen.mjs`: PNG real construido a mano vía `node:zlib`
+(firma + IHDR + IDAT comprimido con `deflateSync` + IEND, con CRC32 propio
+— tabla estándar IEEE 802.3/Anexo D de la spec PNG). **Verificado con
+round-trip real**, no solo "parece un PNG": `zlib.inflateSync` del IDAT y
+lectura del primer píxel confirma que decodifica exactamente al color
+pedido. `fotoGrande()` usa **ruido** por píxel, no un color sólido — un
+color sólido comprime a unos cuantos KB sin importar el tamaño del lienzo
+(deflate ama la repetición) y jamás dispararía el límite real de 3 MB;
+medido: 3,782,118 bytes, por encima del límite. `firmaPng()` medido en 414
+bytes, bajo 250 KB. `jpegReal()` con magic bytes reales.
+
+`e2e/helpers/sesiones.mjs`: un login por persona, `storageState` cacheado
+por usuario — mismo patrón que `pantallas.spec.js` pero como helper
+reusable por cualquier spec futuro.
+
+**`equipos-flujo-completo.spec.js`** (10 pasos, `test.fixme` con motivo y
+condición de despertar escritos en la primera línea del describe):
+escribirlo contra `API_EQUIPOS_v1.md` de punta a punta encontró el
+**entregable más valioso del paquete** — un patrón de huecos del contrato,
+no un caso aislado: el contrato ejemplifica con JSON completo la
+*respuesta* de `GET /loans/{id}` y el *body* de `/confirmar-devolucion`,
+pero nunca los bodies de `POST /loans/`, `POST /loans/{id}/items` ni
+`POST /loans/{id}/autorizar-entrega`. R-I13 (de I3, sobre `/devolucion`)
+era el primer síntoma; esto confirma que es sistemático. Documentado como
+**R-I14** en `docs/riesgos/interfaz.md` con la pregunta concreta para el
+carril de servidor, y anotado directo en `real/loans.js` (I3) para que
+quien lo lea sepa que esos nombres de campo son una asunción, no un hecho
+confirmado.
+
+**`equipos-errores.spec.js`** (los 5 códigos feos, corre HOY): usa
+`DevMockHarness.jsx` (I3) como "UI" de prueba — es lo único que hoy
+reacciona visiblemente a estos códigos, ya que I4 (las 7 vistas reales)
+no existe todavía. Lee el bloque "Último resultado" del harness (JSON
+crudo con `status`/`codigo`/`message`) en vez de parsear el texto del
+Toast, más frágil. Para el caso 503 confirma **explícitamente** que la
+página no redirige a `/login` — la regla dura de que un 503 nunca
+desloguea, verificada por assertion, no solo inferida.
+
+**B-I06 (semilla de demo reusable)**: `e2e/helpers/sembrar-demo.mjs`
+generaliza el bootstrap que vivía hardcodeado dentro de
+`pantallas.spec.js` — ahora acepta cuántos creadores/marcas/tickets, con
+sufijo por corrida (no choca con datos de una corrida anterior), solo por
+la API real. `pantallas.spec.js` fue refactorizado para consumirlo:
+**sigue en 23/23** (no bajó del número anterior a este refactor).
+
+**Evidencia**
+
+```
+npm run build verde, byte-idéntico al de I5 (index-*.js y CSS con el
+MISMO hash de contenido: I6 no tocó ni un archivo de frontend/src/, solo
+frontend/e2e/).
+```
+
+Batería completa, cada uno con DB propia recién sembrada y uvicorn
+reiniciado entre archivos (rate limit 30/15min):
+
+| Spec | Resultado |
+|---|---|
+| `auth.spec.js` | 7/7 |
+| `presupuesto-flujo-completo.spec.js` | 9/9 |
+| `gastos-generales.spec.js` | 9/9 |
+| `pantallas.spec.js` | 23/23 |
+| `contrato-fixtures.spec.js` | 6/6 |
+| `equipos-errores.spec.js` (con `VITE_EQUIPOS_MOCK=1`) | 6/6 |
+| `equipos-flujo-completo.spec.js` | 8 fixme (skip confirmado, no ejecuta) |
+
+**No verificado en pantalla real**: Playwright headless. El flujo completo
+de `equipos-flujo-completo.spec.js` no se verificó contra NADA real (ni
+UI ni servidor) — es aspiracional por diseño, a la espera de I4 y del
+servidor.
+
+**Riesgo nuevo**: R-I14 (bodies de escritura sin ejemplo en el contrato,
+patrón detrás de R-I13 — ver arriba y `docs/riesgos/interfaz.md`).
+
+### ISSUE I4 — en progreso, ver entradas mas abajo en esta misma sesion.
 
 ## 2026-07-28 (sesion 2)
 

@@ -219,3 +219,35 @@ firma de función interna — así que I3/I4 no se bloquean, pero cuando el
 servidor real de Equipos aterrice, `real/loans.js:returnLoan` es el primer
 lugar a revisar si el body no calza. Se reporta, no se resuelve solo: falta
 que quien congelo el contrato confirme la forma real.
+
+## R-I14 — El contrato ejemplifica las respuestas GET pero no los bodies de escritura (patrón, no un solo endpoint)
+
+Verificado en disco escribiendo `equipos-flujo-completo.spec.js` (I6) contra
+`API_EQUIPOS_v1.md` de punta a punta: §3 y §4 dan un ejemplo JSON completo
+de la **respuesta** de `GET /api/loans/{id}` y del **body** de
+`POST /confirmar-devolucion` (`{"decisiones": [...]}`), pero para el resto
+de los POST que escriben datos —`POST /loans/` (crear borrador),
+`POST /loans/{id}/items` (agregar equipo), `POST /loans/{id}/autorizar-entrega`—
+el contrato solo da la ruta y la regla de negocio en prosa, nunca un
+ejemplo de body. R-I13 (arriba) es el primer caso encontrado de este mismo
+patrón, en `/devolucion`; este es el hallazgo de que **no es un caso
+aislado**.
+
+Los nombres de campo que asumí, tanto en `real/loans.js` (I3) como en los
+selectores de `equipos-flujo-completo.spec.js` (I6), salen por inferencia
+del *response* de `GET /loans/{id}` (que sí trae `items[].equipment_id`,
+`items[].accesorios_seleccionados`, `items[].accesorios_otros`,
+`items[].cargador_con`, `responsable`, `area`, `empresa`, `motivo`,
+`notas_responsiva`, `fecha_regreso_esperada`) — razonable, pero no
+confirmado: el contrato nunca dice explícito que el body de
+`POST /loans/{id}/items` use exactamente esos mismos nombres en
+`snake_case` en vez de, por ejemplo, `camelCase` o una forma distinta para
+escritura vs. lectura.
+
+Pregunta concreta para quien congeló el contrato / el carril de servidor:
+**¿los bodies de escritura de `/loans/`, `/loans/{id}/items` y
+`/autorizar-entrega` usan los mismos nombres de campo que el response de
+`GET /loans/{id}`, en snake_case, o hay una forma de escritura distinta?**
+Mientras no haya respuesta: `real/loans.js` y el spec fixme quedan con la
+asunción anotada explícita en el código (no oculta), y son los primeros
+lugares a revisar cuando el servidor real aterrice.

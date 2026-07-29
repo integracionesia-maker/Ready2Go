@@ -66,9 +66,21 @@
       endpoint puntual). Capturas de los 3 roles pedidos + el 503 (no
       desloguea, no se pinta como 403) + la consola con la clave inventada.
       Los 3 e2e de Presupuestos sin tocar: 25/25.
-- [ ] **I6 — e2e del flujo completo de equipos.** Escrito contra el contrato,
-      en `test.fixme` hasta que aterrice el servidor. Helpers de imagen con
-      PNG/JPEG reales, no el truco de `%PDF-1.4`.
+- [x] **I6 — e2e del flujo completo de equipos.** Commit de este issue
+      (modo 09-ejecutar-todo, 1 commit por issue). `e2e/helpers/imagen.mjs`
+      (PNG real via `node:zlib` con CRC32 propio — verificado con
+      round-trip real de `zlib.inflateSync`, no solo "parece PNG"; JPEG
+      minimo valido; `fotoGrande()` con ruido para forzar > 3 MB de verdad,
+      un color solido hubiera comprimido a unos KB sin importar el lienzo).
+      `e2e/helpers/sesiones.mjs` (un login por persona, `storageState`
+      cacheado). `e2e/equipos-flujo-completo.spec.js` — **en `test.fixme`**
+      con el motivo y la condicion de despertar escritos en el propio
+      archivo; selectores aspiracionales (I4 no existe todavia).
+      `e2e/equipos-errores.spec.js` — los 5 codigos feos corriendo HOY
+      contra el mock de I3 via `DevMockHarness` (no fixme), 6/6. Riesgo
+      nuevo: R-I14 (los bodies de escritura del contrato no traen ejemplo
+      JSON, patron detras de R-I13). B-I06 tambien cerrado en este commit
+      (ver abajo).
 
 ## Decisiones ya tomadas, para no re-litigarlas
 
@@ -118,13 +130,15 @@
       R-I04, un solo login con `storageState`, contraste medido del velo de
       cada superficie `.glass` del shell). 22/22. Encontro y arreglo un riesgo
       real en el camino: R-I12.
-- [ ] **B-I06 — Semilla de demo usable para capturas.** Hoy hay que aprobar los
-      355 tickets por la API despues de sembrar (R-I04). Deberia existir un paso
-      documentado, o pedir que el seed del backend deje datos que si pinten.
-      Sigue sin existir el helper generico `e2e/helpers/sembrar-demo.mjs`
-      pedido en la asignacion — lo que hay hoy es un bootstrap ad-hoc *dentro*
-      de `e2e/pantallas.spec.js` (crea 1 creador + 1 marca + 1 ticket via API
-      real, el ticket de superadmin se auto-aprueba) que sirve de precedente
+- [x] **B-I06 — Semilla de demo usable para capturas.** Commit de I6.
+      `e2e/helpers/sembrar-demo.mjs`: generico y parametrizable (cuantos
+      creadores/marcas/tickets, monto, ciclo, prioridad), sufijo por
+      corrida (no choca con datos de una corrida anterior), solo por la API
+      real (clics reales, cero escritura a `presupuesto.db`).
+      `pantallas.spec.js` ya lo consume en vez de su bootstrap ad-hoc
+      anterior — sigue en 23/23 (era 22/22 en el cierre de I1; subio a
+      23/23 en I2 al agregar el chequeo de contraste en `/dashboard`, y se
+      mantiene ahi tras el refactor, sin regresion).
       pero no es reusable por otros specs todavia.
 - [ ] **B-I07 — Promover `useMobile` a un lugar compartido** cuando el modulo de
       equipos lo necesite. Quedo dentro de `modules/presupuestos/hooks/` por I0;
@@ -164,3 +178,11 @@
       de `/confirmar-devolucion`, que si trae uno). `real/loans.js:returnLoan`
       adivino `{items: [...]}` para poder escribir el cliente; revisar ahi
       primero cuando el servidor real de Equipos aterrice.
+- [ ] **B-I15 — Confirmar los nombres de campo de los bodies de escritura**
+      de `POST /loans/`, `POST /loans/{id}/items` y
+      `POST /loans/{id}/autorizar-entrega`. Ver R-I14: el contrato solo
+      ejemplifica el *response* de `GET /loans/{id}`, nunca estos bodies —
+      es el mismo patron que R-I13, pero encontrado escribiendo
+      `equipos-flujo-completo.spec.js` (I6) contra el contrato completo, no
+      un caso aislado. `real/loans.js` (I3) tiene la asuncion anotada
+      explicita en el codigo (snake_case, calcado del ejemplo de lectura).

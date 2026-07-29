@@ -1,5 +1,34 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I6 — e2e de Equipos + B-I06, 1 commit — modo 09-ejecutar-todo)
+
+### Agregado
+
+- `frontend/e2e/helpers/imagen.mjs` — `pngReal()` (PNG RGB truecolor real
+  vía `node:zlib`, CRC32 propio, sin dependencias nuevas), `jpegReal()`
+  (JPEG mínimo válido, constante base64 documentada), `fotoGrande()`
+  (>3 MB con ruido — un color sólido comprimiría a unos KB sin importar el
+  lienzo), `firmaPng()` (<250 KB).
+- `frontend/e2e/helpers/sesiones.mjs` — `contextoDe()`: un login por
+  persona, `storageState` cacheado en `e2e/.auth/<usuario>.json`.
+- `frontend/e2e/helpers/sembrar-demo.mjs` — `sembrarDemo()`: N
+  creadores/marcas/tickets vía API real, sufijo por corrida, extraído del
+  bootstrap que antes vivía solo dentro de `pantallas.spec.js` (B-I06).
+- `frontend/e2e/equipos-errores.spec.js` — los 5 códigos feos contra el
+  mock de I3 (vía `DevMockHarness`), corre HOY (no fixme), 6/6.
+- `frontend/e2e/equipos-flujo-completo.spec.js` — flujo completo de un
+  préstamo (10 pasos), `test.fixme` con motivo y condición de despertar
+  escritos en el archivo; selectores aspiracionales (I4 no existe aún).
+
+### Cambiado
+
+- `frontend/e2e/pantallas.spec.js` — su bootstrap ahora consume
+  `sembrarDemo()` en vez de crear el creador/marca/ticket inline. Sigue en
+  23/23 (era 22/22 al cierre de I1; subió a 23/23 en I2 con el segundo
+  chequeo de contraste en `/dashboard`).
+- `frontend/src/modules/equipos/api/real/loans.js` — comentario nuevo
+  documentando la asunción de nombres de campo (R-I14).
+
 ## 2026-07-29 (I5 — permisos en la UI, 1 commit — modo 09-ejecutar-todo)
 
 ### Agregado

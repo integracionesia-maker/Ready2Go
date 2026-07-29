@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { RUTAS, ANCHOS, medirPantalla, pantallaVacia, dashboardSinGraficos } from "./helpers/pantallas.mjs";
 import { ratio, alphaDe } from "./helpers/contraste.mjs";
+import { sembrarDemo } from "./helpers/sembrar-demo.mjs";
 
 // Formaliza el verificador de capturas (B-I05): recorre las 10 rutas en
 // 1280x800 y 390x844 (20 capturas), falla si una pantalla sale vacía o si
@@ -21,13 +22,6 @@ const SUPERADMIN_USERNAME = "superadmin";
 const SUPERADMIN_SEED_PASSWORD = process.env.E2E_SUPERADMIN_PASSWORD || "";
 const RUN_ID = Date.now();
 const SUPERADMIN_NEW_PASSWORD = `SuperPantallasE2E${RUN_ID}!`;
-
-const CREATOR_NAME = `Creador Pantallas ${RUN_ID}`;
-const BRAND_NAME = `Marca Pantallas ${RUN_ID}`;
-
-function ticketFileBuffer() {
-  return Buffer.from(`%PDF-1.4\n% comprobante de prueba E2E pantallas ${RUN_ID}\n`);
-}
 
 async function login(page, identificador, password) {
   await page.goto("/login");
@@ -55,49 +49,13 @@ test.describe.serial("Verificador de pantallas (B-I05)", () => {
     await page.click('button:has-text("Actualizar contraseña")');
     await expect(page.getByText("Contraseña actualizada.")).toBeVisible();
 
-    // Un creador + marca + ticket real (auto-aprobado por venir de
+    // 1 creador + 1 marca + 1 ticket real (auto-aprobado por venir de
     // superadmin) para que /dashboard tenga algo que graficar en vez de
     // pintar el estado "Sin datos" con la DB "llena" (R-I04, trampa ya
     // pagada en I0: hay que aprobar por la API real, no tocar la DB).
-    await page.goto("/administracion");
-    await page.click('button:has-text("Creadores")');
-    await page.click('button:has-text("Nuevo Creador")');
-    let modal = page.locator(".fixed.inset-0");
-    await modal.locator('input[type="text"]').fill(CREATOR_NAME);
-    await modal.locator('input[type="number"]').fill("5000");
-    await modal.locator("select").selectOption("mensual");
-    await modal.locator('button:has-text("Crear")').click();
-    await expect(page.locator("tr", { hasText: CREATOR_NAME })).toBeVisible();
-
-    await page.click('button:has-text("Marcas")');
-    await page.click('button:has-text("Nueva Marca")');
-    modal = page.locator(".fixed.inset-0");
-    await modal.locator('input[type="text"]').fill(BRAND_NAME);
-    await modal.locator("select").selectOption("alta");
-    await modal.locator('button:has-text("Crear")').click();
-    await expect(page.locator("tr", { hasText: BRAND_NAME })).toBeVisible();
-
-    await page.goto("/");
-    await page.click('button:has-text("Nuevo Ticket")');
-    modal = page.locator(".fixed.inset-0");
-    // La opción de creador lleva un sufijo "— Restante del ciclo: $X" (no es
-    // solo el nombre), así que selectOption({label}) exacto no la encuentra:
-    // se ubica por texto parcial y se selecciona por su value real.
-    const creatorOptionValue = await modal
-      .locator("select")
-      .nth(0)
-      .locator("option", { hasText: CREATOR_NAME })
-      .getAttribute("value");
-    await modal.locator("select").nth(0).selectOption(creatorOptionValue);
-    await modal.locator("select").nth(1).selectOption({ label: BRAND_NAME });
-    await modal.locator('input[type="number"]').fill("750");
-    await modal.locator('input[type="file"]').setInputFiles({
-      name: "comprobante-pantallas.pdf",
-      mimeType: "application/pdf",
-      buffer: ticketFileBuffer(),
-    });
-    await modal.locator('button:has-text("Registrar Ticket")').click();
-    await expect(modal.getByText("Ticket registrado exitosamente.")).toBeVisible();
+    // B-I06: este bootstrap vivía aquí mismo, hardcodeado; ahora es
+    // e2e/helpers/sembrar-demo.mjs, genérico y reusable por otros specs.
+    await sembrarDemo(page, { sufijo: RUN_ID });
 
     await page.context().storageState({ path: STORAGE_STATE_PATH });
   });

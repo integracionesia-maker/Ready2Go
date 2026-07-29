@@ -1,5 +1,12 @@
 import { request, BASE } from "@/api";
 
+// R-I14 (docs/riesgos/interfaz.md): el contrato ejemplifica la RESPUESTA de
+// GET /loans/{id} pero no el BODY de escritura de createLoan/addLoanItem/
+// authorizeDelivery. Los nombres de campo de abajo (snake_case, calcados
+// del ejemplo de lectura) son una asunción razonable, no confirmada — el
+// primer lugar a revisar si el body no calza cuando el servidor real
+// aterrice.
+
 export function createLoan(data) {
   return request("/loans/", { method: "POST", body: JSON.stringify(data) });
 }
