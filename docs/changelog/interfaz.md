@@ -36,6 +36,29 @@
   pone los defaults de `estado_operativo`/`condicion` que antes esperaba
   recibir del cliente.
 
+## 2026-07-29/30 (I8 lote 2 — Levantar el módulo contra el servidor real)
+
+### Cambiado
+
+- `frontend/src/modules/equipos/pages/FichaPrestamoPage.jsx` —
+  "Autorizada por"/"Confirmada por" pintan `.nombre` (antes el objeto
+  `PersonaRef` completo como hijo JSX: crash de React y ficha en blanco
+  en cuanto el campo dejaba de ser `null`).
+- `frontend/src/modules/equipos/pages/NuevoPrestamoPage.jsx` —
+  `reanudarBorrador` pide `fetchLoanById` antes de reanudar (antes asumía
+  `items[]` sobre la fila liviana de `fetchLoans`, y tronaba en silencio
+  dentro del `onClick`: "Continuar borrador" no hacía nada contra el
+  servidor real); el stepper de 4 pasos esconde la etiqueta de texto
+  debajo de `sm:` (desbordaba 38px la página completa a 390px,
+  `scrollWidth` 428 vs `clientWidth` 390 medido en el DOM).
+- `frontend/src/modules/equipos/api/mock/loans.js` —
+  `entrega_autorizada_por`/`confirmada_por` ahora son objetos
+  `{user_id, nombre}` (antes strings planos, divergían del contrato real
+  `PersonaRef` y por eso el bug de `FichaPrestamoPage.jsx` sobrevivió a
+  I3/I4); `createLoan` lee `responsable_user_id/nombre/email` planos
+  (regresión propia: el lote 1 cambió el caller a mandar esas llaves y el
+  mock se quedó esperando el `responsable` anidado viejo).
+
 ## 2026-07-29 (I4g — Ficha de préstamo — modo 09-ejecutar-todo, cierre de I4)
 
 ### Agregado

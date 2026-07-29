@@ -120,6 +120,99 @@ contra el mock, con el mismo componente).
 **Riesgo nuevo**: ninguno — todos los bugs de este lote se encontraron y
 arreglaron dentro del mismo commit.
 
+### Lote 2 — Levantar el módulo contra el servidor real (cerrado)
+
+Con `VITE_EQUIPOS_MOCK` apagado, las 7 vistas recorridas en 1280x800 y
+390x844 contra datos reales (préstamos `CE-0007`..`CE-0012`, creados a
+propósito para cubrir cada caso — devolución confirmada, entrega
+autorizada, atraso real, borrador sin terminar). Tres hallazgos serios,
+los tres arreglados en este commit; ninguno estaba nombrado en el paquete.
+
+**Hallazgo 2.1 (severo) — la ficha se ponía en blanco al autorizar una
+entrega o confirmar una devolución de verdad.** `entrega_autorizada_por` y
+`confirmada_por` son `Optional[PersonaRef]` en `LoanDetail`
+(`schemas_loans.py`) — un objeto `{user_id, nombre}`, no un string.
+`FichaPrestamoPage.jsx` los pintaba como hijos JSX directos
+(`{loan.entrega_autorizada_por}`). Mientras el campo es `null` (el
+fixture `CE-0007` que usó I3/I4 siempre lo trae así) no pasa nada; en
+cuanto el servidor real lo puebla, React tira "Objects are not valid as a
+React child" y la página entera queda en negro, sin *error boundary* que
+lo atrape. Reproducido a propósito: `POST /loans/7/autorizar-entrega` por
+la API real y luego visitar su ficha — pantalla en negro, confirmado con
+`page.on("pageerror")`. Arreglado a `.nombre` en ambos campos (mismo
+patrón que `entregado_por`, que ya lo hacía bien un renglón arriba).
+
+**Hallazgo 2.2 (el mock mentía, y por eso el 2.1 sobrevivió a I3/I4)**:
+`mock/loans.js` ponía `entrega_autorizada_por = "Melisa Avendano"` y
+`confirmada_por` igual — strings planos, no el objeto que exige el
+contrato real. Corregido a `{ user_id: 4, nombre: "Melisa Avendano" }`
+(mismo id que ya usa `entregado_por` en `prestamo_demo.json`).
+
+**Hallazgo 2.3 (regresión propia, encontrada a tiempo) — `createLoan` del
+mock rompió tras el fix 1.2 de este mismo paquete.** El lote 1 corrigió
+`NuevoPrestamoPage.jsx` para mandar `responsable_user_id/nombre/email`
+planos (lo que de verdad exige `LoanCreate`); el mock's `createLoan`
+seguía leyendo `data.responsable` anidado — sin ese fix el mock nunca lo
+notó, pero desde el lote 1 cualquier préstamo nuevo en modo mock quedaba
+con `responsable: null` en silencio. Arreglado a leer las tres llaves
+planas (con una rama de compatibilidad si algún día vuelve a llegar
+anidado).
+
+**Hallazgo 2.4 (severo) — "Continuar borrador" no hacía nada contra el
+servidor real.** `fetchLoans({estado:"borrador", mios:true})` devuelve
+`LoanRow` (sin `items[]`) — el mismo desfase fila-vs-ficha del hallazgo
+del lote 1, esta vez en `reanudarBorrador()`, que hacía
+`borrador.items.length` sobre una fila sin `items`. El *throw* pasa en un
+manejador de evento (`onClick`), no en render, así que React no lo
+muestra en ningún lado: el botón se veía normal, no hacía nada visible, y
+`setBorradorPrevio(null)` (la línea que cierra la pantalla de "borrador
+sin terminar") nunca se ejecutaba porque estaba *después* de la línea que
+tronaba. Cualquier persona que cierre la pestaña a medio wizard y vuelva
+se queda atascada para siempre en esa pantalla. Reproducido creando un
+borrador real por API y dando clic en el botón: `pageerror` capturado
+("Cannot read properties of undefined (reading 'length')"), pantalla sin
+cambios. Arreglado pidiendo `fetchLoanById(borrador.id)` antes de
+reanudar (mismo patrón que `ActivosPage`/`AprobacionesPage`, con estado
+`reanudando` para el botón mientras carga).
+
+**Hallazgo 2.5 (responsividad) — el stepper de 4 pasos desbordaba la
+página completa a 390px.** Medido en el DOM, no solo por ojo:
+`scrollWidth` 428px contra `clientWidth` 390px — la página entera
+quedaba con scroll horizontal (viola la regla de 320px usable). Arreglado
+escondiendo la etiqueta de texto de cada paso debajo de `sm:` (el círculo
+numerado solo ya identifica el paso activo); confirmado `scrollWidth`
+390 == `clientWidth` 390 tras el fix, sin cambio visible en desktop.
+
+**Confirmado con datos reales (cierra sospechosos del paquete)**:
+`estado_fisico`/`comentario_auditoria`/`fecha_auditoria` sí vienen del
+servidor en `GET /equipment/` → **cierra B-I11 a favor del fixture**.
+`disponible`/`tenedor_actual`/`fecha_regreso_esperada` correctos en la
+fila de Inventario. Los 3 badges de la ficha (`estado`, `entrega
+autorizada`, `atrasado`) son ortogonales de verdad — se armó un préstamo
+con `fecha_regreso_esperada` pasada por API para forzar `atrasado:true` (
+ningún dato sembrado lo traía) y el badge "ATRASADO 28D" se pintó en rojo,
+independiente de los otros dos. Los 6 campos `null` de `CE-0007`
+(`notas_responsiva`, `fecha_regreso_real`, `entrega_autorizada_por`,
+`fecha_autorizacion_entrega`, `confirmada_por`, `fecha_confirmacion`)
+confirmados pintando "—".
+
+**No verificado**: paginación real con una segunda página — con 8 equipos
+y hasta 6 préstamos reales en la base de prueba, ambos listados caben en
+una sola página; la forma `{items, total}` con `limit`/`offset` está
+confirmada por API, pero nunca se disparó un salto de página de verdad.
+
+**Evidencia**: `npm run build` verde (mismo tamaño de bundle, sin cambio
+real). Regresión completa: `equipos-errores.spec.js` 6/6,
+`contrato-fixtures.spec.js` 6/6, `paridad-bodies-equipos.spec.js` 10/10,
+y las 4 suites de Presupuestos 48/48 (`auth` 7/7, `presupuesto-flujo-
+completo` 9/9, `gastos-generales` 9/9, `pantallas` 23/23) — sin
+regresión tras los 5 hallazgos de este lote.
+
+**Riesgo nuevo**: ninguno — los 5 hallazgos se arreglaron en este mismo
+commit y quedaron cubiertos por la regresión existente; ninguno tiene
+prueba automatizada propia todavía (quedan para I8 lote 4, que sí ejerce
+la UI real de punta a punta).
+
 ## 2026-07-29 (sesion 3 — modo 09-ejecutar-todo, cinco issues sin push)
 
 ### ISSUE I2 — Piel de Presupuestos (cerrada, 1 commit)

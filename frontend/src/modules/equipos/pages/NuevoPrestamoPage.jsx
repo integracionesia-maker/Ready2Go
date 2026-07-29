@@ -33,6 +33,7 @@ export default function NuevoPrestamoPage() {
   const [cargandoInicial, setCargandoInicial] = useState(true);
   const [errorInicial, setErrorInicial] = useState(null);
   const [borradorPrevio, setBorradorPrevio] = useState(null);
+  const [reanudando, setReanudando] = useState(false);
   const [empresas, setEmpresas] = useState([]);
 
   const [loan, setLoan] = useState(null);
@@ -95,17 +96,34 @@ export default function NuevoPrestamoPage() {
     init();
   }, []);
 
-  function reanudarBorrador(borrador) {
-    setLoan(borrador);
-    setArea(borrador.area || "");
-    setEmpresaSel(borrador.empresa || "");
-    setMotivo(borrador.motivo || "");
-    setFechaRegreso(borrador.fecha_regreso_esperada || "");
-    setNotas(borrador.notas_responsiva || "");
-    if (borrador.items.length === 0) setPaso(2);
-    else if (!borrador.items.every(itemListo)) setPaso(3);
-    else setPaso(4);
-    setBorradorPrevio(null);
+  async function reanudarBorrador(borradorRow) {
+    // I8 lote 2 (hallazgo, mismo patrón que I8 lote 1): `fetchLoans(...)`
+    // devuelve `LoanRow` (fila liviana del listado), sin `items[]` — esta
+    // función asumía la ficha completa y tronaba en silencio ("Cannot read
+    // properties of undefined (reading 'length')", un evento de click, no
+    // de render, así que React no lo mostraba en ningún lado) apenas alguien
+    // dejaba un préstamo a medias y volvía a /equipos/nuevo: el botón
+    // "Continuar borrador" no hacía absolutamente nada contra el servidor
+    // real. Se pide la ficha completa antes de reanudar, igual que
+    // `ActivosPage`/`AprobacionesPage` ya hacen para sus modales.
+    setReanudando(true);
+    try {
+      const borrador = await fetchLoanById(borradorRow.id);
+      setLoan(borrador);
+      setArea(borrador.area || "");
+      setEmpresaSel(borrador.empresa || "");
+      setMotivo(borrador.motivo || "");
+      setFechaRegreso(borrador.fecha_regreso_esperada || "");
+      setNotas(borrador.notas_responsiva || "");
+      if (borrador.items.length === 0) setPaso(2);
+      else if (!borrador.items.every(itemListo)) setPaso(3);
+      else setPaso(4);
+      setBorradorPrevio(null);
+    } catch (e) {
+      push({ tone: "error", title: "No se pudo continuar el borrador", message: e.detail || e.message });
+    } finally {
+      setReanudando(false);
+    }
   }
 
   async function descartarBorrador(borrador) {
@@ -288,10 +306,10 @@ export default function NuevoPrestamoPage() {
         message={`"${borradorPrevio.motivo || "Sin motivo"}" — puedes continuarlo o empezar de nuevo.`}
         action={
           <div className="mt-2 flex gap-2">
-            <button type="button" onClick={() => reanudarBorrador(borradorPrevio)} className="btn-go">
-              Continuar borrador
+            <button type="button" onClick={() => reanudarBorrador(borradorPrevio)} disabled={reanudando} className="btn-go disabled:opacity-40">
+              {reanudando ? "Continuando..." : "Continuar borrador"}
             </button>
-            <button type="button" onClick={() => descartarBorrador(borradorPrevio)} className="btn-go-ghost">
+            <button type="button" onClick={() => descartarBorrador(borradorPrevio)} disabled={reanudando} className="btn-go-ghost">
               Empezar de nuevo
             </button>
           </div>
@@ -302,9 +320,16 @@ export default function NuevoPrestamoPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
+      {/* I8 lote 2 (hallazgo): con las 4 etiquetas completas ("Datos",
+          "Equipos", "Fotos", "Firmas") el stepper mide ~428px — más que los
+          390px del viewport móvil de referencia, y sin overflow-x-auto que
+          lo contenga: la PÁGINA ENTERA quedaba con scroll horizontal
+          (confirmado con scrollWidth 428 vs clientWidth 390). Debajo de
+          `sm:` se esconde la etiqueta y el conector se acorta — el círculo
+          numerado solo ya identifica el paso activo. */}
+      <div className="flex items-center gap-1 sm:gap-2">
         {PASOS.map((label, i) => (
-          <div key={label} className="flex items-center gap-2">
+          <div key={label} className="flex items-center gap-1 sm:gap-2">
             <span
               className="flex h-7 w-7 items-center justify-center rounded-full font-mono text-xs font-bold"
               style={{
@@ -314,10 +339,13 @@ export default function NuevoPrestamoPage() {
             >
               {i + 1}
             </span>
-            <span className="font-body text-xs" style={{ color: paso === i + 1 ? "var(--go-text-primary)" : "var(--go-text-secondary)" }}>
+            <span
+              className="hidden font-body text-xs sm:inline"
+              style={{ color: paso === i + 1 ? "var(--go-text-primary)" : "var(--go-text-secondary)" }}
+            >
               {label}
             </span>
-            {i < PASOS.length - 1 && <span className="h-px w-6" style={{ background: "var(--go-border)" }} />}
+            {i < PASOS.length - 1 && <span className="h-px w-3 sm:w-6" style={{ background: "var(--go-border)" }} />}
           </div>
         ))}
       </div>

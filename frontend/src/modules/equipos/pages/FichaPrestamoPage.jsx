@@ -185,8 +185,16 @@ export default function FichaPrestamoPage() {
           <Dato label="Regreso real">
             <span className="font-mono">{loan.fecha_regreso_real || "—"}</span>
           </Dato>
-          <Dato label="Autorizada por">{loan.entrega_autorizada_por}</Dato>
-          <Dato label="Confirmada por">{loan.confirmada_por}</Dato>
+          {/* I8 lote 2 (hallazgo, mismo patrón que R-I14): ambos son
+              `Optional[PersonaRef]` en `LoanDetail` (objeto {user_id, nombre}),
+              no strings — igual que `responsable`/`entregado_por` de arriba,
+              que ya usan `.nombre`. Nunca se vio roto porque CE-0007 (el
+              fixture usado en I3/I4) siempre los trae null; en cuanto se
+              autoriza una entrega o se confirma una devolución de verdad
+              contra el servidor real, React tronaba con "Objects are not
+              valid as a React child" y la ficha entera se quedaba en blanco. */}
+          <Dato label="Autorizada por">{loan.entrega_autorizada_por?.nombre}</Dato>
+          <Dato label="Confirmada por">{loan.confirmada_por?.nombre}</Dato>
           <Dato label="Fecha de confirmación">
             <span className="font-mono">{loan.fecha_confirmacion ? loan.fecha_confirmacion.slice(0, 10) : "—"}</span>
           </Dato>

@@ -168,7 +168,32 @@
         (10/10). equipos-errores.spec.js 6/6, contrato-fixtures.spec.js
         6/6, los 4 e2e de Presupuestos 48/48. Bundle sin cambio: 122.89 kB
         gz.
-  - [ ] **Lote 2 — Levantar el modulo contra el servidor real.**
+  - [x] **Lote 2 — Levantar el modulo contra el servidor real.** 7 vistas
+        recorridas en 1280x800/390x844 con VITE_EQUIPOS_MOCK apagado.
+        Confirma B-I11 a favor del fixture (estado_fisico/
+        comentario_auditoria/fecha_auditoria si vienen del servidor).
+        disponible/tenedor_actual/fecha_regreso_esperada correctos; los 6
+        campos null de CE-0007 pintan "-"; atrasado/dias_atraso probado
+        con un prestamo real forzado por API (badge "ATRASADO 28d",
+        ortogonal a los otros 2). Tres bugs severos encontrados y
+        arreglados, ninguno nombrado en el paquete: (1) FichaPrestamoPage
+        pintaba entrega_autorizada_por/confirmada_por (objetos
+        PersonaRef reales) como hijo JSX directo -> pantalla en blanco en
+        cuanto el servidor los puebla de verdad; (2) el mock los ponia
+        como string plano, por eso sobrevivio a I3/I4 -> mock corregido a
+        {user_id, nombre}; (3) reanudarBorrador() asumia items[] sobre la
+        fila liviana de fetchLoans (LoanRow) -> "Continuar borrador" no
+        hacia nada contra el servidor real, crash silencioso en el
+        onClick -> arreglado con fetchLoanById primero. Regresion propia
+        encontrada a tiempo: el fix 1.2 del lote 1 (responsable plano)
+        rompio el createLoan del mock, que seguia leyendo el objeto
+        anidado viejo -> corregido. Stepper de 4 pasos del wizard
+        desbordaba 38px la pagina completa a 390px (scrollWidth medido en
+        DOM) -> corregido escondiendo etiquetas bajo sm:. Sin verificar:
+        una segunda pagina real de paginacion (datos de prueba
+        insuficientes, nunca mas de 6 prestamos/8 equipos). Regresion
+        completa sin romper nada: 70/70 (48 Presupuestos + 22 Equipos
+        mock). Build verde, sin cambio de tamano real.
   - [ ] **Lote 3 — Media y responsiva contra el servidor real.**
   - [ ] **Lote 4 — Despertar equipos-flujo-completo.spec.js.**
   - [ ] **Lote 5 — B-I14: retirar fallbackPorRol.js.**

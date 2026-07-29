@@ -63,11 +63,20 @@ export async function fetchLoanByFolio(folio) {
 export async function createLoan(data = {}) {
   checkGlobalInjection();
   const id = ++state.loanIdCounter;
+  // I8 lote 2: `LoanCreate` real exige las tres claves de responsable PLANAS
+  // (`responsable_user_id/nombre/email`, fix de I8 lote 1.2 en
+  // `NuevoPrestamoPage.jsx`) — el mock seguía leyendo un `data.responsable`
+  // anidado que el caller ya no manda desde ese fix, así que todo préstamo
+  // nuevo en modo mock quedaba con `responsable: null` en silencio.
+  const responsable =
+    data.responsable_user_id != null
+      ? { user_id: data.responsable_user_id, nombre: data.responsable_nombre, email: data.responsable_email }
+      : (data.responsable ?? null);
   const loan = {
     id,
     folio: null,
     estado: "borrador",
-    responsable: data.responsable ?? null,
+    responsable,
     area: data.area ?? null,
     empresa: data.empresa ?? null,
     motivo: data.motivo ?? null,
@@ -87,7 +96,7 @@ export async function createLoan(data = {}) {
     firmas: { firma_entrega: null, firma_responsable: null },
     responsiva: null,
     eventos: [
-      { id: Date.now(), tipo: "creado", actor: data.responsable?.nombre || "—", detalle: "Borrador creado.", created_at: ahora() },
+      { id: Date.now(), tipo: "creado", actor: responsable?.nombre || "—", detalle: "Borrador creado.", created_at: ahora() },
     ],
   };
   state.loans.push(loan);
@@ -208,7 +217,11 @@ export async function authorizeDelivery(loanId) {
   checkGlobalInjection();
   const loan = findLoan(loanId);
   loan.entrega_autorizada = true;
-  loan.entrega_autorizada_por = "Melisa Avendano";
+  // I8 lote 2: `entrega_autorizada_por` es `Optional[PersonaRef]` en el
+  // contrato real (objeto, no string) — igual que `entregado_por` de
+  // `prestamo_demo.json`. Antes era un string plano y sobrevivió invisible
+  // porque CE-0007 siempre lo trae null; el mismo id=4 que ya usa ese fixture.
+  loan.entrega_autorizada_por = { user_id: 4, nombre: "Melisa Avendano" };
   loan.fecha_autorizacion_entrega = ahora();
   return clone(loan);
 }
@@ -242,7 +255,9 @@ export async function confirmReturnDecision(loanId, decisiones = []) {
 
   const todasOk = decisiones.every((d) => d.decision === "ok");
   loan.estado = todasOk ? "completado" : "incompleto";
-  loan.confirmada_por = "Melisa Avendano";
+  // Mismo hallazgo que `entrega_autorizada_por` arriba: `confirmada_por`
+  // también es `PersonaRef`, no string.
+  loan.confirmada_por = { user_id: 4, nombre: "Melisa Avendano" };
   loan.fecha_confirmacion = ahora();
   return clone(loan);
 }
