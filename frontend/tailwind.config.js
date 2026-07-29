@@ -34,9 +34,11 @@ export default {
         },
       },
       fontFamily: {
-        display: ['"Space Grotesk"', "sans-serif"],
-        body: ['"Inter"', "sans-serif"],
-        mono: ['"JetBrains Mono"', "monospace"],
+        // Lee las pilas de src/design/fonts.css — meter los woff2 de marca
+        // cuando lleguen es cambiar ese único archivo, no este.
+        display: ["var(--go-font-display)", "sans-serif"],
+        body: ["var(--go-font-body)", "sans-serif"],
+        mono: ["var(--go-font-mono)", "monospace"],
       },
       borderRadius: {
         go: "8px",

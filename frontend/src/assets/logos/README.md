@@ -10,7 +10,8 @@ Assets de marca importados por componentes (Vite los optimiza y les da hash de c
 
 **Regla de variantes por tema**: blanco en modo oscuro, naranja en modo claro.
 
-**No usar `<img>` directo**: importar el componente `src/components/BrandLogo.jsx`, que
+**No usar `<img>` directo**: importar el componente
+`src/modules/presupuestos/components/BrandLogo.jsx`, que
 elige la variante correcta según `ThemeContext`:
 
 ```jsx

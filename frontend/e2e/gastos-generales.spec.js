@@ -166,7 +166,7 @@ test.describe.serial("Gastos Generales y borrado de tickets (R12)", () => {
     await login(page, CREADOR.username, CREADOR.password);
     await changePasswordOnForcedPerfil(page, CREADOR.password, CREADOR.newPassword);
 
-    await expect(page.locator("nav")).not.toContainText("Gastos Generales");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).not.toContainText("Gastos Generales");
 
     await page.goto("/gastos-generales");
     await expect(page).toHaveURL(/\/403/);
@@ -178,13 +178,17 @@ test.describe.serial("Gastos Generales y borrado de tickets (R12)", () => {
     await login(page, ADMIN.username, ADMIN.password);
     await changePasswordOnForcedPerfil(page, ADMIN.password, ADMIN.newPassword);
 
-    await expect(page.locator("nav")).toContainText("Gastos Generales");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).toContainText("Gastos Generales");
     await page.goto("/gastos-generales");
     await expect(page.getByRole("heading", { name: "Gastos Generales" })).toBeVisible();
 
     await page.click('button:has-text("Nuevo Gasto General")');
     const modal = page.locator(".fixed.inset-0");
     await expect(modal.getByText("Nuevo Gasto General")).toBeVisible();
+    // La marca es obligatoria en gastos generales (models.GeneralExpense.brand_id
+    // nullable=False + `required` en el select). Sin seleccionarla, la validación
+    // nativa del navegador bloquea el submit y el modal nunca responde.
+    await modal.locator("select").selectOption({ label: BRAND_NAME });
     await modal.locator("textarea").fill(EXPENSE_DESC_A);
     await modal.locator('input[type="number"]').fill(String(EXPENSE_AMOUNT_A));
     await modal.locator('input[type="file"]').setInputFiles({
@@ -254,6 +258,7 @@ test.describe.serial("Gastos Generales y borrado de tickets (R12)", () => {
 
     await page.click('button:has-text("Nuevo Gasto General")');
     let modal = page.locator(".fixed.inset-0");
+    await modal.locator("select").selectOption({ label: BRAND_NAME });
     await modal.locator("textarea").fill(EXPENSE_DESC_B);
     await modal.locator('input[type="number"]').fill(String(EXPENSE_AMOUNT_B));
     await modal.locator('input[type="file"]').setInputFiles({

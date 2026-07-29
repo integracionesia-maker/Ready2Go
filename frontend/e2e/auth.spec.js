@@ -96,9 +96,9 @@ test.describe.serial("Flujo de autenticación por rol", () => {
     await changePasswordOnForcedPerfil(page, ADMIN.password, ADMIN.newPassword);
 
     // R5: admin ve dashboard/creadores/administración (todo excepto usuarios).
-    await expect(page.locator("nav")).toContainText("Dashboard");
-    await expect(page.locator("nav")).toContainText("Creadores");
-    await expect(page.locator("nav")).toContainText("Administración");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).toContainText("Dashboard");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).toContainText("Creadores");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).toContainText("Administración");
     await page.goto("/dashboard");
     await expect(page).not.toHaveURL(/\/403/);
 
@@ -155,9 +155,9 @@ test.describe.serial("Flujo de autenticación por rol", () => {
     await changePasswordOnForcedPerfil(page, CREADOR.password, CREADOR.newPassword);
 
     // Sidebar de un creador: sin Dashboard, Creadores, Validación ni Administración.
-    await expect(page.locator("nav")).not.toContainText("Dashboard");
-    await expect(page.locator("nav")).not.toContainText("Administración");
-    await expect(page.locator("nav")).not.toContainText("Validación");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).not.toContainText("Dashboard");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).not.toContainText("Administración");
+    await expect(page.getByRole("navigation", { name: "Navegacion de Presupuestos" })).not.toContainText("Validación");
 
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/403/);

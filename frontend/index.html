@@ -3,19 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Control de Presupuestos — Creadores</title>
+    <title>Ready2Go — Grupo Ortiz</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <script>
-      // Aplica el tema guardado ANTES del primer paint para evitar el flash del tema incorrecto.
-      // Default oscuro si no hay preferencia guardada (R2).
-      (function () {
-        var saved = localStorage.getItem("theme");
-        var theme = saved === "light" ? "light" : "dark";
-        document.documentElement.setAttribute("data-theme", theme);
-      })();
-    </script>
+    <script src="/theme-boot.js"></script>
   </head>
-  <body class="bg-gray-50 text-gray-900 antialiased">
+  <body class="antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

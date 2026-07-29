@@ -1,73 +1,19 @@
 /**
- * Thin API wrapper around the FastAPI backend.
- * All calls return parsed JSON; errors throw with a descriptive message.
- * Cookies de sesión (access/refresh) viajan en cada request; un 401 dispara
- * un intento de refresh automático y reintenta la petición original una vez.
+ * Barril público de la API: todo el resto de la app importa de `@/api`.
+ * Aquí viven las funciones por dominio; el transporte (fetch, refresh de
+ * sesión, reintento por 401) vive en `./client.js`.
+ * Todas las llamadas devuelven JSON parseado; los errores lanzan con mensaje.
  */
 
-const BASE = "/api";
-const NO_RETRY_PATHS = ["/auth/login", "/auth/refresh"];
+import { BASE, fetchWithAuthRetry, request } from "./client";
 
-/**
- * Distingue una falla de RED (el fetch nunca obtuvo respuesta — servidor
- * caído, sin internet) de un error HTTP normal (el servidor respondió con
- * un status de error, manejado por `request()` arriba con `body.detail`).
- * El Fetch API siempre lanza `TypeError` para fallas de red en todos los
- * navegadores (Chrome: "Failed to fetch", Firefox: "NetworkError...",
- * Safari: "Load failed") — se complementa con un chequeo de mensaje por si
- * algún entorno lanza otro tipo de error para el mismo caso.
- */
-export function isNetworkError(e) {
-  if (!e) return false;
-  if (e instanceof TypeError) return true;
-  return /failed to fetch|network ?error|internet_disconnected|load failed/i.test(String(e.message || ""));
-}
-
-let onAuthFailure = null;
-export function setAuthFailureHandler(handler) {
-  onAuthFailure = handler;
-}
-
-let refreshPromise = null;
-function refreshSession() {
-  if (!refreshPromise) {
-    refreshPromise = fetch(`${BASE}/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-    }).finally(() => {
-      refreshPromise = null;
-    });
-  }
-  return refreshPromise;
-}
-
-async function fetchWithAuthRetry(path, options = {}, skipAuthRetry = false) {
-  const res = await fetch(`${BASE}${path}`, { credentials: "include", ...options });
-
-  if (res.status === 401 && !skipAuthRetry && !NO_RETRY_PATHS.some((p) => path.startsWith(p))) {
-    const refreshRes = await refreshSession();
-    if (refreshRes.ok) {
-      return fetchWithAuthRetry(path, options, true);
-    }
-    if (onAuthFailure) onAuthFailure();
-  }
-
-  return res;
-}
-
-async function request(path, options = {}) {
-  const res = await fetchWithAuthRetry(path, {
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `Error ${res.status}: ${res.statusText}`);
-  }
-
-  return res.json();
-}
+// Re-exportados para que los consumidores sigan importando de `@/api` y no
+// necesiten conocer `./client`: `isNetworkError` lo usan App.jsx y las vistas,
+// `setAuthFailureHandler` lo usa AuthContext, y `request`/`fetchWithAuthRetry`
+// los va a necesitar el cliente de API del modulo de equipos (JSON y multipart).
+// `refreshSession` NO se re-exporta a proposito: es interno del reintento por
+// 401 y ningun consumidor debe dispararlo a mano.
+export { isNetworkError, setAuthFailureHandler, fetchWithAuthRetry, request } from "./client";
 
 /* ── Auth ────────────────────────────────────────────────────────────────── */
 

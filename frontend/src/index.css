@@ -1,73 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap");
+@import "./design/tokens.css";
+@import "./design/fonts.css";
+@import "./design/glass.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Grupo Ortiz — Design Tokens
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-:root {
-  --go-orange: #fb670b;
-  --go-orange-hover: #ff7a22;
-  --go-orange-pressed: #d95c00;
-  --go-orange-tint: rgba(251, 103, 11, 0.1);
-
-  --go-black: #262626;
-  --go-gray-1: #535353;
-  --go-gray-2: #c5c5c5;
-  --go-cream: #ecebe0;
-  --go-white: #ffffff;
-
-  --go-dark-900: #09090b;
-  --go-dark-800: #111113;
-  --go-dark-700: #18181b;
-  --go-dark-600: #27272a;
-
-  --go-error: #e53e3e;
-  --go-success: #00a36e;
-  --go-warning: #f59e0b;
-
-  --go-font-display: "Space Grotesk", sans-serif;
-  --go-font-body: "Inter", sans-serif;
-  --go-font-mono: "JetBrains Mono", monospace;
-
-  --go-radius: 8px;
-  --go-radius-lg: 12px;
-
-  /* ── Tokens semánticos por tema (R2) — default oscuro ────────────────── */
-  --go-bg: var(--go-dark-900);
-  --go-surface: var(--go-dark-800);
-  --go-surface-raised: var(--go-dark-700);
-  --go-surface-sunken: var(--go-dark-600);
-  --go-border: var(--go-dark-600);
-  --go-text-primary: var(--go-white);
-  --go-text-secondary: var(--go-gray-2);
-  --go-text-muted: #6b7280;
-  --go-table-row-text: #d4d4d4;
-  --go-input-bg: var(--go-dark-600);
-  --go-input-border: var(--go-dark-600);
-  --go-overlay: rgba(0, 0, 0, 0.6);
-}
-
-/* Sin ":root" a propósito: además del tema global en <html>, R8 (reporte PDF)
-   envuelve su plantilla off-screen en un contenedor local con este atributo
-   para forzar tema claro sin tocar el tema real del usuario. */
-[data-theme="light"] {
-  --go-bg: #ffffff;
-  --go-surface: #ffffff;
-  --go-surface-raised: #f7f6f0;
-  --go-surface-sunken: var(--go-cream);
-  --go-border: #dcdbd0;
-  --go-text-primary: var(--go-black);
-  --go-text-secondary: var(--go-gray-1);
-  --go-text-muted: #8a8a8a;
-  --go-table-row-text: #3d3d3d;
-  --go-input-bg: #ffffff;
-  --go-input-border: #c5c5c5;
-  --go-overlay: rgba(38, 38, 38, 0.5);
-}
 
 @layer base {
   html {
@@ -203,6 +140,11 @@
     color: #e53e3e;
     border: 1px solid rgba(229, 62, 62, 0.25);
   }
+  .go-badge-neutral {
+    background: rgba(197, 197, 197, 0.12);
+    color: var(--go-text-secondary);
+    border: 1px solid var(--go-border);
+  }
 
   /* ── GO eyebrow label ─────────────────────────────────────────────── */
   .go-eyebrow {
@@ -332,4 +274,32 @@
 }
 .go-loading-phrase {
   animation: go-phrase-fade 4s ease-in-out;
+}
+
+/* ── SkeletonShimmer (sistema de diseño, src/design/) ─────────────────────
+   Mismo lenguaje visual que LoadingScreen: degradado naranja en movimiento,
+   no un shimmer gris genérico. */
+@keyframes go-skeleton-shimmer {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 150% 0;
+  }
+}
+.go-skeleton-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--go-surface-sunken) 30%,
+    var(--go-orange-tint) 50%,
+    var(--go-surface-sunken) 70%
+  );
+  background-size: 250% 100%;
+  animation: go-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .go-skeleton-shimmer {
+    animation: none;
+    background: var(--go-surface-sunken);
+  }
 }
