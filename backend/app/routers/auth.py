@@ -5,9 +5,10 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
-from .. import crud, models, schemas, security
+from .. import crud, models, rbac_catalog, schemas, security
 from ..database import get_db
 from ..dependencies import get_current_user
+from ..rbac import permisos_del_request
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -157,8 +158,23 @@ def logout(
 
 
 @router.get("/me", response_model=schemas.UserResponse)
-def me(current_user: models.User = Depends(get_current_user)):
-    return current_user
+def me(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Los permisos van aquí y no en login/refresh: es el único endpoint que el
+    # cliente vuelve a consultar cuando cambia algo, así que un aditivo
+    # concedido se ve sin cerrar sesión. El cliente los usa SOLO para pintar;
+    # cada endpoint valida por su cuenta (contrato §1).
+    # Si la base falla al resolverlos sale 503 PERMISOS_NO_DISPONIBLES, nunca
+    # {} silencioso ni 401: un dict vacío se leería como política y el cliente
+    # desloguearía a todo el mundo por un problema de infraestructura.
+    respuesta = schemas.UserResponse.model_validate(current_user)
+    respuesta.permisos = rbac_catalog.a_json(
+        permisos_del_request(request, db, current_user)
+    )
+    return respuesta
 
 
 @router.put("/me", response_model=schemas.UserResponse)

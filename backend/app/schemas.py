@@ -204,6 +204,11 @@ class UserResponse(BaseModel):
     must_change_password: bool
     last_login: Optional[datetime] = None
     created_at: datetime
+    # Permisos efectivos {modulo: [acciones]}. Solo GET /api/auth/me los llena;
+    # el resto de endpoints que devuelven UserResponse (login, refresh, gestión
+    # de usuarios) los dejan en {} a propósito, para no resolver RBAC en rutas
+    # que no lo necesitan. Lista y no set porque JSON no tiene sets.
+    permisos: dict[str, list[str]] = {}
 
     model_config = {"from_attributes": True}
 
