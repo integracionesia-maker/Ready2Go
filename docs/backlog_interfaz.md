@@ -240,7 +240,12 @@
 - [ ] **B-I07 — Promover `useMobile` a un lugar compartido** cuando el modulo de
       equipos lo necesite. Quedo dentro de `modules/presupuestos/hooks/` por I0;
       es infra generica, no del modulo. Al moverlo, corregir tambien la ruta que
-      `CLAUDE.md:46` documenta (R-I03).
+      `CLAUDE.md:46` documenta (R-I03). **Ampliado en I4b**: `RowActions.jsx`
+      tiene el mismo problema, mismo commit de origen (`d602e00`) — `CLAUDE.md`
+      tambien documenta una ruta vieja para el (`frontend/src/components/
+      RowActions.jsx` en vez de `frontend/src/modules/presupuestos/
+      components/RowActions.jsx`). Si se promueve a compartido, hacerlo junto
+      con `useMobile` y corregir ambas referencias a la vez.
 - [ ] **B-I14 — Retirar `fallbackPorRol.js`** cuando WP1 (RBAC aditivo del
       servidor) este en pie y `/auth/me` mande siempre `permisos` con
       contenido real. Vive en `src/modules/equipos/permisos/`, marcado
