@@ -19,7 +19,7 @@ function ahora() {
   return new Date().toISOString();
 }
 
-export async function fetchLoans({ estado, q, limit = 50, offset = 0 } = {}) {
+export async function fetchLoans({ estado, q, desde, hasta, limit = 50, offset = 0 } = {}) {
   checkGlobalInjection();
   let items = state.loans;
   if (estado) items = items.filter((l) => l.estado === estado);
@@ -29,9 +29,21 @@ export async function fetchLoans({ estado, q, limit = 50, offset = 0 } = {}) {
   if (q) {
     const needle = q.toLowerCase();
     items = items.filter(
-      (l) => l.folio?.toLowerCase().includes(needle) || l.motivo?.toLowerCase().includes(needle)
+      (l) =>
+        l.folio?.toLowerCase().includes(needle) ||
+        l.motivo?.toLowerCase().includes(needle) ||
+        l.responsable?.nombre?.toLowerCase().includes(needle)
     );
   }
+  // `desde`/`hasta` (I4f, Historial): el contrato no dice contra qué campo
+  // de fecha filtran — se decidió `fecha_entrega` (cuándo arrancó el
+  // préstamo de verdad, no cuándo se creó el borrador). Comparación de
+  // strings "YYYY-MM-DD" en vez de `new Date()`: el orden lexicográfico de
+  // ese formato ya es cronológico, sin el riesgo de zona horaria que
+  // prohíbe la regla dura del módulo. Un préstamo sin `fecha_entrega`
+  // (`borrador`/`cancelado` antes de confirmar) no matchea ningún rango.
+  if (desde) items = items.filter((l) => l.fecha_entrega && l.fecha_entrega >= desde);
+  if (hasta) items = items.filter((l) => l.fecha_entrega && l.fecha_entrega <= hasta);
   const total = items.length;
   return { items: items.slice(offset, offset + limit).map(clone), total };
 }
@@ -231,6 +243,51 @@ export async function closeIncident(loanId, nota) {
   loan.estado = "completado";
   loan.eventos.push({ id: Date.now(), tipo: "incidencia_cerrada", actor: "Melisa Avendano", detalle: nota, created_at: ahora() });
   return clone(loan);
+}
+
+function csvEscape(valor) {
+  const texto = valor == null ? "" : String(valor);
+  return /[",\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+}
+
+const COLUMNAS_EXPORT = [
+  ["folio", "Folio"],
+  ["estado", "Estado"],
+  ["responsable", "Responsable"],
+  ["motivo", "Motivo"],
+  ["fecha_entrega", "Fecha de entrega"],
+  ["fecha_regreso_esperada", "Fecha de regreso esperada"],
+  ["atrasado", "Atrasado"],
+  ["dias_atraso", "Días de atraso"],
+];
+
+/** `equipos_prestamos:exportar` — mismo filtrado que `fetchLoans`, sin
+ * paginar (el CSV completo). El mock no genera un archivo real en disco;
+ * arma el mismo Blob `text/csv` que produciría el endpoint real, para que
+ * el cliente (`real/loans.js` y esta función) compartan el mismo camino
+ * de "fetch → blob → descarga". */
+export async function fetchLoansExport({ estado, q, desde, hasta } = {}) {
+  checkGlobalInjection();
+  let items = state.loans;
+  if (estado) items = items.filter((l) => l.estado === estado);
+  if (q) {
+    const needle = q.toLowerCase();
+    items = items.filter(
+      (l) =>
+        l.folio?.toLowerCase().includes(needle) ||
+        l.motivo?.toLowerCase().includes(needle) ||
+        l.responsable?.nombre?.toLowerCase().includes(needle)
+    );
+  }
+  if (desde) items = items.filter((l) => l.fecha_entrega && l.fecha_entrega >= desde);
+  if (hasta) items = items.filter((l) => l.fecha_entrega && l.fecha_entrega <= hasta);
+
+  const encabezado = COLUMNAS_EXPORT.map(([, etiqueta]) => csvEscape(etiqueta)).join(",");
+  const filas = items.map((l) =>
+    COLUMNAS_EXPORT.map(([campo]) => csvEscape(campo === "responsable" ? l.responsable?.nombre : l[campo])).join(",")
+  );
+  const csv = [encabezado, ...filas].join("\r\n");
+  return new Blob([csv], { type: "text/csv" });
 }
 
 export function loanResponsivaUrl(loanId) {

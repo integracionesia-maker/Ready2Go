@@ -1,5 +1,26 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I4f — Historial — modo 09-ejecutar-todo)
+
+### Agregado
+
+- `frontend/src/modules/equipos/api/loans.js` — `fetchLoansExport`
+  agregada al dispatcher público (vivía huérfana solo en `real/loans.js`).
+- `frontend/src/modules/equipos/api/mock/loans.js` — implementación de
+  `fetchLoansExport` (mismo filtrado que `fetchLoans`, arma un `Blob`
+  `text/csv`); soporte para `desde`/`hasta` en `fetchLoans` (filtra por
+  `fecha_entrega`, comparación de strings `YYYY-MM-DD`).
+
+### Cambiado
+
+- `frontend/src/modules/equipos/pages/HistorialPage.jsx` — de placeholder
+  (I4a) a listado real con filtros (estado/texto/rango de fechas),
+  paginación y exportación CSV.
+- `frontend/src/modules/equipos/api/real/loans.js` — `fetchLoansExport`
+  corregida: usaba `request()` (`res.json()`, incorrecto para un CSV);
+  ahora hace `fetch → blob → descarga`, lanzando `ApiError` real si el
+  servidor no responde 2xx.
+
 ## 2026-07-29 (I4e — Aprobaciones — modo 09-ejecutar-todo)
 
 ### Agregado

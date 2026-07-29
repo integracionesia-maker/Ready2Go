@@ -786,7 +786,77 @@ en I4d).
 
 **Riesgo nuevo**: ninguno.
 
-#### Commits I4f..I4g — pendientes, ver entradas mas abajo en esta misma sesion conforme se cierren.
+#### Commit I4f — Historial (cerrado)
+
+Filtros por estado (los 6 del contrato, no solo los "activos" de I4d),
+persona/folio/motivo (`q`) y rango de fechas (`desde`/`hasta`), paginado —
+la primera vista del módulo que usa `GET /api/loans/` con **todos** sus
+parámetros documentados, sin necesitar el rodeo de filtrar en cliente que
+usaron I4d/I4e (ahí la unión de varios estados no tenía forma de pedirse
+en una sola llamada; aquí cada filtro es independiente y sí calza en el
+querystring tal cual).
+
+**Dos bugs reales de I3 encontrados al conectar esto, arreglados en el
+mismo commit** (mismo patrón que I4c: código escrito pero nunca
+terminado de cablear):
+
+1. **`desde`/`hasta` no existían en el mock.** `real/loans.js` ya los
+   mandaba en el querystring desde I3, pero `mock/loans.js` los
+   ignoraba silenciosamente (no estaban ni en la firma de la función). El
+   contrato tampoco dice contra qué campo de fecha filtran — se decidió
+   `fecha_entrega` (cuándo arrancó el préstamo de verdad, no cuándo se
+   creó el borrador) y se documentó la decisión en el propio código; un
+   préstamo sin `fecha_entrega` (`borrador`/`cancelado` antes de
+   confirmar) no matchea ningún rango. Comparación de strings
+   `"YYYY-MM-DD"` en vez de `new Date()` — el orden lexicográfico de ese
+   formato ya es cronológico, sin el riesgo de zona horaria que prohíbe
+   la regla dura del módulo.
+2. **`fetchLoansExport` no estaba conectada a nada.** Vivía únicamente en
+   `real/loans.js`, nunca en el dispatcher público (`api/loans.js`, el
+   único punto por el que el resto del módulo debe importar) ni en el
+   mock — exactamente el mismo patrón de "escrito pero huérfano" que
+   `addLoanMedia` en I4c. Peor: la implementación real usaba `request()`,
+   que **siempre hace `res.json()`** — un CSV no es JSON; de haber
+   quedado así, un 403/503 real habría intentado parsear el error como si
+   fuera el archivo. Arreglado: `real/loans.js` ahora hace
+   `fetch → blob → descarga` de verdad (mismo texto que pedía el prompt
+   de I4f), lanza `ApiError` real si el servidor no responde 2xx; se
+   agregó al dispatcher; y se escribió una implementación en el mock que
+   arma el mismo `Blob` `text/csv` (mismas columnas, mismo filtrado que
+   `fetchLoans`) para que ambos lados del dispatcher compartan
+   exactamente el mismo contrato observable.
+
+**Evidencia**
+
+```
+npm run build verde. index-*.js sin cambio (16.68 kB gz, HistorialPage es
+un chunk lazy). CSS 7.07 -> 7.08 kB gz. Payload de /login: 122.86 kB gz,
+igual que I4e, contra el techo de 250. HistorialPage-*.js (chunk lazy):
+5.77 kB / 2.15 kB gz. dist/ grep sigue sin rastro de mock/harness/
+permisos-demo.
+```
+
+Verificado en pantalla real (`VITE_EQUIPOS_MOCK=1`, 1280x800 y 390x844,
+superadmin): filtro por estado "prestado" muestra el demo `CE-0007`;
+filtro por "cancelado" muestra el estado vacío correcto ("Sin
+resultados"); "Exportar CSV" descarga un archivo real (`prestamos.csv`,
+2 líneas: encabezado + 1 fila) con las 8 columnas esperadas y sin
+depender de ningún visor de PDF ni backend real para generarse.
+
+Los 4 e2e de Presupuestos: `auth.spec.js` 7/7,
+`presupuesto-flujo-completo.spec.js` 9/9, `gastos-generales.spec.js` 9/9,
+`pantallas.spec.js` 23/23 (48/48).
+
+**No verificado en pantalla real**: el toast de error de "Exportar CSV"
+ante un 403/503 real (el fixture actual no tiene forma de negarle
+`equipos_prestamos:exportar` a superadmin sin tocar el catálogo de
+permisos; el camino de error se revisó por lectura de código —
+`throwApiError` ya está probado por el resto del módulo desde I3).
+
+**Riesgo nuevo**: ninguno — los dos bugs se encontraron y arreglaron en
+este mismo commit.
+
+#### Commit I4g — pendiente, ver entrada mas abajo en esta misma sesion conforme se cierre.
 
 ## 2026-07-28 (sesion 2)
 

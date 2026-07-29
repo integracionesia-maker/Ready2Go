@@ -119,7 +119,18 @@
         limite exacto que pedia el prompt (pendiente_confirmacion +
         entrega no autorizada a la vez). Bundle: 122.85 → 122.86 kB gz.
         Los 4 e2e de Presupuestos: 48/48.
-  - [ ] **I4f — Historial.**
+  - [x] **I4f — Historial.** Filtros por los 6 estados, persona/folio/
+        motivo y rango de fechas — primera vista que usa GET /loans/ con
+        TODOS sus parametros documentados sin rodeos de cliente. Dos bugs
+        reales de I3 arreglados: mock nunca implemento desde/hasta
+        (decision documentada: filtra por fecha_entrega, comparacion de
+        strings YYYY-MM-DD en vez de new Date()); fetchLoansExport vivia
+        huerfana en real/loans.js (nunca en el dispatcher ni en el mock) y
+        ademas usaba request() -que hace res.json()- para lo que debe ser
+        un blob CSV. Arreglado: fetch -> blob -> descarga real, ApiError
+        si el servidor falla, dispatcher completo, mock con el mismo
+        contrato observable. Bundle: 122.86 kB gz (sin cambio, chunk
+        lazy). Los 4 e2e de Presupuestos: 48/48.
   - [ ] **I4g — Ficha de prestamo.**
 - [x] **I5 — Permisos en la UI.** Commit de este issue (modo 09-ejecutar-todo,
       1 commit por issue). `src/modules/equipos/permisos/`: `catalogo.js`

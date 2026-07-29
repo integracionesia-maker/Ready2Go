@@ -39,3 +39,6 @@ export async function closeIncident(loanId, nota) {
 export async function loanResponsivaUrl(loanId) {
   return (await backend).loanResponsivaUrl(loanId);
 }
+export async function fetchLoansExport(params) {
+  return (await backend).fetchLoansExport(params);
+}

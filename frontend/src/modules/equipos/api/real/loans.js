@@ -1,4 +1,4 @@
-import { request, BASE } from "@/api";
+import { request, BASE, fetchWithAuthRetry, throwApiError } from "@/api";
 
 // R-I14 (docs/riesgos/interfaz.md): el contrato ejemplifica la RESPUESTA de
 // GET /loans/{id} pero no el BODY de escritura de createLoan/addLoanItem/
@@ -87,8 +87,21 @@ export function closeIncident(loanId, nota) {
   });
 }
 
-export function fetchLoansExport(params) {
-  return request(`/loans/export${params ? `?${new URLSearchParams(params)}` : ""}`);
+// Bug de I3 corregido en I4f: esto usaba `request()`, que siempre hace
+// `res.json()` — un CSV no es JSON. `fetch → blob → descarga` (I4f):
+// si el servidor responde 403/503, `throwApiError` parsea el sobre de
+// error real y lo lanza como ApiError, en vez de dejar que el navegador
+// descargue un archivo .csv cuyo contenido es el cuerpo del error.
+export async function fetchLoansExport({ estado, q, desde, hasta } = {}) {
+  const params = new URLSearchParams();
+  if (estado) params.set("estado", estado);
+  if (q) params.set("q", q);
+  if (desde) params.set("desde", desde);
+  if (hasta) params.set("hasta", hasta);
+  const qs = params.toString();
+  const res = await fetchWithAuthRetry(`/loans/export${qs ? `?${qs}` : ""}`);
+  if (!res.ok) await throwApiError(res);
+  return res.blob();
 }
 
 export function loanResponsivaUrl(loanId) {
