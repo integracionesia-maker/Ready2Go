@@ -19,6 +19,10 @@ from ..conftest import PASSWORD_SUPERADMIN
 @pytest.fixture
 def inventario(db, catalogo):
     seed_equipos.sembrar_equipos(db, verbose=False)
+    # Las razones sociales hacen falta: confirmar genera la carta responsiva, y
+    # la emisora sale de la tabla `empresa`. Sin ella el prestamo no se confirma
+    # — a proposito: no se entrega equipo sin carta.
+    seed_equipos.sembrar_empresas(db, verbose=False)
     return db
 
 

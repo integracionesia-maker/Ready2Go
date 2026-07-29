@@ -17,6 +17,8 @@ from .conftest import jpeg_bytes, logueado, png_bytes, subir, usuario_con
 @pytest.fixture
 def inventario(db, catalogo):
     seed_equipos.sembrar_equipos(db, verbose=False)
+    # Confirmar genera la responsiva, y su emisora sale de la tabla `empresa`.
+    seed_equipos.sembrar_empresas(db, verbose=False)
     return db
 
 

@@ -15,17 +15,28 @@ import io
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import (
     crud,
     crud_loans,
-    disponibilidad,
     loan_state,
     media_manager,
     models,
+    notificaciones,
+    plantillas_correo,
     rbac,
     schemas_loans,
     tz,
@@ -38,13 +49,7 @@ from ..errores import (
     SinPermiso,
     TransicionInvalida,
 )
-from ..models_equipos import (
-    DecisionDevolucion,
-    EstadoOperativo,
-    Equipment,
-    KindMedia,
-    LoanItem,
-)
+from ..models_equipos import EstadoOperativo, Equipment, KindMedia, LoanItem
 from ..rbac import permisos_del_request, require_cualquiera, require_perm
 
 router = APIRouter(prefix="/api/loans", tags=["loans"])
@@ -358,6 +363,7 @@ async def subir_media(
 def confirmar_prestamo(
     loan_id: int,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_perm("equipos_prestamos", "solicitar")),
 ):
@@ -380,6 +386,26 @@ def confirmar_prestamo(
         target_id=prestamo.id,
         details=prestamo.folio,
     )
+
+    # Los correos van en BackgroundTasks: un SMTP caido jamas tumba el registro
+    # del prestamo. El equipo ya salio por la puerta; que el aviso falle no puede
+    # deshacer eso (§10.15).
+    notificaciones.encolar(
+        db,
+        plantillas_correo.TIPO_CONFIRMADO_APROBADOR,
+        prestamo,
+        background_tasks,
+        con_responsiva=True,
+    )
+    if prestamo.responsable_email:
+        notificaciones.encolar(
+            db,
+            plantillas_correo.TIPO_CONFIRMADO_RESPONSABLE,
+            prestamo,
+            background_tasks,
+            destinatarios=[prestamo.responsable_email],
+            con_responsiva=True,
+        )
     return _ficha(db, prestamo)
 
 
@@ -421,6 +447,7 @@ def registrar_devolucion(
     loan_id: int,
     data: schemas_loans.DevolucionRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_perm("equipos_prestamos", "registrar_devolucion")),
 ):
@@ -448,6 +475,9 @@ def registrar_devolucion(
         action="loan.return",
         target_type="loan",
         target_id=prestamo.id,
+    )
+    notificaciones.encolar(
+        db, plantillas_correo.TIPO_DEVOLUCION_APROBADOR, prestamo, background_tasks
     )
     return _ficha(db, prestamo)
 

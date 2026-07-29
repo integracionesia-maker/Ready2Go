@@ -4,6 +4,253 @@ Una entrada por dia de trabajo. Que hice, evidencia, bloqueos.
 
 ---
 
+## 2026-07-28 — S6 Correo y recordatorios (WP6) + S7 Guardias de contrato
+
+Hecho (S6):
+
+- `backend/app/mailer.py` — `smtplib` de la libreria estandar, STARTTLS,
+  `NOTIF_ENABLED` como corta-circuito. **Nunca levanta**: devuelve un resultado.
+- `backend/app/plantillas_correo.py` — las 5 plantillas de §7, texto plano, sin
+  emojis, funciones puras.
+- `backend/app/notificaciones.py` — `encolar`, destinatarios por rol desde la
+  base, idempotencia, reintentos.
+- `backend/app/routers/notifications.py` — diagnostico.
+- `backend/scripts/recordatorios_vencimiento.py` — para el LaunchAgent.
+- `backend/app/routers/loans.py` y `approvals.py` — enganches en confirmar,
+  devolucion y confirmar-devolucion, todos en `BackgroundTasks`.
+- `docs/deploy/recordatorios_launchagent.md` — plist, las 8 variables de entorno
+  y el arbol de diagnostico de "no llegan los correos".
+- `backend/tests/equipos/test_notificaciones.py` — 35 pruebas.
+
+Hecho (S7):
+
+- `backend/tests/test_contrato_openapi.py` — 37 pruebas.
+- `backend/tests/equipos/test_fixture_demo.py` — 10 pruebas.
+
+Evidencia:
+
+```
+$ python -m pytest tests -q --ignore=tests/equipos --ignore=tests/rbac
+205 passed, 1 skipped        (169 existentes + 37 de la guardia de contrato)
+
+$ python -m pytest tests/rbac -q
+80 passed
+
+$ python -m pytest tests/equipos -q
+315 passed, 1 skipped
+```
+
+**600 passed, 2 skipped** sobre 602 recolectadas. Las 169 existentes siguen
+verdes con todo el modulo encima.
+
+En tres bloques y no en una corrida: la suite completa tarda ~15 minutos y las
+tareas de fondo de esta sesion se cortaban antes de terminar. Cada bloque recrea
+la base por prueba, asi que la cobertura es la misma.
+
+**La suite de este repo no se puede correr en paralelo consigo misma**: todos los
+bloques usan `tests/test_auth.db`. Lo aprendi lanzando un spot-check mientras
+corria la suite completa y contaminando las dos. Anotado por si alguien intenta
+paralelizarla con `-n`.
+
+Corrida real del recordatorio sobre base limpia, dos veces el mismo dia:
+
+```
+$ python scripts/recordatorios_vencimiento.py     # x2
+  - CE-0007: 8 dia(s) de atraso, 2 aviso(s) por mandar
+filas en notification_log: 2      <- no 4
+  vencimiento:2026-07-28 -> ana.ruiz@grupo-ortiz.com
+  vencimiento:2026-07-28 -> melisa.avendano@grupo-ortiz.com
+```
+
+Destinatarios resueltos desde la base, sin el superadmin.
+
+Criterios de cierre:
+
+| Criterio | Prueba | Estado |
+|---|---|---|
+| Reintentar no duplica correos | `test_encolar_dos_veces_no_duplica`, `test_lo_ya_enviado_no_se_vuelve_a_encolar`, `test_confirmar_dos_veces_no_manda_el_correo_dos_veces` | verde |
+| SMTP caido no tumba el registro del prestamo | `test_smtp_caido_no_tumba_el_registro_del_prestamo` — el prestamo queda `prestado`, con folio y responsiva v1, y la notificacion en `fallido` con su motivo | verde |
+| `GET /api/loans/{id}` del demo identico al fixture | `test_el_payload_es_identico_al_fixture` — por HTTP, campo por campo | verde |
+| Guardia de OpenAPI | `test_contrato_openapi.py` — la comparacion contra el JSON congelado en `skip` con motivo escrito; las 31 rutas de las tablas del contrato si se verifican | verde |
+
+### La colision que hubo que resolver: recordatorio diario contra el UNIQUE
+
+`notification_log` tiene `UNIQUE (loan_id, tipo, destinatario)`, que es lo que
+hace que reintentar no duplique el aviso a la aprobadora. Pero §7 pide que el
+recordatorio de vencimiento sea **diario**.
+
+Con un `tipo` constante, las dos cosas se pelean y gana la peor: el primer dia
+inserta la fila y **todos los dias siguientes chocan con el UNIQUE, se leen como
+"ya enviado" y no sale nada**. Sin error, sin log, sin que nadie lo note. El
+recordatorio diario se mandaria una sola vez en la vida del prestamo.
+
+Solucion: el tipo lleva el dia civil de CDMX — `vencimiento:2026-07-30`. El
+UNIQUE pasa a significar "un aviso por prestamo, por destinatario, **por dia**",
+que es exactamente lo que pide §7, y sigue bloqueando la doble corrida del mismo
+dia (LaunchAgent disparando al despertar la Mac, o alguien corriendo el script a
+mano). El dia sale de `tz.hoy()`, jamas de UTC: despues de las 18:00 CDMX el UTC
+ya es el dia siguiente y saldrian dos avisos para el mismo dia civil.
+
+Descartadas: cambiar el UNIQUE (exige migracion y contradice §7), reusar una sola
+fila subiendo `intentos` (pierde la historia), y mandar el aviso una sola vez
+(contradice §7 en la otra direccion).
+
+Consecuencia a vigilar: `notification_log` crece una fila por prestamo vencido,
+por destinatario, por dia. Falta politica de retencion — anotado en el backlog.
+
+### Decisiones
+
+**AI. `routers/notifications.py` esta fuera del contrato.** El contrato v1 no
+define ningun endpoint de notificaciones y `permisos_catalogo.json` no tiene un
+modulo para ellas. Existe porque la asignacion lo pide de forma explicita en S6 y
+la asignacion manda sobre el plan. Protegido con `usuarios:gestionar` —el unico
+par del catalogo que encaja, hoy solo del `superadmin`—. Son de diagnostico: no
+cambian ningun payload y ningun cliente del contrato los llama. **Hay que darles
+su modulo propio en el contrato v2.**
+
+**AJ. `GET /api/notifications/config` jamas devuelve `SMTP_PASSWORD`,** solo si
+esta configurada. Y expone `aprobadores_resueltos`, que es el dato mas dificil de
+descubrir cuando "no llegan los correos".
+
+**AK. En `RBAC_MODO=legacy` no hay aprobadores y ningun aviso sale.** Los
+aditivos no aplican y `equipos_aprobacion` solo lo concede `APROBADOR_EQUIPO`. La
+lista vacia se escribe en el log como advertencia, con el modo incluido: escribir
+un correo de respaldo en el codigo seria volver al hardcode que §10.20 prohibe.
+Ver R-SRV-13.
+
+**AL. Texto plano, no HTML.** Ninguna fuente lo define. Sin CSP que pelear, sin
+imagenes remotas que se bloqueen, legible en cualquier cliente. Si marketing
+quiere HTML es decision de marca.
+
+**AM. Se notifica a quien tiene el permiso, no a `entregado_por`.** La maqueta
+mandaba el correo a quien figuraba como "quien entrega", buscado en una constante
+`APPROVERS`. Si `entregado_por` es alguien sin el aditivo, no recibe el correo —
+correcto, porque tampoco puede autorizar.
+
+**AN. Las rutas de los enlaces del correo son propuesta.** `APP_PUBLIC_URL` da el
+origen, pero `/equipos/aprobaciones` y `/equipos/prestamo/{folio}` no estan en
+ninguna fuente: el contrato solo define rutas de `/api/*`. **Sin acuerdo con
+quien construye la interfaz, los correos apuntan a paginas que dan 404.**
+
+**AO. La guardia de OpenAPI no se quedo en un `skip` pelado.** El JSON congelado
+no existe (§8 del contrato lo dice), asi que esa comparacion esta en `skip` con
+el motivo escrito. Pero mientras tanto la prueba verifica lo que **si** esta
+congelado en `API_EQUIPOS_v1.md`: que las 31 rutas y metodos de sus tablas
+existan con el nombre exacto, que `/dashboard`, `/export` y `/by-folio` no los
+absorba la ruta por id, que no haya mount estatico, y que `permisos` siga en
+`UserResponse`. Un `skip` solo habria dejado el paquete sin red durante semanas.
+
+**AP. `freeze_time` no se puede usar alrededor de una peticion HTTP.** Freezegun
+sustituye `datetime.date` por su propia clase y FastAPI deja de poder analizar los
+parametros de fecha de otras rutas ("Invalid args for response field"). La guardia
+del fixture fija la fecha parcheando `tz.hoy`, que es lo unico que el calculo de
+atraso consulta. Vale para cualquiera que agregue pruebas con reloj congelado.
+
+### Pendientes que no puedo cerrar yo
+
+- **`.env.example` no lo puedo tocar** (esta en la lista fuera de mi carril) y §7
+  pide que las 8 variables SMTP entren ahi con placeholders. Documentadas en
+  `docs/deploy/recordatorios_launchagent.md`; **hace falta ese parche de la raiz**.
+- **Congelar `openapi_equipos_v1.json`.** Ya hay 60 rutas en pie; el comando esta
+  en el docstring de `test_contrato_openapi.py`.
+- **Aprobar la redaccion de los cinco correos** con marketing: son mensajes de
+  cara a personas de Grupo Ortiz.
+
+Bloqueos: ninguno para el codigo. Envio real a una cuenta de prueba pendiente de
+credenciales SMTP (§14.6 del plan).
+
+---
+
+## 2026-07-28 — S5 Carta responsiva en PDF (WP5)
+
+Hecho:
+
+- `backend/app/pdf/estilos.py` — tokens de marca de `docs/contratos/tokens_marca.md`.
+- `backend/app/pdf/plantilla.py` — estructura del documento y **el texto legal
+  literal** de la maqueta. No toca la base: recibe un diccionario.
+- `backend/app/pdf/responsiva.py` — reune los datos, escribe el archivo,
+  devuelve el sha256.
+- `backend/app/routers/responsivas.py` — `GET /api/loans/{id}/responsiva.pdf`.
+- `backend/app/main.py` — su include_router.
+- `backend/requirements-dev.txt` — `pypdf` (leer el PDF en las pruebas).
+- `backend/tests/equipos/test_responsiva_pdf.py` — 27 pruebas.
+
+Criterios de cierre de S5:
+
+| Criterio | Prueba | Estado |
+|---|---|---|
+| La version 2 no pisa la 1 | `test_la_version_2_no_pisa_la_1` — compara bytes y sha256 de la v1 antes y despues | verde |
+| PDF generado con datos reales para revision visual | `backend/uploads/responsivas/CE-0007_v1.pdf`, generado del prestamo demo | hecho |
+
+### El PDF de revision
+
+Generado con `seed_prestamo_demo.py` sobre base limpia. Una hoja, folio CE-0007,
+emisora tomada de la tabla `empresa`, los 5 puntos de Situaciones
+extraordinarias literales, y las dos firmas con sus leyendas.
+
+**Falta que Jose lo revise a ojo** — esa parte no la puedo cerrar yo. El archivo
+esta en `backend/uploads/responsivas/CE-0007_v1.pdf` (gitignored; se regenera
+con `python seed_prestamo_demo.py` sobre base limpia).
+
+### Lo que encontre generandolo
+
+**El bloque de firmas se caia solo a la hoja 2.** Con los margenes iniciales
+(22/18 mm), una responsiva de **un solo equipo** terminaba con la hoja 1 llena de
+texto legal y las dos firmas solas en la hoja 2. Es la peor forma de imprimir una
+carta responsiva: nadie sabe si esa hoja 2 pertenece a esa hoja 1. Ajustados
+margenes (20/14 mm), alto de firma (14 mm) y el espacio previo (7 mm): el caso
+comun cabe en una hoja. Hay prueba que lo afirma.
+
+### Decisiones
+
+**AB. La emisora sale de la tabla y si no hay, no se confirma.** El generador
+levanta `EmisoraNoConfigurada` y `POST /confirmar` falla. Es deliberado: no se
+entrega equipo sin carta responsiva, y un encabezado a medias en un documento que
+alguien firma es peor que no generarlo. Consecuencia operativa: **hay que sembrar
+`empresa` antes de poder confirmar el primer prestamo** (`seed_equipos.py` lo
+hace). §14.3 del plan ya declaraba esto como dependencia que bloquea WP5.
+
+**AC. La condicion del equipo se congela contra la auditoria vigente a la fecha
+de entrega**, no contra la ultima del catalogo. Si no, la v2 de una carta ya
+firmada diria una condicion distinta de la v1 sobre los mismos hechos. Limitacion
+conocida: no hay columna donde guardar el texto que salio impreso en cada
+version; mientras nadie retro-feche una auditoria, dos versiones dicen lo mismo.
+
+**AD. Implemente `?version=` aunque no este en el contrato.** Esta en el plan §5
+y es puramente aditivo: no cambia ningun payload y el default sigue siendo la
+ultima version. Sin el, el versionado que la base ya sostiene no tiene forma de
+consultarse. Reportado para v2, junto con la falta de una forma de **enumerar**
+versiones (`responsiva: {version, url}` solo expone la ultima).
+
+**AE. Etiquetas legibles de `cargador_con`.** El PDF no puede imprimir el token
+crudo (`responsable`) porque en la carta se lee como una palabra suelta. El mapa
+esta en `plantilla.ETIQUETAS_CARGADOR`; el contrato no publica esas etiquetas.
+
+**AF. Pie tecnico con folio, version y fecha de generacion.** No afirma validez
+legal —§6 lo prohibe explicito y hay prueba que lo verifica— pero sin marca de
+version no hay forma de distinguir dos impresiones del mismo folio.
+
+**AG. Fuentes de respaldo.** Blauer Nue y Conthic son dependencia de WP7 y no
+estan en el repo. Se usan Helvetica y Courier, que `tokens_marca.md` autoriza
+como respaldo. Queda escrito en `estilos.py`, no elegido en silencio.
+
+**AH. Escapado de XML.** `Paragraph` de reportlab interpreta un subconjunto de
+XML: un nombre de equipo con `&` o `<` rompe el documento entero. Hay prueba con
+`Camara <A&B>` y marca `R&D`.
+
+### No implementado
+
+- **No hay endpoint de regeneracion.** El contrato v1 no lo tiene, aunque
+  `motivo_regeneracion` existe en la tabla y el plan §6 lo pide. Hoy la unica
+  generacion es la v1 interna de `POST /confirmar`;
+  `crud_loans.generar_responsiva` esta lista para cuando exista la ruta.
+- **El PDF no incluye las fotos de entrega.** Ni la maqueta ni el plan §6 las
+  listan en el contenido. Conviene confirmarlo con marketing.
+
+Bloqueos: la revision visual de Jose.
+
+---
+
 ## 2026-07-28 — S4 API de prestamos, aprobacion y media (WP4)
 
 Hecho:

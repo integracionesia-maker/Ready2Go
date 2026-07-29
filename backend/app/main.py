@@ -12,7 +12,7 @@ from .database import engine, Base
 from .errores import registrar_manejadores
 from .routers import auth, creators, brands, tickets, dashboard, users, general_expenses
 from .routers import roles, user_roles, empresas, equipos_dashboard, equipment
-from .routers import loans, approvals, media
+from .routers import loans, approvals, media, responsivas, notifications
 
 Base.metadata.create_all(bind=engine)
 
@@ -64,7 +64,11 @@ app.include_router(equipos_dashboard.router)
 app.include_router(equipment.router)
 app.include_router(loans.router)
 app.include_router(approvals.router)
+app.include_router(responsivas.router)
 app.include_router(media.router)
+# Diagnostico de correo. Fuera del contrato v1: lo pide la asignacion (S6) y va
+# protegido con `usuarios:gestionar`, que hoy solo tiene el superadmin.
+app.include_router(notifications.router)
 
 
 @app.get("/api/health")

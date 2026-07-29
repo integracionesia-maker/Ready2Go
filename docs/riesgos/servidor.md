@@ -4,6 +4,68 @@ Lo que descubro que puede fallar. No lo que ya esta mitigado en el plan.
 
 ---
 
+## R-SRV-13 — Con `RBAC_MODO=legacy` ningun aviso de autorizacion sale, y no falla nada
+
+**Sev:** alto. **Estado:** abierto, mitigado con una advertencia en el log.
+
+`equipos_aprobacion:autorizar_entrega` solo lo concede el paquete **aditivo**
+`APROBADOR_EQUIPO`. El rollback de §13 (`RBAC_MODO=legacy`) apaga los aditivos.
+
+Resultado: `notificaciones.aprobadores()` devuelve **lista vacia**, no se encola
+ningun aviso, no hay excepcion, no hay error HTTP y el prestamo se confirma
+normalmente. La aprobadora simplemente nunca se entera de que hay algo que
+autorizar.
+
+Se combina con R-SRV-05 (en legacy tampoco puede autorizar aunque se entere) y
+lo empeora: en legacy el modulo de aprobacion queda mudo **y** cerrado.
+
+Mitigacion puesta: la lista vacia escribe una advertencia con el modo incluido
+(`0 usuarios con equipos_aprobacion:autorizar_entrega (RBAC_MODO=legacy)`) y
+`GET /api/notifications/config` expone `aprobadores_resueltos`, que es el primer
+lugar donde mirar cuando "no llegan los correos".
+
+Lo que **no** se hizo: poner un correo de respaldo en el codigo. Eso es
+exactamente el hardcode que §10.20 prohibe y que este modulo existe para quitar.
+
+---
+
+## R-SRV-14 — `notification_log` crece un renglon por dia por prestamo vencido
+
+**Sev:** bajo. **Estado:** abierto, sin politica de retencion.
+
+Para que el recordatorio de vencimiento pueda ser **diario** sin chocar con
+`UNIQUE (loan_id, tipo, destinatario)`, el tipo lleva el dia:
+`vencimiento:2026-07-30`.
+
+Efecto: un prestamo 60 dias vencido con 3 destinatarios deja **180 filas**. No
+rompe nada —la tabla es chica y las consultas van por indice— pero no hay
+politica de retencion escrita y a nadie se le ocurre revisarla hasta que estorba.
+
+Propuesta: borrar filas `enviado` de mas de 6 meses en el mismo LaunchAgent que
+manda los recordatorios. No lo agrego sin que alguien lo apruebe: borrar registro
+de avisos enviados es decision de negocio, no de implementacion.
+
+---
+
+## R-SRV-15 — Los enlaces de los correos apuntan a rutas que nadie confirmo
+
+**Sev:** medio. **Estado:** abierto, necesita acuerdo con el carril de interfaz.
+
+Los cinco correos llevan enlaces a `{APP_PUBLIC_URL}/equipos/aprobaciones` y
+`{APP_PUBLIC_URL}/equipos/prestamo/{folio}`.
+
+`APP_PUBLIC_URL` es variable de entorno, pero **los paths son invento del
+servidor**: el contrato solo define rutas de `/api/*` y `frontend/` esta fuera de
+mi carril. Las saque de la tabla de vistas de §8.5 del plan, que es diseño, no
+contrato.
+
+Si no coinciden con lo que construya la interfaz, cada correo que salga lleva un
+enlace que da 404 — y el correo ya se mando, no se puede corregir. Hay que
+confirmarlas **antes** del piloto. Estan en un solo lugar:
+`plantillas_correo.RUTA_APROBACIONES` y `RUTA_PRESTAMO`.
+
+---
+
 ## R-SRV-11 — CRITICO: cualquiera del area puede escribir en el prestamo de otro
 
 **Sev:** critico. **Estado:** abierto. **Decision de contrato, no la tomo yo.**
@@ -238,18 +300,15 @@ no lo edito.
 
 ## R-SRV-02 — reportlab instalado es 5.0.0, el plan asumia la serie 4
 
-**Sev:** bajo. **Estado:** abierto.
+**Sev:** bajo. **Estado:** CERRADO 2026-07-28.
 
-`requirements.txt` pide `reportlab>=4.2.0`. `pip` resolvio **5.0.0** en Python
+`requirements.txt` pedia `reportlab>=4.2.0` y `pip` resolvio **5.0.0** en Python
 3.14.6. El plan (§6) se escribio contra la serie 4.
 
-Por que importa: la serie 5 puede haber movido APIs de `platypus`. Si el PDF de
-S5 se escribe contra 5.0.0 y produccion instala una 4.x vieja, el generador
-truena en el unico entorno que importa.
-
-Mitigacion: cuando S5 este escrito y probado contra 5.0.0, subir el piso de
-`requirements.txt` a la version exacta que compilo el PDF. Pendiente en
-`docs/backlog_servidor.md`.
+El PDF de S5 se escribio y se probo contra 5.0.0, asi que el piso subio a
+`reportlab>=5.0.0`. Con el piso viejo, produccion podia instalar una 4.x donde
+nada esta probado y el generador solo habria tronado en el unico entorno que
+importa.
 
 ---
 

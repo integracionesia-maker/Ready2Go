@@ -8,7 +8,10 @@ argon2-cffi>=23.1.0
 email-validator>=2.2.0
 # Control de Equipos: PDF de la carta responsiva (reportlab) y miniaturas +
 # validacion de imagen del modulo media (pillow).
-reportlab>=4.2.0
+# Piso subido a la serie 5 tras compilar y probar la carta responsiva contra
+# 5.0.0 (S5). Con `>=4.2.0` produccion podia instalar una 4.x donde el PDF no
+# esta probado, y el generador solo truena en el unico entorno que importa.
+reportlab>=5.0.0
 pillow>=11.0.0
 # zoneinfo no trae la base IANA en Windows: sin tzdata, ZoneInfo("America/Mexico_City")
 # revienta y el calculo de atraso se queda sin zona. En Linux/macOS suele estar en

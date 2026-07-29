@@ -218,6 +218,7 @@ def test_seed_del_prestamo_demo_es_idempotente(db, catalogo):
     import seed_prestamo_demo
 
     seed_equipos.sembrar_equipos(db, verbose=False)
+    seed_equipos.sembrar_empresas(db, verbose=False)
     seed_prestamo_demo.sembrar_prestamo_demo(db, verbose=False)
     seed_prestamo_demo.sembrar_prestamo_demo(db, verbose=False)
 
@@ -229,6 +230,7 @@ def test_el_seed_demo_deja_el_contador_de_folio_en_siete(db, catalogo):
     import seed_prestamo_demo
 
     seed_equipos.sembrar_equipos(db, verbose=False)
+    seed_equipos.sembrar_empresas(db, verbose=False)
     seed_prestamo_demo.sembrar_prestamo_demo(db, verbose=False)
     assert db.get(FolioCounter, "CE").last_value == 7
 
@@ -241,6 +243,7 @@ def test_el_seed_demo_escribe_archivos_de_media_de_verdad(db, catalogo):
     import seed_prestamo_demo
 
     seed_equipos.sembrar_equipos(db, verbose=False)
+    seed_equipos.sembrar_empresas(db, verbose=False)
     seed_prestamo_demo.sembrar_prestamo_demo(db, verbose=False)
 
     for media in db.query(MediaAsset).all():

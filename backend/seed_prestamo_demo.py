@@ -224,6 +224,17 @@ def sembrar_prestamo_demo(db, verbose: bool = True) -> Loan:
             f"No existe el equipo {EQUIPO_ID}. Corre primero: python seed_equipos.py"
         )
 
+    # La carta responsiva toma su razon social emisora de la tabla `empresa`.
+    # Sin ella el generador falla a proposito, pero el mensaje hablaria del PDF
+    # cuando lo que falta es un paso del seed.
+    from app import crud_empresas
+
+    if crud_empresas.emisora_por_defecto(db) is None:
+        raise SeedDemoBloqueado(
+            "No hay razon social emisora (activa y con RFC). "
+            "Corre primero: python seed_equipos.py"
+        )
+
     ana = usuarios["ana.ruiz"]
     melisa = usuarios["melisa"]
 

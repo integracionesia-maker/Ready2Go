@@ -4,6 +4,65 @@ Que agregue, cambie, quite. Orden inverso: lo nuevo arriba.
 
 ---
 
+## 2026-07-28 — S6 Correo y recordatorios (WP6) + S7 Guardias de contrato
+
+### Agregado
+
+- `backend/app/mailer.py` — SMTP con `smtplib`, STARTTLS, `NOTIF_ENABLED`.
+- `backend/app/plantillas_correo.py` — 5 plantillas de texto plano.
+- `backend/app/notificaciones.py` — encolado idempotente, destinatarios por rol
+  desde la base, reintentos con tope, aviso ruidoso cuando no hay aprobadores.
+- `backend/app/routers/notifications.py` — `GET /api/notifications/`,
+  `GET /api/notifications/config`,
+  `POST /api/notifications/{id}/reintentar`. **Fuera del contrato v1**: los pide
+  la asignacion en S6; protegidos con `usuarios:gestionar`.
+- `backend/scripts/recordatorios_vencimiento.py` — recordatorio diario.
+- `docs/deploy/recordatorios_launchagent.md` — plist, variables de entorno y
+  diagnostico.
+- `backend/tests/equipos/test_notificaciones.py` — 35 pruebas.
+- `backend/tests/test_contrato_openapi.py` — 37 pruebas.
+- `backend/tests/equipos/test_fixture_demo.py` — 10 pruebas.
+
+### Cambiado
+
+- `backend/app/routers/loans.py` — `POST /confirmar` avisa a aprobadores y al
+  responsable (con el PDF adjunto); `POST /devolucion` avisa a aprobadores.
+  Todo en `BackgroundTasks`.
+- `backend/app/routers/approvals.py` — `POST /confirmar-devolucion` avisa al
+  responsable con el resultado.
+- `backend/app/main.py` — include_router de `notifications`.
+
+### Quitado
+
+- Nada.
+
+---
+
+## 2026-07-28 — S5 Carta responsiva en PDF (WP5)
+
+### Agregado
+
+- `backend/app/pdf/__init__.py`, `estilos.py`, `plantilla.py`, `responsiva.py`.
+- `backend/app/routers/responsivas.py` — `GET /api/loans/{id}/responsiva.pdf`
+  con `?version=` opcional.
+- `backend/tests/equipos/test_responsiva_pdf.py` — 27 pruebas.
+- `backend/requirements-dev.txt` — `pypdf>=5.0.0`.
+
+### Cambiado
+
+- `backend/app/main.py` — include_router de `responsivas`.
+- `backend/seed_prestamo_demo.py` — precondicion explicita de que exista la
+  razon social emisora, con mensaje que manda a `seed_equipos.py`.
+- `backend/tests/equipos/test_aprobacion.py`, `test_media.py`,
+  `test_migracion_y_seeds.py` — sus fixtures ahora siembran tambien las
+  razones sociales: confirmar genera la carta y la emisora sale de esa tabla.
+
+### No hecho a proposito
+
+- Endpoint de regeneracion de la responsiva: no esta en el contrato v1.
+
+---
+
 ## 2026-07-28 — S4 API de prestamos, aprobacion y media (WP4)
 
 ### Agregado
