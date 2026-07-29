@@ -654,7 +654,74 @@ encontraron y arreglaron dentro de este mismo commit. El límite de
 limitación conocida, no como riesgo nuevo (ya estaba documentado en
 `mock/loans.js` desde I3).
 
-#### Commits I4d..I4g — pendientes, ver entradas mas abajo en esta misma sesion conforme se cierren.
+#### Commit I4d — Préstamos activos (cerrado)
+
+`GET /api/loans/` — el contrato solo acepta **un** `estado` a la vez, pero
+"Activos" es la unión de tres (`prestado`, `pendiente_confirmacion`,
+`incompleto`): se trae una página razonable (`limit=200`) y se filtra en
+el cliente, en vez de inventar un parámetro multivalor que el contrato no
+tiene. El dropdown de estado sí reduce a uno solo cuando la persona lo usa
+(mismo filtrado, sin round-trip extra). Tabla (`go-table-scroll-wrapper`,
+cero cristal): folio (enlaza a la ficha), responsable, equipos, fecha de
+regreso esperada, y los **tres badges ortogonales** por separado —
+`estado`, `atrasado`+`dias_atraso` (del servidor, nunca derivado) y
+`entrega_autorizada` (el demo `CE-0007` los muestra los tres a la vez:
+"Prestado" + "Entrega no autorizada", sin fusionarlos en uno). Acciones
+con `RowActions`: Ver ficha, Ver responsiva, Registrar devolución.
+
+**"Ver responsiva" es un endpoint autenticado, no un mount estático**
+(hallazgo 3 del plan fue un IDOR real en este mismo repo) — mismo patrón
+ya usado en Presupuestos (`ticketFileUrl`, `generalExpenseFileUrl`):
+`loanResponsivaUrl(loanId)` es async (el dispatcher mock/real lo envuelve
+igual que `mediaUrl`), se resuelve antes de abrir la pestaña
+(`window.open`), nunca se renderiza en un `href` sin await primero — el
+mismo descuido que se corrigió en I4c (`PhotoCapture`) para no repetirlo
+aquí.
+
+**`RegistrarDevolucionModal.jsx`** (nuevo, reutiliza `PhotoCapture` de
+I4c): por cada equipo, 2 fotos de devolución **o** "No devuelto" con nota
+obligatoria — el botón de enviar queda deshabilitado hasta que **todos**
+los equipos del préstamo estén resueltos de una forma u otra (nunca se
+puede enviar a medias). Las fotos usan el mismo contrato atómico de
+`uploadMedia` (sube y adjunta en una sola llamada) que ya se corrigió en
+el mock durante I4c — este commit no tuvo que tocar el mock de nuevo,
+señal de que el arreglo de raíz de I4c efectivamente sostiene al resto
+del módulo.
+
+**Evidencia**
+
+```
+npm run build verde. index-*.js 16.64 -> 16.68 kB gz, CSS 7.06 -> 7.07 kB
+gz. Payload de /login: 122.85 kB gz (anterior: 122.80 kB gz), contra el
+techo de 250. PhotoCapture pasó a ser un chunk compartido entre
+NuevoPrestamoPage y RegistrarDevolucionModal (Rollup lo extrajo solo, sin
+pedírselo) — NuevoPrestamoPage-*.js bajó de 17.68 a 15.17 kB gz.
+ActivosPage-*.js (chunk lazy): 8.40 kB / 3.15 kB gz. dist/ grep sigue sin
+rastro de mock/harness/permisos-demo.
+```
+
+Verificado en pantalla real (`VITE_EQUIPOS_MOCK=1`, 1280x800 y 390x844,
+superadmin) contra el préstamo demo `CE-0007` (ya `prestado` en el
+fixture): tabla con los 3 badges correctos; modal de devolución con las 2
+fotos subidas y el botón habilitándose correctamente; tras registrar la
+devolución, el renglón pasa a "Pend. confirmación" y pierde la acción
+"Registrar devolución" (ya no aplica), con toast de éxito. En 390x844 la
+tabla desborda horizontalmente por diseño (mismo patrón ya aceptado de
+Presupuestos: `go-table-scroll-wrapper` con scroll, no colapso de
+columnas).
+
+Los 4 e2e de Presupuestos: `auth.spec.js` 7/7,
+`presupuesto-flujo-completo.spec.js` 9/9, `gastos-generales.spec.js` 9/9,
+`pantallas.spec.js` 23/23 (48/48).
+
+**No verificado en pantalla real**: el filtro de "Estado" (dropdown) solo
+se probó por code review, no con un clic — el fixture demo solo trae un
+préstamo activo, no hay un segundo estado con el que comparar visualmente
+el filtro en acción.
+
+**Riesgo nuevo**: ninguno.
+
+#### Commits I4e..I4g — pendientes, ver entradas mas abajo en esta misma sesion conforme se cierren.
 
 ## 2026-07-28 (sesion 2)
 

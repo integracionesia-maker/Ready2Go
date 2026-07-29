@@ -100,7 +100,15 @@
         122.80 kB gz. Los 4 e2e de Presupuestos: 48/48;
         `contrato-fixtures`/`equipos-errores` re-verificados sin
         regresion (18/18).
-  - [ ] **I4d — Prestamos activos.**
+  - [x] **I4d — Prestamos activos.** Union de 3 estados (el contrato solo
+        filtra por uno) resuelta con filtrado en cliente sobre una pagina
+        de 200, no un parametro multivalor inventado. Tabla con los 3
+        badges ortogonales por separado (estado/atrasado/entrega
+        autorizada). `RegistrarDevolucionModal` (reutiliza `PhotoCapture`
+        de I4c): 2 fotos o "no devuelto"+nota obligatoria por equipo,
+        nunca a medias. "Ver responsiva" resuelve la URL async antes de
+        abrir pestaña (mismo cuidado que `mediaUrl` en I4c). Bundle:
+        122.80 → 122.85 kB gz. Los 4 e2e de Presupuestos: 48/48.
   - [ ] **I4e — Aprobaciones.**
   - [ ] **I4f — Historial.**
   - [ ] **I4g — Ficha de prestamo.**

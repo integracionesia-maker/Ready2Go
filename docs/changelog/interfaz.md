@@ -1,5 +1,20 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I4d — Préstamos activos — modo 09-ejecutar-todo)
+
+### Agregado
+
+- `frontend/src/modules/equipos/components/RegistrarDevolucionModal.jsx`
+  — 2 fotos por equipo o "no devuelto" + nota obligatoria (reutiliza
+  `PhotoCapture` de I4c).
+
+### Cambiado
+
+- `frontend/src/modules/equipos/pages/ActivosPage.jsx` — de placeholder
+  (I4a) a tabla real con los 3 badges ortogonales, filtro por estado/texto
+  y acciones (`RowActions`): ver ficha, ver responsiva, registrar
+  devolución.
+
 ## 2026-07-29 (I4c — Wizard de nuevo préstamo — modo 09-ejecutar-todo)
 
 ### Agregado
