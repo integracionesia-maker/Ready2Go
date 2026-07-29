@@ -421,7 +421,91 @@ solo contra el mock del contrato).
 **Riesgo nuevo**: ninguno con número propio — los dos bugs de arriba se
 encontraron y arreglaron el mismo commit.
 
-#### Commits I4b..I4g — pendientes, ver entradas mas abajo en esta misma sesion conforme se cierren.
+#### Commit I4b — Inventario (cerrado)
+
+`GET /api/equipment/` con `q`, `categoria`, `condicion`, `disponible`,
+`limit`/`offset` (20 por página) — **filtros en la URL** vía
+`useSearchParams` (`useUrlFilters()`), no en estado local: un F5 o un link
+compartido conserva la búsqueda. El input de texto (`q`) es el único filtro
+que dispara una petición por tecleo, así que corre con debounce de 300ms
+sobre un estado local (`qInput`); los selects sincronizan de inmediato
+porque son una acción deliberada, no tecleo continuo. Las opciones del
+select de categoría se aprenden de una llamada propia con `limit=200` (no
+hay enum de categorías en el contrato, es texto libre — inventarlo habría
+sido "improvisar un adaptador").
+
+**`EquipmentCard.jsx`** (rejilla) con **tilt 3D condicionado**: el chequeo
+`matchMedia("(hover: hover) and (pointer: fine)")` corre una sola vez al
+montar el módulo (el tipo de dispositivo no cambia a media sesión) y en
+táctil el componente **ni siquiera monta** los listeners de `mousemove`
+— no es solo esconder el efecto con CSS, es no pagar su costo. Alternativa
+de **tabla** (`go-table-scroll-wrapper`/`go-table-scroll`, cero cristal en
+filas) con `RowActions` (Ver ficha/Editar/Auditar) por renglón.
+
+**Separación real del contrato, no una decisión de UI**: `editar`
+(metadata: nombre, categoría, marca, modelo, número de serie, activo fijo,
+cuenta de Gmail, espacio disponible, accesorios) y `auditar_condicion`
+(condición, estado físico, comentario) son dos permisos distintos en
+`permisos_catalogo.json` → dos modales distintos
+(`EquipmentFormModal.jsx`, `EquipmentAuditModal.jsx`), cada uno detrás de
+su propio `RequierePermiso`. La fecha de auditoría **no se manda desde el
+cliente** — mismo patrón que `atrasado`/`dias_atraso`: la pone el servidor
+(el mock ya lo hace, `fecha_auditoria: data.fecha_auditoria ?? ...`).
+`estado_fisico`/`comentario_auditoria`/`fecha_auditoria` se pintan **solo
+si vienen** en la ficha (R-I10: no están en el contrato congelado, solo en
+el fixture).
+
+`EquipmentFichaModal.jsx`: `GET /api/equipment/{id}` fresco al abrir (no
+reusa la fila del listado, para que una auditoría recién guardada se
+refleje sin recargar toda la página). Acción **"Dar de baja"** con
+`POST /baja` — el **409 `EQUIPO_OCUPADO`** se pinta con `e.detail` del
+servidor tal cual, en un toast, nunca con un texto propio que pueda
+desalinearse de la regla real del servidor.
+
+**Bug de doc encontrado (mismo patrón que R-I03)**: `CLAUDE.md` dice que
+`RowActions` vive en `frontend/src/components/RowActions.jsx`; el archivo
+real quedó en `frontend/src/modules/presupuestos/components/
+RowActions.jsx` desde la costura de I0 (`d602e00`, el mismo commit que
+también dejó vieja la ruta de `useMobile.js`). Anotado como continuación
+de R-I03 en `docs/riesgos/interfaz.md` — no me toca editar `CLAUDE.md`.
+
+Autoverificación de la regla dura del paquete: `grep -rn "new Date(" src/modules/equipos/`
+solo encuentra los tres usos ya existentes dentro de `api/mock/*.js`
+(simulan al SERVIDOR estampando fechas, igual que haría el backend real) —
+cero apariciones nuevas en código de UI de I4b.
+
+**Evidencia**
+
+```
+npm run build verde. index-*.js 16.31 -> 16.63 kB gz, CSS 6.95 -> 6.99 kB
+gz (clases de Tailwind nuevas, sin sorpresas). Payload de /login: 122.72
+kB gz (anterior: 122.36 kB gz), contra el techo de 250.
+InventarioPage-*.js (chunk lazy, no entra al payload de /login): 22.26 kB
+/ 6.01 kB gz. dist/ grep sigue sin rastro de mock/harness/permisos-demo.
+```
+
+Los 4 e2e de Presupuestos: `auth.spec.js` 7/7,
+`presupuesto-flujo-completo.spec.js` 9/9, `gastos-generales.spec.js` 9/9,
+`pantallas.spec.js` 23/23 (48/48). Verificado en pantalla real
+(`VITE_EQUIPOS_MOCK=1`, 1280x800 y 390x844): rejilla con datos del
+fixture, cambio a vista de tabla, filtro por categoría + búsqueda con
+debounce (confirmado en la URL), ficha con los 3 badges + auditoría
+previa, modal de auditoría pre-poblado con los valores actuales, alta de
+un equipo nuevo que aparece de inmediato en el conteo (8 → 9) sin recargar
+la página.
+
+**No verificado en pantalla real**: `POST /baja` con 409 `EQUIPO_OCUPADO`
+(el fixture no trae, hoy, un equipo activo con préstamo abierto a la vez
+que se pueda dar de baja desde Inventario sin antes construir I4c/I4d;
+queda para cuando exista un préstamo real que ocupe un equipo). Filtro
+`condicion` en pantalla real (probado categoría y búsqueda, no condición,
+mismo mecanismo).
+
+**Riesgo nuevo**: ninguno con número propio — la actualización de
+`RowActions.jsx` se agregó como continuación de R-I03 (mismo commit que lo
+originó, `d602e00`), no como un riesgo nuevo.
+
+#### Commits I4c..I4g — pendientes, ver entradas mas abajo en esta misma sesion conforme se cierren.
 
 ## 2026-07-28 (sesion 2)
 

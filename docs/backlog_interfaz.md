@@ -66,7 +66,20 @@
         Bundle: index-*.js 14.88 → 16.31 kB gz, payload de /login
         ~120.87 → 122.36 kB gz (techo 250). Los 4 e2e de Presupuestos:
         48/48 (auth 7/7, flujo 9/9, gastos-generales 9/9, pantallas 23/23).
-  - [ ] **I4b — Inventario.**
+  - [x] **I4b — Inventario.** Filtros en la URL (`useSearchParams`,
+        debounce de 300ms solo en el texto libre); opciones de categoría
+        aprendidas del propio inventario (`limit=200`), sin enum inventado.
+        `EquipmentCard` con tilt 3D que ni monta listeners en táctil
+        (`matchMedia("(hover: hover) and (pointer: fine)")` una sola vez).
+        Alternativa de tabla sin cristal + `RowActions`. Dos modales
+        separados por permiso real del contrato: `editar` (metadata) vs
+        `auditar_condicion` (condición/estado físico/comentario) — la
+        fecha de auditoría la pone el servidor, nunca el cliente. Ficha con
+        `GET /equipment/{id}` fresco; "Dar de baja" pinta el 409
+        `EQUIPO_OCUPADO` con el `detail` del servidor. Bug de doc
+        encontrado: `CLAUDE.md` apunta a una ruta vieja de `RowActions.jsx`
+        (continuación de R-I03, mismo commit `d602e00`). Bundle: 122.36 →
+        122.72 kB gz. Los 4 e2e de Presupuestos: 48/48.
   - [ ] **I4c — Wizard de nuevo prestamo (4 pasos).**
   - [ ] **I4d — Prestamos activos.**
   - [ ] **I4e — Aprobaciones.**

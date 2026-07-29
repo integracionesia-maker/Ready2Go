@@ -1,5 +1,28 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I4b — Inventario de Equipos — modo 09-ejecutar-todo)
+
+### Agregado
+
+- `frontend/src/modules/equipos/components/EquipmentCard.jsx` — tarjeta de
+  rejilla con tilt 3D condicionado a `matchMedia("(hover: hover) and
+  (pointer: fine)")` (no se monta en táctil).
+- `frontend/src/modules/equipos/components/EquipmentFormModal.jsx` —
+  alta/edición de metadata (`equipos_inventario:crear`/`:editar`).
+- `frontend/src/modules/equipos/components/EquipmentAuditModal.jsx` —
+  auditoría de condición (`equipos_inventario:auditar_condicion`),
+  separado del formulario de edición porque el contrato los trata como
+  permisos distintos.
+- `frontend/src/modules/equipos/components/EquipmentFichaModal.jsx` —
+  ficha con `GET /equipment/{id}` fresco y acción "Dar de baja"
+  (`POST /baja`, pinta 409 `EQUIPO_OCUPADO` con el `detail` del servidor).
+
+### Cambiado
+
+- `frontend/src/modules/equipos/pages/InventarioPage.jsx` — de placeholder
+  (I4a) a listado real: filtros en la URL, alternancia rejilla/tabla,
+  paginación por `limit`/`offset`.
+
 ## 2026-07-29 (I4a — Rutas, esqueleto y vista Inicio de Equipos — modo 09-ejecutar-todo)
 
 ### Agregado

@@ -1,6 +1,361 @@
-import { EmptyState } from "@/design";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { EmptyState, SkeletonShimmer } from "@/design";
+import { esCodigo } from "@/api";
+import { fetchEquipmentList } from "../api";
+import { usePermisos } from "../permisos/usePermisos";
+import RequierePermiso from "../permisos/RequierePermiso";
+import RowActions from "../../presupuestos/components/RowActions";
+import EquipmentCard from "../components/EquipmentCard";
+import EquipmentFormModal from "../components/EquipmentFormModal";
+import EquipmentAuditModal from "../components/EquipmentAuditModal";
+import EquipmentFichaModal from "../components/EquipmentFichaModal";
 
-// Placeholder de I4a (esqueleto de rutas) — reemplazado por la vista real en I4b.
+const LIMIT = 20;
+
+const CONDICION_BADGE = { bueno: "go-badge-success", atencion: "go-badge-warning" };
+
+function useUrlFilters() {
+  const [params, setParams] = useSearchParams();
+
+  const filtros = useMemo(
+    () => ({
+      q: params.get("q") || "",
+      categoria: params.get("categoria") || "",
+      condicion: params.get("condicion") || "",
+      disponible: params.get("disponible") || "",
+      offset: Number(params.get("offset") || 0),
+    }),
+    [params]
+  );
+
+  function set(patch) {
+    const next = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === "" || value == null) next.delete(key);
+      else next.set(key, String(value));
+    }
+    // Cualquier cambio de filtro regresa a la primera página — un filtro
+    // nuevo con un offset viejo puede caer fuera de rango y verse "vacío".
+    if (!("offset" in patch)) next.delete("offset");
+    setParams(next, { replace: true });
+  }
+
+  return { filtros, set };
+}
+
 export default function InventarioPage() {
-  return <EmptyState title="Inventario" message="Este módulo se construye en I4b." />;
+  const { puede } = usePermisos();
+  const { filtros, set } = useUrlFilters();
+
+  // Input local + debounce: "q" es el único filtro que dispara una petición
+  // por cada cambio, así que sincroniza a la URL 300ms después de que la
+  // persona deja de teclear, no en cada tecla.
+  const [qInput, setQInput] = useState(filtros.q);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (qInput !== filtros.q) set({ q: qInput });
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qInput]);
+
+  const [vista, setVista] = useState("grid");
+  const [resultado, setResultado] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [permisosNoDisponibles, setPermisosNoDisponibles] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [categoriasConocidas, setCategoriasConocidas] = useState([]);
+
+  const [modalCrear, setModalCrear] = useState(false);
+  const [modalEditar, setModalEditar] = useState(null);
+  const [modalAuditar, setModalAuditar] = useState(null);
+  const [fichaId, setFichaId] = useState(null);
+
+  async function cargar() {
+    setLoading(true);
+    setError(null);
+    setPermisosNoDisponibles(false);
+    try {
+      const data = await fetchEquipmentList({
+        q: filtros.q || undefined,
+        categoria: filtros.categoria || undefined,
+        condicion: filtros.condicion || undefined,
+        disponible: filtros.disponible || undefined,
+        limit: LIMIT,
+        offset: filtros.offset,
+      });
+      setResultado(data);
+      if (categoriasConocidas.length === 0) {
+        // Semilla única de opciones de filtro: no hay enum de categorías en
+        // el contrato (es texto libre), así que se aprende del propio
+        // inventario en vez de inventar una lista fija.
+        const todas = await fetchEquipmentList({ limit: 200 });
+        setCategoriasConocidas([...new Set(todas.items.map((i) => i.categoria))].sort());
+      }
+    } catch (e) {
+      if (esCodigo(e, "PERMISOS_NO_DISPONIBLES")) {
+        setPermisosNoDisponibles(true);
+      } else {
+        setError(e.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtros.q, filtros.categoria, filtros.condicion, filtros.disponible, filtros.offset]);
+
+  const totalPages = resultado ? Math.max(1, Math.ceil(resultado.total / LIMIT)) : 1;
+  const currentPage = Math.floor(filtros.offset / LIMIT) + 1;
+
+  if (loading && !resultado) {
+    return (
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <SkeletonShimmer key={i} className="h-32" />
+        ))}
+      </div>
+    );
+  }
+
+  if (permisosNoDisponibles) {
+    return (
+      <EmptyState
+        title="No se pudieron resolver los permisos"
+        message="Esto es temporal — reintenta en un momento. Tu sesión sigue activa."
+        action={
+          <button type="button" onClick={cargar} className="btn-go mt-2">
+            Reintentar
+          </button>
+        }
+      />
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        className="rounded-go border px-4 py-3 font-body text-sm"
+        style={{ background: "rgba(229,62,62,0.08)", borderColor: "rgba(229,62,62,0.25)", color: "var(--go-error)" }}
+      >
+        {error}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-lg font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
+          Inventario <span style={{ color: "var(--go-orange)" }}>({resultado.total})</span>
+        </h1>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-go border p-0.5" style={{ borderColor: "var(--go-border)" }}>
+            <button
+              type="button"
+              onClick={() => setVista("grid")}
+              className={`rounded-go px-3 py-1 font-body text-xs ${vista === "grid" ? "btn-go" : "btn-go-ghost"}`}
+            >
+              Rejilla
+            </button>
+            <button
+              type="button"
+              onClick={() => setVista("tabla")}
+              className={`rounded-go px-3 py-1 font-body text-xs ${vista === "tabla" ? "btn-go" : "btn-go-ghost"}`}
+            >
+              Tabla
+            </button>
+          </div>
+          <RequierePermiso modulo="equipos_inventario" accion="crear">
+            <button type="button" onClick={() => setModalCrear(true)} className="btn-go">
+              + Nuevo equipo
+            </button>
+          </RequierePermiso>
+        </div>
+      </div>
+
+      {/* Filtros en la URL: sobreviven a un F5, se pueden compartir por link. */}
+      <div className="go-card flex flex-wrap items-end gap-3">
+        <div className="min-w-[180px] flex-1">
+          <label className="go-eyebrow mb-1.5 block">Buscar</label>
+          <input
+            type="text"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            placeholder="Nombre del equipo..."
+            className="go-input"
+          />
+        </div>
+        <div className="min-w-[160px]">
+          <label className="go-eyebrow mb-1.5 block">Categoría</label>
+          <select value={filtros.categoria} onChange={(e) => set({ categoria: e.target.value })} className="go-select">
+            <option value="">Todas</option>
+            {categoriasConocidas.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="min-w-[140px]">
+          <label className="go-eyebrow mb-1.5 block">Condición</label>
+          <select value={filtros.condicion} onChange={(e) => set({ condicion: e.target.value })} className="go-select">
+            <option value="">Todas</option>
+            <option value="bueno">Bueno</option>
+            <option value="atencion">Atención</option>
+          </select>
+        </div>
+        <div className="min-w-[140px]">
+          <label className="go-eyebrow mb-1.5 block">Disponibilidad</label>
+          <select value={filtros.disponible} onChange={(e) => set({ disponible: e.target.value })} className="go-select">
+            <option value="">Todas</option>
+            <option value="true">Disponible</option>
+            <option value="false">No disponible</option>
+          </select>
+        </div>
+      </div>
+
+      {resultado.items.length === 0 ? (
+        <EmptyState title="Sin equipos" message="Ningún equipo coincide con estos filtros." />
+      ) : vista === "grid" ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {resultado.items.map((eq) => (
+            <EquipmentCard key={eq.id} equipo={eq} onClick={(e) => setFichaId(e.id)} />
+          ))}
+        </div>
+      ) : (
+        <div className="go-table-scroll-wrapper">
+          <div className="overflow-x-auto rounded-go-lg border go-table-scroll" style={{ borderColor: "var(--go-border)" }}>
+            <table className="go-table w-full">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Categoría</th>
+                  <th>Condición</th>
+                  <th>Disponibilidad</th>
+                  <th>Con</th>
+                  <th aria-label="Acciones" />
+                </tr>
+              </thead>
+              <tbody>
+                {resultado.items.map((eq) => (
+                  <tr key={eq.id} className="cursor-pointer" onClick={() => setFichaId(eq.id)}>
+                    <td>{eq.nombre}</td>
+                    <td>{eq.categoria}</td>
+                    <td>
+                      <span className={`go-badge ${CONDICION_BADGE[eq.condicion] || "go-badge-neutral"}`}>
+                        {eq.condicion || "sin auditar"}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`go-badge ${eq.disponible ? "go-badge-success" : "go-badge-neutral"}`}>
+                        {eq.disponible ? "Disponible" : "No disponible"}
+                      </span>
+                    </td>
+                    <td>
+                      {eq.tenedor_actual?.nombre || "—"}
+                      {eq.atrasado && <span className="go-badge go-badge-error ml-2">Atrasado {eq.dias_atraso}d</span>}
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <RowActions
+                        actions={[
+                          { key: "ficha", label: "Ver ficha", onClick: () => setFichaId(eq.id) },
+                          puede("equipos_inventario", "editar") && {
+                            key: "editar",
+                            label: "Editar",
+                            onClick: () => setModalEditar(eq),
+                          },
+                          puede("equipos_inventario", "auditar_condicion") && {
+                            key: "auditar",
+                            label: "Auditar",
+                            onClick: () => setModalAuditar(eq),
+                          },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
+          <span>
+            Página {currentPage} de {totalPages}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={filtros.offset === 0}
+              onClick={() => set({ offset: Math.max(0, filtros.offset - LIMIT) })}
+              className="btn-go-ghost text-xs px-3 py-1.5 disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              disabled={currentPage >= totalPages}
+              onClick={() => set({ offset: filtros.offset + LIMIT })}
+              className="btn-go-ghost text-xs px-3 py-1.5 disabled:opacity-40"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
+
+      {modalCrear && (
+        <EquipmentFormModal
+          onClose={() => setModalCrear(false)}
+          onSuccess={() => {
+            setModalCrear(false);
+            cargar();
+          }}
+        />
+      )}
+      {modalEditar && (
+        <EquipmentFormModal
+          equipo={modalEditar}
+          onClose={() => setModalEditar(null)}
+          onSuccess={() => {
+            setModalEditar(null);
+            cargar();
+          }}
+        />
+      )}
+      {modalAuditar && (
+        <EquipmentAuditModal
+          equipo={modalAuditar}
+          onClose={() => setModalAuditar(null)}
+          onSuccess={() => {
+            setModalAuditar(null);
+            cargar();
+          }}
+        />
+      )}
+      {fichaId != null && (
+        <EquipmentFichaModal
+          equipoId={fichaId}
+          onClose={() => setFichaId(null)}
+          onEditar={(eq) => {
+            setFichaId(null);
+            setModalEditar(eq);
+          }}
+          onAuditar={(eq) => {
+            setFichaId(null);
+            setModalAuditar(eq);
+          }}
+          onCambio={cargar}
+        />
+      )}
+    </div>
+  );
 }

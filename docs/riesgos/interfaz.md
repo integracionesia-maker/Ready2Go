@@ -44,6 +44,18 @@ documentada quedo vieja. Tampoco puedo editar ese archivo. Ver B-I07: cuando el
 modulo de equipos necesite `useMobile`, hay que promoverlo a un lugar compartido,
 y ese es el momento de corregir la referencia de una sola vez.
 
+**Actualizacion (I4b)**: mismo problema, mismo commit `d602e00`, segundo
+archivo. `CLAUDE.md` tambien dice `frontend/src/components/RowActions.jsx`
+("Las acciones por fila de cualquier tabla nueva deben usar..."); el
+archivo real vive en `frontend/src/modules/presupuestos/components/
+RowActions.jsx` (`git log --follow` lo confirma: movido por la misma
+costura de I0, la referencia en `CLAUDE.md` nunca se actualizo para
+ninguno de los dos). `InventarioPage.jsx` (I4b) importa desde la ruta real
+que sí existe. Mismo tratamiento que arriba: no me toca editar
+`CLAUDE.md`; si `RowActions.jsx` se promueve a un lugar compartido (junto
+con `useMobile.js` en B-I07, o antes), es el momento de corregir ambas
+referencias a la vez.
+
 ## R-I04 — `seed_demo_year.py` deja una DB que parece sembrada y pinta ceros
 
 Corre sin error y reporta porcentajes de gasto por creador, pero deja:
