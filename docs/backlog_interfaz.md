@@ -47,10 +47,10 @@
       capturas reales mostrando cada codigo — sustituido cuando I4 tenga
       vistas propias. Riesgo nuevo: R-I13 (body de `/devolucion` sin ejemplo
       en el contrato, se adivino la forma en `real/loans.js`).
-- [ ] **I4 — Modulo Equipos (WP8).** 7 vistas, 7 sub-commits (I4a..I4g).
-      `SignaturePad`, `PhotoCapture`, `AccesoriosPicker`, `EquipmentCard` en
-      `modules/equipos/components/`; solo `Timeline` es generico y vive en
-      `src/design/`.
+- [x] **I4 — Modulo Equipos (WP8).** 7 vistas, 7 sub-commits (I4a..I4g),
+      los 7 cerrados. `SignaturePad`, `PhotoCapture`, `AccesoriosPicker`,
+      `EquipmentCard` en `modules/equipos/components/`; solo `Timeline`
+      es generico y vive en `src/design/` (ya estaba listo desde I1).
   - [x] **I4a — Rutas, esqueleto y vista Inicio.** `App.jsx`: 7 rutas lazy
         bajo `/equipos` (`EquiposLayout` + `EquiposSubNav` filtrada por
         `usePermisos`). `InicioPage.jsx` real (KPIs + `StatusDonut` +
