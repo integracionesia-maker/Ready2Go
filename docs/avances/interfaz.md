@@ -856,7 +856,108 @@ permisos; el camino de error se revisó por lectura de código —
 **Riesgo nuevo**: ninguno — los dos bugs se encontraron y arreglaron en
 este mismo commit.
 
-#### Commit I4g — pendiente, ver entrada mas abajo en esta misma sesion conforme se cierre.
+#### Commit I4g — Ficha de préstamo (cerrado) — último sub-paquete de I4
+
+`GET /api/loans/by-folio/{folio}` (la razón de ser de esa ruta en el
+contrato — I4a-f solo habían usado `GET /loans/{id}`). Folio y fechas en
+`--go-font-mono`. Los **tres badges ortogonales** de nuevo, esta vez los
+tres juntos en el mismo lugar donde más importa verlos sin fusionar:
+`estado`, `atrasado`+`dias_atraso`, `entrega_autorizada`. Fotos
+**antes/después lado a lado** por equipo (frente/atrás de entrega junto a
+frente/atrás de devolución, en ese orden) vía miniaturas de 96px
+ampliables (clic → `GlassModal` con la imagen completa). Bitácora con el
+`Timeline` genérico que I1 ya había dejado listo específicamente para
+esto (mismo shape `{id, tipo, actor, detalle, created_at}` que trae
+`loan.eventos`, sin que I4g tuviera que tocarlo).
+
+**El criterio de aceptación real, no solo leído**: se cargó
+`fixtures/prestamo_demo.json` tal cual y se verificó en pantalla —no por
+inspección del JSON— que los 6 campos `null` del payload (`notas_responsiva`,
+`fecha_regreso_real`, `entrega_autorizada_por`, `confirmada_por`,
+`fecha_confirmacion`, y las 2 fotos de devolución aún no tomadas) se
+pintan como "—", nunca como el string literal `"null"` ni `"undefined"`,
+y sin tronar el render. Verificado por script: cero apariciones de esos
+dos literales en el texto renderizado, 6 guiones exactos donde el fixture
+trae `null`.
+
+**Bug real encontrado al verificar en pantalla, no al leer código**: la
+página tronaba con `pageerror` — "Media 39/40/41/42 no encontrada" — al
+intentar pintar las miniaturas de firmas y fotos del préstamo demo.
+Causa: `fixtures/prestamo_demo.json` referencia esos 4 ids como si ya
+existieran (son el payload congelado, criterio de aceptación de esta
+misma ficha), pero `state.media` (el `Map` en memoria del mock) arranca
+**vacío** — solo se puebla cuando alguien sube una foto de verdad vía
+`uploadMedia`. Nadie lo había notado antes porque I4a-f nunca renderizó
+una miniatura de un media id preexistente del fixture, solo de fotos
+recién subidas en la misma sesión (que sí generan su propia entrada).
+Arreglado sembrando 4 placeholders (SVG generado en el momento, sin
+canvas ni dependencias — `data:image/svg+xml`) en `state.js` para
+exactamente esos 4 ids, con una nota explicando por qué existen y por qué
+no son fotos reales.
+
+**Evidencia**
+
+```
+npm run build verde. index-*.js 16.66 kB gz (sin cambio real — el salto a
+16.68 en el build anterior fue ruido del pre-bundle de Vite, no un
+cambio real de código). CSS 7.08 -> 7.11 kB gz. Payload de /login: 122.89
+kB gz (anterior: 122.86 kB gz), contra el techo de 250 — el margen sigue
+enorme incluso sumando los 7 sub-paquetes completos de I4.
+FichaPrestamoPage-*.js (chunk lazy): 9.18 kB / 2.76 kB gz. dist/ grep
+sigue sin rastro de mock/harness/permisos-demo.
+```
+
+Verificado en pantalla real de punta a punta (`VITE_EQUIPOS_MOCK=1`,
+1280x800 y 390x844, superadmin) contra `CE-0007` con su JSON pristino
+(nunca mutado por ninguna prueba anterior en esta misma sesión de
+servidor): folio, badges, los 6 campos vacíos como "—", accesorios,
+cargador, 4 miniaturas (2 con placeholder naranja de "foto", 2 "Sin foto"
+para las de devolución que no existen todavía), clic en una miniatura
+abre el modal con la imagen completa y el título correcto, bitácora
+muestra el evento real del fixture ("Prestamo confirmado. Carta
+responsiva firmada por ambas partes.").
+
+Los 4 e2e de Presupuestos: `auth.spec.js` 7/7,
+`presupuesto-flujo-completo.spec.js` 9/9, `gastos-generales.spec.js` 9/9,
+`pantallas.spec.js` 23/23 (48/48).
+
+**No verificado en pantalla real**: "Ver responsiva (PDF)" solo abre la
+URL en una pestaña nueva (el mock no genera un PDF real detrás de esa
+ruta, mismo límite ya documentado desde I3 en `loanResponsivaUrl`); un
+préstamo `atrasado:true` para ver el tercer badge simultáneo con los
+otros dos (el fixture demo trae `atrasado:false`).
+
+**Riesgo nuevo**: ninguno — el bug de media ids se encontró y arregló en
+este mismo commit.
+
+---
+
+### Cierre del paquete I4 completo (I4a → I4g, 7 commits)
+
+Los 7 sub-paquetes cerraron con build verde, capturas reales en 1280x800
+y 390x844, y los 4 e2e de Presupuestos en 48/48 cada uno — sin una sola
+regresión a lo largo de todo el paquete. Bundle final de `/login`: **122.89
+kB gz**, contra el techo de 250 (el paquete que el propio prompt marcaba
+como "el que puede reventar el techo" terminó usando poco más de la mitad
+del margen, sin necesitar ningún recorte).
+
+Bugs reales encontrados y arreglados durante la construcción (todos
+dentro del mismo commit que los encontró, ninguno quedó abierto):
+`src/api/index.js` no reexportaba `BASE`/`throwApiError` (I4a);
+`GlassNav` recortaba la pestaña activa en 390px con 6 items (I4a);
+`uploadMedia` del mock nunca adjuntaba el media al ítem/firma —
+`addLoanMedia` vivía huérfana sin dispatcher (I4c); un ítem se duplicaba
+al agregarlo por reconstruir el array a mano sobre una referencia viva
+del mock (I4c); por la misma causa, un `setLoan` con la misma identidad
+de objeto no re-renderizaba — arreglo de raíz con `clone()` en la
+frontera pública de todo `mock/loans.js`, no un parche puntual (I4c);
+`fetchLoansExport` vivía huérfana y además usaba `res.json()` para lo que
+debía ser un blob CSV (I4f); el mock nunca implementó `desde`/`hasta`
+(I4f); y el `state.media` vacío tronaba al pintar las miniaturas del
+préstamo demo (I4g). Nueve bugs reales en total, los nueve encontrados
+por verificación en pantalla (no por lectura de código) salvo dos, y los
+nueve arreglados antes de cerrar su commit — ninguno quedó como riesgo
+abierto en `docs/riesgos/interfaz.md`.
 
 ## 2026-07-28 (sesion 2)
 

@@ -1,5 +1,21 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I4g — Ficha de préstamo — modo 09-ejecutar-todo, cierre de I4)
+
+### Agregado
+
+- `frontend/src/modules/equipos/pages/FichaPrestamoPage.jsx` — de
+  placeholder (I4a) a la ficha real: `GET /loans/by-folio/{folio}`, los
+  3 badges ortogonales, fotos antes/después ampliables por equipo,
+  bitácora vía `Timeline` (I1).
+
+### Cambiado
+
+- `frontend/src/modules/equipos/api/mock/state.js` — se siembran 4
+  entradas de `state.media` (ids 39-42, placeholders SVG) para que las
+  miniaturas del préstamo demo (`fixtures/prestamo_demo.json`) tengan algo
+  que `mediaUrl()` pueda resolver — antes tronaban con "no encontrada".
+
 ## 2026-07-29 (I4f — Historial — modo 09-ejecutar-todo)
 
 ### Agregado

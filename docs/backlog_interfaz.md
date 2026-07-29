@@ -131,7 +131,22 @@
         si el servidor falla, dispatcher completo, mock con el mismo
         contrato observable. Bundle: 122.86 kB gz (sin cambio, chunk
         lazy). Los 4 e2e de Presupuestos: 48/48.
-  - [ ] **I4g — Ficha de prestamo.**
+  - [x] **I4g — Ficha de prestamo.** GET /loans/by-folio/{folio} (la
+        razon de ser de esa ruta). Los 3 badges ortogonales juntos, fotos
+        antes/despues lado a lado (miniaturas ampliables), bitacora con
+        el Timeline generico que I1 ya habia dejado listo para esto.
+        Criterio de aceptacion verificado en pantalla real: los 6 campos
+        null del fixture demo se pintan como "—", nunca como texto "null"
+        ni revientan el render. Bug real encontrado en pantalla (no
+        leyendo codigo): state.media del mock arranca vacio pero el
+        fixture demo referencia 4 ids de firmas/fotos como si ya
+        existieran -> pageerror "no encontrada". Arreglado sembrando 4
+        placeholders SVG en state.js. Bundle final: 122.89 kB gz (techo
+        250). Los 4 e2e de Presupuestos: 48/48.
+  - **Cierre de I4 completo**: 7/7 sub-paquetes, 48/48 e2e en cada uno,
+    cero regresiones, 9 bugs reales encontrados y arreglados en el mismo
+    commit que los encontro (ninguno quedo abierto). Bundle final 122.89
+    kB gz contra el techo de 250.
 - [x] **I5 — Permisos en la UI.** Commit de este issue (modo 09-ejecutar-todo,
       1 commit por issue). `src/modules/equipos/permisos/`: `catalogo.js`
       (import directo de la copia congelada de I3), `fallbackPorRol.js`
