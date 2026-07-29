@@ -52,16 +52,29 @@ export function confirmLoan(loanId) {
   return request(`/loans/${loanId}/confirmar`, { method: "POST" });
 }
 
-export function cancelLoan(loanId) {
-  return request(`/loans/${loanId}/cancelar`, { method: "POST" });
+// I8 lote 1 (hallazgo adicional, mismo patrón que 1.1/1.2 pero no nombrado
+// en el prompt): `CancelarRequest` es un parámetro de cuerpo obligatorio en
+// `routers/loans.py:415` aunque su único campo (`motivo`) sea opcional —
+// FastAPI exige que llegue *algún* JSON, y sin `body` el fetch no manda
+// nada. Sin este fix, descartar un borrador recuperado (wizard) responde
+// 422 contra el servidor real.
+export function cancelLoan(loanId, motivo) {
+  return request(`/loans/${loanId}/cancelar`, {
+    method: "POST",
+    body: JSON.stringify({ motivo: motivo ?? null }),
+  });
 }
 
-// El contrato (§3) describe la REGLA de /devolucion (2 fotos por equipo o
-// no_devuelto+nota) pero no da un ejemplo de body JSON como sí hace con
-// /confirmar-devolucion — a diferencia de ahí, aquí se está adivinando la
-// forma (`items: [...]`). Reportado como riesgo nuevo (R-I13); si el
-// servidor espera otra forma, este es el primer lugar a revisar cuando
-// llegue el servidor real.
+// I8 lote 1: la FORMA exterior que R-I13 adivinó (`{items: [...]}`) resultó
+// correcta contra el servidor real (`DevolucionRequest`) — acertó la
+// estructura. Lo que fallaba eran las LLAVES de cada item: el caller mandaba
+// camelCase (`itemId`/`noDevuelto`/`notaDevolucion`) y `DevolucionItem`
+// exige snake_case (`loan_item_id`/`no_devuelto`/`nota_devolucion`, el
+// primero sin default → 422 en cuanto faltaba). Reproducido contra el
+// servidor real antes de arreglarlo (ver docs/avances/interfaz.md, I8).
+// Sin conversión aquí a propósito — mismo patrón que `confirmReturnDecision`
+// (abajo): el caller ya manda las llaves reales de la API (ver
+// `RegistrarDevolucionModal.jsx`), este archivo solo hace el POST.
 export function returnLoan(loanId, { decisionesPorItem }) {
   return request(`/loans/${loanId}/devolucion`, {
     method: "POST",

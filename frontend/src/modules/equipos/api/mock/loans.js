@@ -165,18 +165,35 @@ export async function cancelLoan(loanId) {
   return clone(loan);
 }
 
+// I8 lote 1.3: "el mock deja de mentir" — las llaves son snake_case
+// (`loan_item_id`/`no_devuelto`/`nota_devolucion`), igual que
+// `DevolucionItem` del servidor real, y `loan_item_id` es obligatorio: si
+// falta, 422 con el mismo sobre de error del contrato ({detail}), no un
+// `continue` silencioso. El mock viejo aceptaba `itemId` (camelCase) sin
+// quejarse — coincidía con lo que el caller viejo mandaba, así que el par
+// mock+caller funcionaba consistente entre sí. El bug real vivía
+// exclusivamente en `real/loans.js` (serializaba ese mismo camelCase al
+// JSON que el servidor real rechaza): los 48/48 nunca tocaron esa costura.
+// Ahora que el caller manda snake_case, el mock valida la MISMA forma que
+// exige el servidor, para que un futuro regreso a camelCase sí truene aquí.
 export async function returnLoan(loanId, { decisionesPorItem = [] } = {}) {
   checkGlobalInjection();
   const loan = findLoan(loanId);
   if (loan.estado !== "prestado") throwFixtureError("TRANSICION_INVALIDA");
 
   for (const d of decisionesPorItem) {
-    const item = loan.items.find((it) => it.id === d.itemId);
-    if (!item) continue;
-    if (d.noDevuelto) {
-      if (!d.notaDevolucion) throwFixtureError("TRANSICION_INVALIDA");
+    if (d.loan_item_id == null) {
+      throw new ApiError("loan_item_id es obligatorio en cada item de la devolución.", {
+        status: 422,
+        detail: "loan_item_id es obligatorio en cada item de la devolución.",
+      });
+    }
+    const item = loan.items.find((it) => it.id === d.loan_item_id);
+    if (!item) throwNotFound(`El renglon ${d.loan_item_id} no pertenece a este préstamo.`);
+    if (d.no_devuelto) {
+      if (!d.nota_devolucion) throwFixtureError("TRANSICION_INVALIDA");
       item.no_devuelto = true;
-      item.nota_devolucion = d.notaDevolucion;
+      item.nota_devolucion = d.nota_devolucion;
     } else if (!item.media.foto_dev_frente || !item.media.foto_dev_atras) {
       throwFixtureError("TRANSICION_INVALIDA");
     }

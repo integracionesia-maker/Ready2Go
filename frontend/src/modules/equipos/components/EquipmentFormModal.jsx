@@ -43,13 +43,12 @@ export default function EquipmentFormModal({ equipo, onClose, onSuccess }) {
         .map((a) => a.trim())
         .filter(Boolean),
     };
-    if (!editando) {
-      // Un equipo recién dado de alta arranca activo y sin auditar — la
-      // condición inicial se asigna aquí (no la pide el formulario) porque
-      // "auditar" es una acción física posterior, no parte del alta.
-      data.estado_operativo = "activo";
-      data.condicion = "bueno";
-    }
+    // I8 lote 1/2: `EquipmentCreate` (schema real) no declara ni
+    // `estado_operativo` ni `condicion` — Pydantic descarta cualquier clave
+    // no declarada antes de que `crud_equipment.crear` la vea, así que
+    // mandarlas desde aquí era inerte (el servidor ya default a "activo" y
+    // "bueno" el mismo). Se deja de inventar campos que el servidor ignora;
+    // el mock ahora pone esos mismos defaults por su cuenta.
 
     setSubmitting(true);
     setError(null);

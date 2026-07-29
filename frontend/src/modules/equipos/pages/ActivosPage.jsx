@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { EmptyState, SkeletonShimmer } from "@/design";
+import { EmptyState, SkeletonShimmer, useToast } from "@/design";
 import { esCodigo } from "@/api";
-import { fetchLoans, loanResponsivaUrl } from "../api";
+import { fetchLoans, fetchLoanById, loanResponsivaUrl } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
 import RowActions from "../../presupuestos/components/RowActions";
 import RegistrarDevolucionModal from "../components/RegistrarDevolucionModal";
@@ -24,6 +24,7 @@ const ESTADO_BADGE = {
 export default function ActivosPage() {
   const { puede } = usePermisos();
   const navigate = useNavigate();
+  const { push } = useToast();
 
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +37,25 @@ export default function ActivosPage() {
   const [page, setPage] = useState(1);
 
   const [devolucionLoan, setDevolucionLoan] = useState(null);
+  const [cargandoDevolucion, setCargandoDevolucion] = useState(null); // id del loan en vuelo
+
+  // GET /loans/ devuelve LoanRow (fila liviana: sin `items`, sin `firmas`,
+  // sin `responsiva`) — el mock nunca distinguio fila de ficha y siempre
+  // regreso el objeto completo, asi que este desfase no se vio hasta probar
+  // contra el servidor real. RegistrarDevolucionModal necesita `items[]` con
+  // media por renglon: hay que pedir el detalle (LoanDetail) antes de abrir
+  // el modal, no pasarle la fila tal cual.
+  async function abrirDevolucion(loan) {
+    setCargandoDevolucion(loan.id);
+    try {
+      const detalle = await fetchLoanById(loan.id);
+      setDevolucionLoan(detalle);
+    } catch (e) {
+      push({ tone: "error", title: "No se pudo abrir la devolución", message: e.detail || e.message });
+    } finally {
+      setCargandoDevolucion(null);
+    }
+  }
 
   useEffect(() => {
     const t = setTimeout(() => setQDebounced(q), 300);
@@ -189,7 +209,7 @@ export default function ActivosPage() {
                       </Link>
                     </td>
                     <td>{loan.responsable?.nombre || "—"}</td>
-                    <td>{(loan.items || []).map((it) => it.equipo_nombre).join(", ")}</td>
+                    <td>{(loan.equipos || []).join(", ") || "—"}</td>
                     <td className="font-mono">{loan.fecha_regreso_esperada || "—"}</td>
                     <td>
                       <div className="flex flex-wrap gap-1.5">
@@ -202,12 +222,16 @@ export default function ActivosPage() {
                       <RowActions
                         actions={[
                           { key: "ficha", label: "Ver ficha", onClick: () => navigate(`/equipos/prestamo/${loan.folio}`) },
-                          loan.responsiva && { key: "responsiva", label: "Ver responsiva", onClick: () => verResponsiva(loan) },
+                          // `LoanRow` no trae `responsiva` (solo `LoanDetail` la
+                          // tiene) — el folio se asigna en el mismo momento que
+                          // la responsiva (al confirmar), así que su presencia
+                          // es la señal disponible en la fila.
+                          loan.folio && { key: "responsiva", label: "Ver responsiva", onClick: () => verResponsiva(loan) },
                           loan.estado === "prestado" &&
                             puede("equipos_prestamos", "registrar_devolucion") && {
                               key: "devolucion",
-                              label: "Registrar devolución",
-                              onClick: () => setDevolucionLoan(loan),
+                              label: cargandoDevolucion === loan.id ? "Abriendo..." : "Registrar devolución",
+                              onClick: () => abrirDevolucion(loan),
                             },
                         ]}
                       />

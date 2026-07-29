@@ -69,6 +69,12 @@ export async function createEquipment(data) {
   const id = Math.max(0, ...state.equipos.map((e) => e.id)) + 1;
   const nuevo = {
     id,
+    // `EquipmentCreate` (real) no acepta estos dos del cliente — el
+    // servidor los pone él mismo (`crud_equipment.crear`, default "activo"
+    // / "bueno"). El mock replica el mismo default en vez de esperar que
+    // el cliente los mande (I8 lote 1/2: el cliente dejó de inventarlos).
+    estado_operativo: "activo",
+    condicion: "bueno",
     disponible: true,
     atrasado: false,
     dias_atraso: 0,

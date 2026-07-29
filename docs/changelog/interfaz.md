@@ -1,5 +1,41 @@
 # Changelog — interfaz
 
+## 2026-07-29/30 (I8 lote 1 — Paridad de bodies de escritura)
+
+### Agregado
+
+- `frontend/e2e/paridad-bodies-equipos.spec.js` — 10 casos, intercepta
+  `window.fetch` en el navegador y compara las llaves de cada body de
+  escritura contra los schemas reales (`schemas_loans.py`/
+  `schemas_equipment.py`), sin tocar la red ni un servidor.
+
+### Cambiado
+
+- `frontend/src/modules/equipos/components/RegistrarDevolucionModal.jsx` —
+  manda `loan_item_id`/`no_devuelto`/`nota_devolucion` (antes camelCase,
+  422 real).
+- `frontend/src/modules/equipos/pages/NuevoPrestamoPage.jsx` — `createLoan`
+  recibe `responsable_user_id/nombre/email` planos (antes `responsable`
+  anidado, ignorado en silencio por el servidor).
+- `frontend/src/modules/equipos/pages/ActivosPage.jsx` y
+  `AprobacionesPage.jsx` — piden `fetchLoanById` antes de abrir
+  `RegistrarDevolucionModal`/`ConfirmarDevolucionModal` (`GET /loans/`
+  devuelve la fila liviana `LoanRow`, sin `items[]`); columna "Equipos"
+  corregida a `loan.equipos`; "Ver responsiva" corregido a comprobar
+  `loan.folio`.
+- `frontend/src/modules/equipos/api/real/loans.js` — `cancelLoan` ahora
+  manda `{motivo}` (antes sin body, 422 contra `CancelarRequest`).
+- `frontend/src/modules/equipos/api/real/equipment.js` —
+  `dischargeEquipment` ahora manda `{motivo}` (mismo bug, `BajaRequest`).
+- `frontend/src/modules/equipos/components/EquipmentFormModal.jsx` — deja
+  de mandar `estado_operativo`/`condicion` al crear (el servidor los
+  ignora y los default él mismo).
+- `frontend/src/modules/equipos/api/mock/loans.js` — `returnLoan` exige
+  `loan_item_id` (422 si falta, igual que el servidor real).
+- `frontend/src/modules/equipos/api/mock/equipment.js` — `createEquipment`
+  pone los defaults de `estado_operativo`/`condicion` que antes esperaba
+  recibir del cliente.
+
 ## 2026-07-29 (I4g — Ficha de préstamo — modo 09-ejecutar-todo, cierre de I4)
 
 ### Agregado

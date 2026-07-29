@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState, SkeletonShimmer, useToast } from "@/design";
 import { esCodigo } from "@/api";
-import { fetchLoans, authorizeDelivery } from "../api";
+import { fetchLoans, fetchLoanById, authorizeDelivery } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
 import ConfirmarDevolucionModal from "../components/ConfirmarDevolucionModal";
 import CerrarIncidenciaModal from "../components/CerrarIncidenciaModal";
@@ -29,6 +29,23 @@ export default function AprobacionesPage() {
 
   const [modalDevolucion, setModalDevolucion] = useState(null);
   const [modalIncidencia, setModalIncidencia] = useState(null);
+  const [abriendoDevolucionId, setAbriendoDevolucionId] = useState(null);
+
+  // GET /loans/ devuelve LoanRow (sin `items`) — ConfirmarDevolucionModal
+  // necesita el detalle completo (LoanDetail) para decidir por renglon. El
+  // mock nunca distinguio fila de ficha, por eso este desfase solo aparecio
+  // al probar contra el servidor real (I8, lote 1/2).
+  async function abrirConfirmarDevolucion(loan) {
+    setAbriendoDevolucionId(loan.id);
+    try {
+      const detalle = await fetchLoanById(loan.id);
+      setModalDevolucion(detalle);
+    } catch (e) {
+      push({ tone: "error", title: "No se pudo abrir la devolución", message: e.detail || e.message });
+    } finally {
+      setAbriendoDevolucionId(null);
+    }
+  }
 
   async function cargar() {
     setLoading(true);
@@ -172,8 +189,13 @@ export default function AprobacionesPage() {
                     </span>
                     {!loan.entrega_autorizada && <span className="go-badge go-badge-warning ml-2">Entrega no autorizada</span>}
                   </div>
-                  <button type="button" onClick={() => setModalDevolucion(loan)} className="btn-go text-xs px-3 py-1.5">
-                    Confirmar devolución
+                  <button
+                    type="button"
+                    onClick={() => abrirConfirmarDevolucion(loan)}
+                    disabled={abriendoDevolucionId === loan.id}
+                    className="btn-go text-xs px-3 py-1.5"
+                  >
+                    {abriendoDevolucionId === loan.id ? "Abriendo..." : "Confirmar devolución"}
                   </button>
                 </li>
               ))}

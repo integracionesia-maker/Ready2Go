@@ -45,11 +45,17 @@ export default function RegistrarDevolucionModal({ loan, onClose, onSuccess }) {
     }
     setEnviando(true);
     try {
+      // I8 lote 1: las llaves de cada item van tal cual las exige
+      // `DevolucionItem` del servidor real (snake_case) — mismo patrón que
+      // `ConfirmarDevolucionModal.jsx` ya usaba para `/confirmar-devolucion`.
+      // Antes se mandaba camelCase y el servidor real respondía 422
+      // (`loan_item_id` es obligatorio, sin default) — el mock lo aceptaba
+      // igual porque nunca validó la forma, por eso sobrevivió a 48/48.
       await returnLoan(loan.id, {
         decisionesPorItem: loan.items.map((it) => ({
-          itemId: it.id,
-          noDevuelto: porItem[it.id].noDevuelto,
-          notaDevolucion: porItem[it.id].noDevuelto ? porItem[it.id].notaDevolucion : null,
+          loan_item_id: it.id,
+          no_devuelto: porItem[it.id].noDevuelto,
+          nota_devolucion: porItem[it.id].noDevuelto ? porItem[it.id].notaDevolucion : null,
         })),
       });
       push({ tone: "success", title: "Devolución registrada" });

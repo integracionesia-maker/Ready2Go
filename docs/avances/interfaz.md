@@ -1,5 +1,125 @@
 # Avances — interfaz
 
+## 2026-07-29/30 (sesion 4 — I8, integracion real, 7 lotes)
+
+El carril de servidor aterrizó completo en `BeniBranch` (S0..S7, merge limpio
+sin conflictos: tocó solo `backend/` y `docs/*/servidor.md`, este carril solo
+`frontend/` y `docs/*/interfaz.md`). I4 quedó verificado contra el mock, no
+contra la API real — I8 cierra esa brecha.
+
+### Lote 1 — Paridad de los bodies de escritura (cerrado)
+
+**El 422 se reprodujo primero, contra el servidor real**, antes de tocar una
+línea: wizard completo (crear → agregar equipo → subir 2 fotos → firmar →
+confirmar) funcionó de punta a punta sin un solo 422 — folio real `CE-0008`
+emitido por la base. El único 422 apareció al intentar `POST
+/loans/{id}/devolucion` desde `Activos`, exactamente como describía el
+paquete: `RegistrarDevolucionModal.jsx` mandaba `{itemId, noDevuelto,
+notaDevolucion}` (camelCase) y `DevolucionItem` (schema real) exige
+`{loan_item_id, no_devuelto, nota_devolucion}`, con `loan_item_id`
+obligatorio y sin default.
+
+**Bug adicional encontrado ANTES de poder siquiera reproducir el 422** (no
+nombrado en el paquete): `RegistrarDevolucionModal` y `ConfirmarDevolucionModal`
+tronaban con un error de React (`Cannot read properties of undefined
+(reading 'map')`) al abrirse desde `ActivosPage`/`AprobacionesPage` contra el
+servidor real. Causa: `GET /api/loans/` devuelve `LoanRow` — la fila liviana
+del listado (`schemas_loans.py`), **sin** `items[]`, sin `firmas`, sin
+`responsiva` — pero ambas páginas pasaban esa fila directo a modales que
+esperan la ficha completa (`LoanDetail`, con `items[].media` por renglon). El
+mock nunca distinguió fila de ficha (`fetchLoans()` siempre devolvía el
+objeto completo), así que este desfase real-vs-mock sobrevivió invisible a
+los 48/48 de I4d/I4e. Arreglado: ambas páginas ahora piden `fetchLoanById(loan.id)`
+antes de abrir el modal, en vez de pasar la fila tal cual. De paso, la
+columna "Equipos" de `ActivosPage` (que leía `loan.items` — siempre vacía
+contra el servidor real, `LoanRow` no lo tiene) se corrigió a `loan.equipos`
+(el campo real de la fila), y "Ver responsiva" pasó de comprobar
+`loan.responsiva` (tampoco existe en la fila) a comprobar `loan.folio`
+(se asigna en el mismo momento que la responsiva).
+
+**Fix de 1.1**: siguiendo el patrón que ya usaba `ConfirmarDevolucionModal.jsx`
+para `/confirmar-devolucion` (mandar las llaves reales directo, sin capa de
+conversión), `RegistrarDevolucionModal.jsx` ahora arma
+`{loan_item_id, no_devuelto, nota_devolucion}` — `real/loans.js` sigue
+siendo un paso directo (raw passthrough), consistente con
+`confirmReturnDecision`.
+
+**Fix de 1.2 (bug latente, R-I14)**: `NuevoPrestamoPage.jsx` mandaba
+`responsable: {user_id, nombre, email}` anidado; `LoanCreate` exige las tres
+claves **planas** (`responsable_user_id/nombre/email`). Pydantic ignoraba la
+clave desconocida en silencio y el servidor caía a `current_user` — hoy
+coincide siempre (el wizard es autoservicio), así que nunca se vio roto.
+Arreglado a las tres claves planas, con el comentario de por qué en el
+código.
+
+**Hallazgos adicionales del mismo patrón** (no nombrados en el paquete, pero
+mismo bug de forma — cuerpo obligatorio sin mandar ninguno):
+`cancelLoan` (`CancelarRequest`) y `dischargeEquipment`
+(`BajaRequest`, en Inventario) mandaban `POST` sin body a rutas que
+declaran un parámetro Pydantic obligatorio (aunque su único campo sea
+opcional, FastAPI exige *algún* JSON). Ambas corregidas a mandar
+`{motivo: null}` si no hay motivo.
+
+**Limpieza relacionada**: `EquipmentFormModal.jsx` inventaba
+`estado_operativo`/`condicion` al crear un equipo — confirmado leyendo
+`routers/equipment.py` que `EquipmentCreate.model_dump()` ni siquiera
+conserva esas dos claves (Pydantic las descarta antes de validar, nunca
+llegan a `crud_equipment.crear`, que ya las default a "activo"/"bueno" él
+mismo). Se dejó de inventarlas en el cliente; el mock ahora pone los mismos
+default por su cuenta en vez de esperar que el cliente los mande.
+
+**1.3 — el mock deja de mentir**: `mock/loans.js` ahora exige
+`loan_item_id` en cada item de `/devolucion` (422 con el mismo sobre del
+contrato si falta), igual que el servidor real. No se borró nada:
+`equipos-errores.spec.js` lo sigue necesitando para el 503, imposible de
+provocar a voluntad en el servidor real.
+
+**1.4 — prueba de paridad** (`frontend/e2e/paridad-bodies-equipos.spec.js`,
+10 casos): llama cada función de `real/loans.js`/`real/equipment.js`/
+`real/media.js` con `window.fetch` interceptado en el propio navegador
+(nunca toca la red), y compara las llaves del body capturado contra una
+copia de lectura de `schemas_loans.py`/`schemas_equipment.py`. Cubre los 9
+endpoints que pedía el paquete, incluyendo la afirmación explícita de que
+`/autorizar-entrega` y `/confirmar` **no** llevan body. **Alcance honesto**:
+protege la fidelidad de la capa de transporte (`real/*.js`) dado un input
+ya bien formado — para `createLoan`/`returnLoan`/`confirmReturnDecision`
+(passthrough crudo, sin conversión), un regreso a camelCase en el
+COMPONENTE que llama no lo detectaría esta prueba; lo detectaría
+`equipos-flujo-completo.spec.js` (I8 lote 4) contra el servidor real, con
+un 422 de verdad. Para `addLoanItem` (que sí convierte camelCase→snake_case
+dentro de `real/loans.js`) la prueba sí protege ese código directamente.
+
+**Evidencia**
+
+```
+npm run build verde. Bundle sin cambio real: 122.89 kB gz de /login (todos
+los archivos tocados son chunks lazy o el dispatcher/mock, fuera del grafo
+eager). dist/ grep sigue sin rastro de mock/harness/permisos-demo.
+```
+
+Migraciones y seeds del servidor corridos en el orden que sus propios
+encabezados exigían (no el orden sugerido por el paquete): `seed_auth.py` →
+`migrate_rbac_aditivo.py` → `migrate_equipos.py` → `seed_equipos.py` →
+`seed_prestamo_demo.py` → `seed_rbac.py` (invertido respecto al paquete:
+`seed_prestamo_demo.py` siembra a `melisa` con `user_id=4` exacto — el que
+pide el fixture — y `seed_rbac.py --crear-si-falta` ejecutado antes se la
+había robado con `id=2`; el propio script avisó y no pisó nada, se
+reconstruyó la base con el orden correcto).
+
+`paridad-bodies-equipos.spec.js`: 10/10. `equipos-errores.spec.js`: 6/6.
+`contrato-fixtures.spec.js`: 6/6 (sin regresión tras el endurecimiento del
+mock). Los 4 e2e de Presupuestos: `auth.spec.js` 7/7,
+`presupuesto-flujo-completo.spec.js` 9/9, `gastos-generales.spec.js` 9/9,
+`pantallas.spec.js` 23/23 (48/48).
+
+**No verificado en pantalla real**: el 422 original solo se capturó por
+red (`page.on("response")`), no se guardó una captura de pantalla del
+error tal cual lo vería una persona (el toast de error sí se probó en I4d
+contra el mock, con el mismo componente).
+
+**Riesgo nuevo**: ninguno — todos los bugs de este lote se encontraron y
+arreglaron dentro del mismo commit.
+
 ## 2026-07-29 (sesion 3 — modo 09-ejecutar-todo, cinco issues sin push)
 
 ### ISSUE I2 — Piel de Presupuestos (cerrada, 1 commit)

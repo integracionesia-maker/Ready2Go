@@ -140,9 +140,20 @@ export default function NuevoPrestamoPage() {
     setErrorPaso1(null);
     setEnviandoPaso1(true);
     try {
+      // I8 lote 1 (bug latente, R-I14): `LoanCreate` espera las tres claves
+      // de responsable PLANAS (`responsable_user_id/nombre/email`), no un
+      // objeto anidado. Pydantic ignora silenciosamente una clave `responsable`
+      // desconocida y el servidor cae a `current_user` — hoy coincide
+      // siempre (el wizard es autoservicio, nadie pide equipo para otra
+      // persona), así que nada se ve roto. El día que exista un selector de
+      // "pedir para alguien más", el préstamo se habría asignado a quien
+      // llena el formulario, no a quien realmente lo va a usar, sin un solo
+      // error visible.
       const nuevo = await conManejoDeSesion(() =>
         createLoan({
-          responsable: { user_id: user.id, nombre: user.full_name, email: user.email },
+          responsable_user_id: user.id,
+          responsable_nombre: user.full_name,
+          responsable_email: user.email,
           area,
           empresa: empresaSel,
           motivo,

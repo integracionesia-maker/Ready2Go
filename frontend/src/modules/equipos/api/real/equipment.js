@@ -34,6 +34,12 @@ export function auditEquipment(id, data) {
   return request(`/equipment/${id}/auditoria`, { method: "POST", body: JSON.stringify(data) });
 }
 
-export function dischargeEquipment(id) {
-  return request(`/equipment/${id}/baja`, { method: "POST" });
+// I8 lote 1 (mismo patrón que cancelLoan): `BajaRequest` es un cuerpo
+// obligatorio en el router aunque `motivo` sea opcional. Sin `body`, un 422
+// real por "Expecting value" en cuanto alguien de de baja un equipo.
+export function dischargeEquipment(id, motivo) {
+  return request(`/equipment/${id}/baja`, {
+    method: "POST",
+    body: JSON.stringify({ motivo: motivo ?? null }),
+  });
 }

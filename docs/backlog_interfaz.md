@@ -147,6 +147,33 @@
     cero regresiones, 9 bugs reales encontrados y arreglados en el mismo
     commit que los encontro (ninguno quedo abierto). Bundle final 122.89
     kB gz contra el techo de 250.
+- [ ] **I8 — Integracion real (7 lotes).** El carril de servidor aterrizo
+      (S0..S7); I4 quedo verificado solo contra el mock. Cierra esa brecha.
+  - [x] **Lote 1 — Paridad de bodies de escritura.** 422 reproducido de
+        verdad contra el servidor real antes de arreglarlo (wizard
+        completo sin un solo 422; el unico 422 fue /devolucion, como
+        describia el paquete). Bug adicional encontrado ANTES de poder
+        reproducirlo: GET /loans/ devuelve LoanRow (sin items/firmas/
+        responsiva) y ActivosPage/AprobacionesPage pasaban esa fila
+        directo a modales que esperan LoanDetail -> React tronaba al abrir
+        el modal. Arreglado pidiendo fetchLoanById antes de abrir. Fix
+        1.1 (RegistrarDevolucionModal a snake_case, mismo patron que
+        ConfirmarDevolucionModal) y 1.2 (responsable plano en
+        NuevoPrestamoPage, R-I14). Hallazgos extra: cancelLoan/
+        dischargeEquipment mandaban POST sin body a schemas que lo exigen
+        (CancelarRequest/BajaRequest); EquipmentFormModal inventaba
+        estado_operativo/condicion que el servidor ni siquiera conserva.
+        Mock endurecido (valida loan_item_id, 422 igual que el real).
+        Prueba de paridad nueva: frontend/e2e/paridad-bodies-equipos.spec.js
+        (10/10). equipos-errores.spec.js 6/6, contrato-fixtures.spec.js
+        6/6, los 4 e2e de Presupuestos 48/48. Bundle sin cambio: 122.89 kB
+        gz.
+  - [ ] **Lote 2 — Levantar el modulo contra el servidor real.**
+  - [ ] **Lote 3 — Media y responsiva contra el servidor real.**
+  - [ ] **Lote 4 — Despertar equipos-flujo-completo.spec.js.**
+  - [ ] **Lote 5 — B-I14: retirar fallbackPorRol.js.**
+  - [ ] **Lote 6 — Cierre e integracion.**
+  - [ ] **Lote 7 — OPCIONAL: B-I07 (useMobile/RowActions compartidos).**
 - [x] **I5 — Permisos en la UI.** Commit de este issue (modo 09-ejecutar-todo,
       1 commit por issue). `src/modules/equipos/permisos/`: `catalogo.js`
       (import directo de la copia congelada de I3), `fallbackPorRol.js`
