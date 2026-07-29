@@ -11,6 +11,9 @@ const LoginPage = lazy(() => import("./modules/presupuestos/pages/LoginPage"));
 // elimina, junto con el chunk del harness. Se borra cuando I4 tenga vistas
 // reales de Equipos reaccionando a los mismos códigos de error.
 const DevMockHarness = import.meta.env.DEV ? lazy(() => import("./modules/equipos/DevMockHarness")) : null;
+// Demo TEMPORAL de I5 (ver PermisosDemo.jsx) — mismo trato: solo DEV, se
+// borra cuando I4 tenga vistas reales consumiendo usePermisos/RequierePermiso.
+const PermisosDemo = import.meta.env.DEV ? lazy(() => import("./modules/equipos/permisos/PermisosDemo")) : null;
 
 // App.jsx se queda solo con enrutado (B-I04): el chrome genérico vive en
 // src/shell/AppShell.jsx, los datos y rutas de Presupuestos en
@@ -34,6 +37,16 @@ export default function App() {
               element={
                 <Suspense fallback={null}>
                   <DevMockHarness />
+                </Suspense>
+              }
+            />
+          )}
+          {import.meta.env.DEV && (
+            <Route
+              path="/equipos/_permisos-demo"
+              element={
+                <Suspense fallback={null}>
+                  <PermisosDemo />
                 </Suspense>
               }
             />

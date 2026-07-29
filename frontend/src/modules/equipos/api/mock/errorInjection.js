@@ -22,10 +22,17 @@ export function setInjectedError(codigo) {
   }
 }
 
-/** SIN_PERMISO truena en CUALQUIER acción — se llama al principio de cada
- * función del mock, sin excepción, antes de cualquier chequeo puntual. */
+const GLOBALES = ["SIN_PERMISO", "PERMISOS_NO_DISPONIBLES"];
+
+/** SIN_PERMISO y PERMISOS_NO_DISPONIBLES truenan en CUALQUIER acción — se
+ * llama al principio de cada función del mock, sin excepción, antes de
+ * cualquier chequeo puntual. Ambos son fallos de la capa de autorización
+ * (403: "no tienes el permiso" / 503: "no pudimos ni resolver que permisos
+ * tienes"), no de un endpoint en particular — el contrato los describe como
+ * fallos generales, no acotados a una sola ruta. */
 export function checkGlobalInjection() {
-  if (getInjectedError() === "SIN_PERMISO") throwFixtureError("SIN_PERMISO");
+  const codigo = getInjectedError();
+  if (GLOBALES.includes(codigo)) throwFixtureError(codigo);
 }
 
 /** Chequeo puntual: solo truena si el código inyectado es exactamente `codigo`. */

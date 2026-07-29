@@ -50,9 +50,22 @@
 - [ ] **I4 — Modulo Equipos (WP8).** 7 vistas. `SignaturePad`, `PhotoCapture`,
       `AccesoriosPicker`, `EquipmentCard` en `modules/equipos/components/`; solo
       `Timeline` es generico y vive en `src/design/`.
-- [ ] **I5 — Permisos en la UI.** `usePermisos` y `RequierePermiso` propios del
-      modulo, leyendo `user.permisos`. Con modo diagnostico en desarrollo que
-      loguee toda clave de permiso desconocida.
+- [x] **I5 — Permisos en la UI.** Commit de este issue (modo 09-ejecutar-todo,
+      1 commit por issue). `src/modules/equipos/permisos/`: `catalogo.js`
+      (import directo de la copia congelada de I3), `fallbackPorRol.js`
+      (**temporal**, marcado para retiro — ver B-I14), `usePermisos.js`
+      (`puede`/`permisosDe`, deny-by-default, fallback solo si `permisos`
+      viene ausente/vacio, **jamas** regala paquetes aditivos por rol),
+      `RequierePermiso.jsx` (modo `ui` y modo `ruta`). Modo diagnostico:
+      `console.warn` una sola vez por clave `(modulo, accion)` fuera del
+      catalogo — encontro y arreglo un bug real en el camino (ver
+      `docs/riesgos/interfaz.md`, sin numero propio porque se arreglo el
+      mismo dia sin quedar expuesto). `checkGlobalInjection` del mock de I3
+      se amplio para cubrir tambien `PERMISOS_NO_DISPONIBLES` ademas de
+      `SIN_PERMISO` (ambos son fallos de la capa de autorizacion, no de un
+      endpoint puntual). Capturas de los 3 roles pedidos + el 503 (no
+      desloguea, no se pinta como 403) + la consola con la clave inventada.
+      Los 3 e2e de Presupuestos sin tocar: 25/25.
 - [ ] **I6 — e2e del flujo completo de equipos.** Escrito contra el contrato,
       en `test.fixme` hasta que aterrice el servidor. Helpers de imagen con
       PNG/JPEG reales, no el truco de `%PDF-1.4`.
@@ -117,6 +130,12 @@
       equipos lo necesite. Quedo dentro de `modules/presupuestos/hooks/` por I0;
       es infra generica, no del modulo. Al moverlo, corregir tambien la ruta que
       `CLAUDE.md:46` documenta (R-I03).
+- [ ] **B-I14 — Retirar `fallbackPorRol.js`** cuando WP1 (RBAC aditivo del
+      servidor) este en pie y `/auth/me` mande siempre `permisos` con
+      contenido real. Vive en `src/modules/equipos/permisos/`, marcado
+      "TEMPORAL" en su cabecera. Al retirarlo, `usePermisos` deja de
+      necesitar la rama de fallback y el import de `catalogo.js` en ese
+      archivo especifico ya no hace falta.
 
 ## Pedidos a otros carriles
 

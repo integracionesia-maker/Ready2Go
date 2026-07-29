@@ -188,7 +188,84 @@ verdad (no existe todavia) — solo se revisó que las rutas/metodos/body
 coincidan con lo que documenta `API_EQUIPOS_v1.md`, con la excepcion
 anotada en R-I13.
 
-### ISSUE I5, I6, I4 — en progreso, ver entradas mas abajo en esta misma sesion.
+### ISSUE I5 — Permisos en la UI (cerrada, 1 commit)
+
+`usePermisos()` lee `user.permisos` de `useAuth()` (AuthContext, sin fetch
+propio) y deriva `permisos` efectivos: si vienen con contenido, se usan tal
+cual; si vienen ausentes o vacios (`{}`, el default del contrato para no
+romper nada existente), se deriva del rol base via `fallbackPorRol.js`
+**temporal** — nunca de los paquetes aditivos (`APROBADOR_EQUIPO`,
+`CUSTODIO_EQUIPO`, `AUDITOR`), que sin `permisos` explicito simplemente no
+se pintan. `puede(modulo, accion)` es deny-by-default incluso contra el
+propio catalogo: una clave que ya no existe ahi no puede otorgar acceso a
+nada aunque el paquete del usuario la listara antes.
+
+`RequierePermiso` en dos modos (`ui`: renderiza `children` o `fallback`;
+`ruta`: redirige a `/403`), sin duplicar `ProtectedRoute` de Presupuestos
+(ese resuelve sesion/rol; este resuelve `(modulo, accion)` sobre una sesion
+que ya existe).
+
+**Bug real encontrado y arreglado en el camino** (por eso las primeras
+capturas de verificacion salieron mal y hubo que repetirlas): el modo
+diagnostico llamaba `advertirClaveDesconocida()` **antes** de comprobar si
+la clave existia en el catalogo, asi que avisaba "clave desconocida" en
+**cada** llamada a `puede()`, existiera o no la clave — probado en vivo:
+`equipos_prestamos:solicitar` y `equipos_aprobacion:autorizar_entrega`
+(ambas claves reales del contrato) salian marcadas como desconocidas.
+Arreglado moviendo el aviso DENTRO del `if (!accionExiste(...))`. Verificado
+de nuevo: solo la clave inventada a proposito (`teletransportar`) dispara el
+aviso.
+
+**Segundo hallazgo real**: la demo de "503 no es 403" llamaba
+`loansApi.fetchLoans()` con `PERMISOS_NO_DISPONIBLES` inyectado, pero
+`fetchLoans` (I3) solo respetaba la inyeccion global de `SIN_PERMISO` — el
+503 nunca se disparaba, la llamada respondia `{ok:true}`. Causa: al
+construir el mock en I3 solo cablee `PERMISOS_NO_DISPONIBLES` en
+`permisos.js` (catalogo/auth_me), asumiendo que era especifico de
+"resolver permisos" como concepto aislado. Releyendo el contrato: es un
+fallo general de la capa de autorizacion (igual que `SIN_PERMISO`), no
+acotado a un endpoint. Arreglado ampliando `checkGlobalInjection` para
+cubrir ambos codigos — verificado que esto no rompio los 5 codigos del
+harness de I3 (se re-corrio completo, sin regresion).
+
+**Evidencia**
+
+Capturas reales en `C:\dev\prompts-interfaz\respaldos\I5\` (via
+`PermisosDemo.jsx`, usando `userOverride` de `usePermisos` para simular los
+3 roles sin necesitar 3 sesiones reales con esos permisos exactos):
+
+- `colaborador_mkt`: Solicitar=Visible, Ver global=Oculto, Autorizar=Oculto.
+- `colaborador_mkt` + `APROBADOR_EQUIPO`: las 3 Visible.
+- `admin`: Solicitar=Visible, Ver global=Visible, Autorizar=Oculto (admin
+  base **nunca** tiene `equipos_aprobacion`, ni por fallback).
+- 503: `{status:503, codigo:"PERMISOS_NO_DISPONIBLES", message:"No se
+  pudieron resolver los permisos. Reintenta en un momento."}` mostrado via
+  Toast, **sin** redireccion a `/login` ni a `/403`.
+- Consola: `[permisos] clave desconocida: equipos_prestamos:teletransportar`
+  — una sola vez, nada mas.
+
+```
+npm run build verde. Sin cambio de peso: index-*.js 14.88 kB gz, CSS 6.89
+kB gz — igual que I2/I3. dist/ sigue en 25 archivos JS, grep confirma cero
+rastro de PermisosDemo/fallbackPorRol/claves del catalogo.
+```
+
+Los 3 e2e de Presupuestos (uvicorn reiniciado + DB fresca entre cada uno):
+`auth.spec.js` 7/7, `presupuesto-flujo-completo.spec.js` 9/9,
+`gastos-generales.spec.js` 9/9 — sin tocar `src/modules/presupuestos/` ni
+`src/context/`. Mas `pantallas.spec.js` 23/23 y `contrato-fixtures.spec.js`
+6/6 (29/29 en la misma invocacion).
+
+**No verificado en pantalla real**: Playwright headless otra vez. Tampoco
+se probo `usePermisos` contra un `/auth/me` real que ya mande `permisos`
+con contenido (WP1 no ha aterrizado) — solo contra el fallback por rol y
+contra usuarios sinteticos via `userOverride`.
+
+**Riesgo nuevo**: ninguno nuevo con numero propio — los dos bugs de arriba
+se encontraron y arreglaron el mismo dia, dentro del mismo commit, sin
+quedar expuestos en ninguna captura de cierre.
+
+### ISSUE I6, I4 — en progreso, ver entradas mas abajo en esta misma sesion.
 
 ## 2026-07-28 (sesion 2)
 

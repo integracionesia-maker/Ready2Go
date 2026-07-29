@@ -1,5 +1,34 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I5 — permisos en la UI, 1 commit — modo 09-ejecutar-todo)
+
+### Agregado
+
+- `frontend/src/modules/equipos/permisos/` — `catalogo.js` (import directo
+  de la copia congelada de `permisos_catalogo.json`), `fallbackPorRol.js`
+  (temporal, marcado para retiro cuando WP1 aterrice — B-I14),
+  `usePermisos.js` (`puede`/`permisosDe`, deny-by-default, modo diagnostico
+  con `console.warn` deduplicado por clave), `RequierePermiso.jsx` (modo
+  `ui` y modo `ruta`), `PermisosDemo.jsx` (demo temporal dev-only, ruta
+  `/equipos/_permisos-demo`).
+
+### Cambiado
+
+- `frontend/src/modules/equipos/api/mock/errorInjection.js` —
+  `checkGlobalInjection` ahora cubre `SIN_PERMISO` **y**
+  `PERMISOS_NO_DISPONIBLES` (antes solo el primero): ambos son fallos de la
+  capa de autorización que el contrato describe como generales, no
+  acotados a un endpoint puntual.
+- `frontend/src/App.jsx` — ruta dev-only `/equipos/_permisos-demo` agregada
+  junto a la de I3.
+
+### Sin cambio (verificado)
+
+Los 3 e2e de Presupuestos: 25/25, sin tocar ningún archivo de
+`src/modules/presupuestos/` ni `src/context/`. `dist/` de un build sin
+`VITE_EQUIPOS_MOCK` sigue en 25 archivos JS, cero rastro de
+`PermisosDemo`/`fallbackPorRol`/claves del catálogo.
+
 ## 2026-07-29 (I3 — mocks del contrato + ApiError, 1 commit — modo 09-ejecutar-todo)
 
 ### Agregado
