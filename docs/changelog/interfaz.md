@@ -1,5 +1,43 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I3 — mocks del contrato + ApiError, 1 commit — modo 09-ejecutar-todo)
+
+### Agregado
+
+- `frontend/src/api/client.js` — `class ApiError extends Error` (`status`,
+  `codigo`, `detail`), `esCodigo(e, codigo)`, `throwApiError(res)` compartido.
+- `frontend/src/modules/equipos/api/` — módulo completo: `index.js` (barril),
+  `equipment.js`/`loans.js`/`media.js`/`empresas.js`/`permisos.js`
+  (dispatchers mock-vs-real por `import()` dinámico según
+  `VITE_EQUIPOS_MOCK`), `real/*.js` (clientes HTTP contra el contrato),
+  `mock/*.js` (estado en memoria, máquina de estados de préstamos,
+  inyección de errores por `localStorage`), `mock/fixtures/*.json` (copia
+  literal de `docs/contratos/`).
+- `frontend/src/modules/equipos/DevMockHarness.jsx` — panel de diagnóstico
+  temporal (dev-only), ruta `/equipos/_mock-harness` en `App.jsx` detrás de
+  `import.meta.env.DEV`.
+- `frontend/e2e/contrato-fixtures.spec.js` — igualdad profunda entre
+  `docs/contratos/` y la copia local, 6/6.
+
+### Cambiado
+
+- `frontend/src/api/index.js` — exporta `ApiError`/`esCodigo`/`BASE`;
+  `uploadTicket`/`createGeneralExpense` (multipart) migran a
+  `throwApiError` compartido en vez de duplicar el parseo del sobre de
+  error.
+- `frontend/src/App.jsx` — ruta dev-only agregada como hermana de `/*`
+  (mayor especificidad, React Router v6 la prioriza sobre el wildcard de
+  `PresupuestosLayout`).
+
+### Sin cambio (verificado)
+
+`message` de los errores sigue siendo exactamente `body.detail`: ningún
+`catch (e) { setError(e.message) }` existente en Presupuestos se enteró del
+cambio (25/25 e2e). `dist/` de un build sin `VITE_EQUIPOS_MOCK` no contiene
+ninguna referencia a `EQUIPO_OCUPADO`, `estado_fisico`,
+`equipos-mock-error` ni `DevMockHarness` — el módulo completo queda fuera,
+no solo el mock.
+
 ## 2026-07-29 (I2 — piel de Presupuestos, 1 commit — modo 09-ejecutar-todo)
 
 ### Cambiado

@@ -59,6 +59,41 @@ export async function fetchWithAuthRetry(path, options = {}, skipAuthRetry = fal
   return res;
 }
 
+/**
+ * Error HTTP con el sobre completo del contrato ({ detail, codigo }), no solo
+ * el texto (R-I09). `message` sigue siendo `body.detail` exactamente como
+ * antes de este cambio: las vistas de Presupuestos que hacen
+ * `catch (e) { setError(e.message) }` no se enteran de nada. El código
+ * (`SIN_PERMISO`, `PERMISOS_NO_DISPONIBLES`, `EQUIPO_OCUPADO`, ...) y el
+ * status HTTP quedan disponibles para quien sí necesite distinguir un 403 de
+ * un 503 — el módulo de Equipos, donde esa distinción es obligatoria: un 503
+ * JAMÁS se interpreta como sesión inválida.
+ */
+export class ApiError extends Error {
+  constructor(message, { status, codigo, detail } = {}) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.codigo = codigo;
+    this.detail = detail;
+  }
+}
+
+/** `esCodigo(e, "EQUIPO_OCUPADO")` — true solo si `e` es un ApiError con ese código. */
+export function esCodigo(e, codigo) {
+  return e instanceof ApiError && e.codigo === codigo;
+}
+
+/** Parsea el sobre de error de una respuesta no-ok y lanza ApiError. Compartido
+ * por `request()` (JSON) y por los clientes multipart (uploadTicket,
+ * createGeneralExpense, el futuro cliente de media de Equipos) para no
+ * duplicar el parseo tres veces. */
+export async function throwApiError(res) {
+  const body = await res.json().catch(() => ({}));
+  const message = body.detail || `Error ${res.status}: ${res.statusText}`;
+  throw new ApiError(message, { status: res.status, codigo: body.codigo, detail: body.detail });
+}
+
 export async function request(path, options = {}) {
   const res = await fetchWithAuthRetry(path, {
     headers: { "Content-Type": "application/json", ...options.headers },
@@ -66,8 +101,7 @@ export async function request(path, options = {}) {
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `Error ${res.status}: ${res.statusText}`);
+    await throwApiError(res);
   }
 
   return res.json();

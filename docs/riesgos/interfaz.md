@@ -105,7 +105,7 @@ Queda como riesgo porque cualquiera que siga la instruccion de clonar con la URL
 `git@github.com:...` de la asignacion se estrella de entrada, sin pista de que la
 causa es la llave y no el repo.
 
-## R-I09 — `request()` de `src/api/client.js` descarta `status` y `codigo`
+## R-I09 — `request()` de `src/api/client.js` descarta `status` y `codigo` (RESUELTO en I3)
 
 Verificado en disco, `frontend/src/api/client.js:62-74`:
 
@@ -134,6 +134,15 @@ cambia la redaccion de `detail` sin tocar `codigo`.
 Se arregla en **I3 commit 1** con una `ApiError` que conserve `status` y
 `codigo` ademas del mensaje. Se reporta aqui como riesgo, no como pedido:
 es archivo mio (`src/api/`), lo resuelvo yo cuando le toque.
+
+**Resuelto**: `ApiError extends Error` en `client.js`, con `status`/`codigo`/
+`detail` ademas de `message` (que sigue siendo exactamente `body.detail`,
+igual que antes — las vistas de Presupuestos que hacen
+`catch (e) { setError(e.message) }` no se enteraron del cambio, confirmado
+por los 25/25 e2e de Presupuestos sin tocar). `esCodigo(e, "EQUIPO_OCUPADO")`
+exportado desde `@/api`. `uploadTicket`/`createGeneralExpense` (los dos
+multipart existentes) tambien migraron a la misma `throwApiError` compartida,
+por consistencia — antes duplicaban el parseo del sobre de error a mano.
 
 ## R-I10 — `fixtures/equipos.json` trae 3 campos fuera del contrato congelado
 
@@ -193,3 +202,20 @@ con el gray-900 equivocado.
 alcanzadas por ningun estilo ni logica. Se quitaron sin sustituto
 (`<body class="antialiased">`); cero regresion visual, los 47 e2e (25 de
 Presupuestos + 22 del verificador) siguen verdes tras el cambio.
+
+## R-I13 — El contrato no da un ejemplo de body para `POST /loans/{id}/devolucion`
+
+Verificado en disco: `API_EQUIPOS_v1.md` §3 describe la *regla* de
+`/devolucion` ("por cada equipo: 2 fotos de devolucion, o no_devuelto: true
+con nota_devolucion obligatoria") pero, a diferencia de
+`/confirmar-devolucion` (que sí trae un ejemplo JSON completo del body:
+`{"decisiones": [...]}`), no da la forma exacta del body que espera este
+endpoint.
+
+`src/modules/equipos/api/real/loans.js` (`returnLoan`) tuvo que **adivinar**
+una forma (`{ items: [...] }`) para poder escribir el cliente real contra
+algo. El mock (`mock/loans.js`) no depende de esta adivinanza — usa su propia
+firma de función interna — así que I3/I4 no se bloquean, pero cuando el
+servidor real de Equipos aterrice, `real/loans.js:returnLoan` es el primer
+lugar a revisar si el body no calza. Se reporta, no se resuelve solo: falta
+que quien congelo el contrato confirme la forma real.

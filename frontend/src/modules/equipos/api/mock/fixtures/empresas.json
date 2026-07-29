@@ -1,0 +1,5 @@
+[
+  {"id":1,"razon_social":"MERCASYSTEM SA DE CV","direccion":null,"ciudad":null,"rfc":null,"is_active":true},
+  {"id":2,"razon_social":"DISTRIBUCION Y COMERCIALIZACION DE PRODUCTOS INNOVADORES INNOVA SA DE CV","direccion":null,"ciudad":null,"rfc":null,"is_active":true},
+  {"id":3,"razon_social":"SERVICIOS CORPORATIVOS QUANTUM DE OCCIDENTE, S.C.","direccion":"Belisario Dominguez No. 30 Col. Centro","ciudad":"Morelia, Michoacan","rfc":"SCQ1212149P0","is_active":true,"_nota":"emisora de la carta responsiva — PENDIENTE que marketing confirme que es la correcta"}
+]

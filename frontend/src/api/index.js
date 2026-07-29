@@ -5,15 +5,17 @@
  * Todas las llamadas devuelven JSON parseado; los errores lanzan con mensaje.
  */
 
-import { BASE, fetchWithAuthRetry, request } from "./client";
+import { BASE, fetchWithAuthRetry, request, throwApiError } from "./client";
 
 // Re-exportados para que los consumidores sigan importando de `@/api` y no
 // necesiten conocer `./client`: `isNetworkError` lo usan App.jsx y las vistas,
 // `setAuthFailureHandler` lo usa AuthContext, y `request`/`fetchWithAuthRetry`
 // los va a necesitar el cliente de API del modulo de equipos (JSON y multipart).
+// `ApiError`/`esCodigo` (R-I09): el módulo de Equipos los necesita para
+// distinguir los cinco códigos feos del contrato sin parsear `message` a mano.
 // `refreshSession` NO se re-exporta a proposito: es interno del reintento por
 // 401 y ningun consumidor debe dispararlo a mano.
-export { isNetworkError, setAuthFailureHandler, fetchWithAuthRetry, request } from "./client";
+export { isNetworkError, setAuthFailureHandler, fetchWithAuthRetry, request, ApiError, esCodigo } from "./client";
 
 /* ── Auth ────────────────────────────────────────────────────────────────── */
 
@@ -162,10 +164,7 @@ export async function uploadTicket({ creatorId, brandId, amount, notes, file }) 
     body: formData,
   });
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `Error ${res.status}`);
-  }
+  if (!res.ok) await throwApiError(res);
 
   return res.json();
 }
@@ -204,10 +203,7 @@ export async function createGeneralExpense({ brandId, amount, description, file 
     body: formData,
   });
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `Error ${res.status}`);
-  }
+  if (!res.ok) await throwApiError(res);
 
   return res.json();
 }

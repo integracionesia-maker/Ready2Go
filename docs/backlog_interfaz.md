@@ -29,9 +29,24 @@
       is_deleted/status===/role===/ADMIN_ROLES`. `e2e/pantallas.spec.js`
       ganó un segundo chequeo de contraste en `/dashboard` (las 2 KpiTile
       nuevas no estaban cubiertas por el de `/`). 25/25 + 23/23.
-- [ ] **I3 — Mocks propios.** `src/modules/equipos/api/mock/` con
-      `VITE_EQUIPOS_MOCK=1`, copia literal de `docs/contratos/fixtures/*.json`.
-      Los cinco codigos feos: 409, 403, 503, 413 y 401 a mitad del wizard.
+- [x] **I3 — Mocks propios.** Commit de este issue (modo 09-ejecutar-todo, 1
+      commit por issue). `ApiError`/`esCodigo` en `client.js` (R-I09
+      resuelto), copia literal de los 6 archivos de `docs/contratos/` a
+      `src/modules/equipos/api/mock/fixtures/` (`contrato-fixtures.spec.js`
+      nuevo, 6/6, compara byte a byte). `src/modules/equipos/api/` con
+      `equipment.js`/`loans.js`/`media.js`/`empresas.js`/`permisos.js` +
+      `index.js`, cada uno decidiendo mock-vs-real por `import()` dinamico
+      segun `VITE_EQUIPOS_MOCK` — confirmado en `dist/`: **cero** rastro del
+      mock, sus fixtures o `DevMockHarness` en un build sin la variable
+      (`grep` vacio en todo `dist/`, no solo "fuera del chunk principal").
+      Maquina de estados de prestamos completa en el mock (borrador →
+      prestado → pendiente_confirmacion → completado/incompleto, con el
+      indice unico "un equipo no en dos prestamos abiertos" replicado en
+      memoria). Los cinco codigos feos + panel de diagnostico temporal
+      (`DevMockHarness.jsx`, dev-only, ruta `/equipos/_mock-harness`) con
+      capturas reales mostrando cada codigo — sustituido cuando I4 tenga
+      vistas propias. Riesgo nuevo: R-I13 (body de `/devolucion` sin ejemplo
+      en el contrato, se adivino la forma en `real/loans.js`).
 - [ ] **I4 — Modulo Equipos (WP8).** 7 vistas. `SignaturePad`, `PhotoCapture`,
       `AccesoriosPicker`, `EquipmentCard` en `modules/equipos/components/`; solo
       `Timeline` es generico y vive en `src/design/`.
@@ -125,3 +140,8 @@
       "Quantum de Occidente" marcada `PENDIENTE`). Ver R-I11. No bloquea mi
       carril; bloquea el PDF final (WP5, no es mio). Mencionar una vez por
       reporte mientras siga abierto.
+- [ ] **B-I13 — Confirmar la forma del body de `POST /loans/{id}/devolucion`**.
+      Ver R-I13: el contrato da la regla pero no un ejemplo JSON (a diferencia
+      de `/confirmar-devolucion`, que si trae uno). `real/loans.js:returnLoan`
+      adivino `{items: [...]}` para poder escribir el cliente; revisar ahi
+      primero cuando el servidor real de Equipos aterrice.

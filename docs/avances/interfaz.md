@@ -89,7 +89,106 @@ manual en un navegador con usuario.
 **Riesgo nuevo**: ninguno. El `motion` chunk creciendo por goteo (arriba) no
 es un riesgo nuevo, es continuación de lo ya anotado en I1 commit 4.
 
-### ISSUE I3, I5, I6, I4 — en progreso, ver entradas mas abajo en esta misma sesion.
+### ISSUE I3 — Mocks del contrato + `ApiError` (cerrada, 1 commit)
+
+`ApiError extends Error` en `client.js`, con `status`/`codigo`/`detail`
+ademas del `message` habitual (que sigue siendo exactamente `body.detail`:
+verificado que ningun `catch (e) { setError(e.message) }` existente en
+Presupuestos se enteró del cambio — los 25/25 e2e de Presupuestos lo
+confirman). `esCodigo(e, codigo)` exportado desde `@/api`. Los dos multipart
+existentes (`uploadTicket`, `createGeneralExpense`) migraron a la misma
+`throwApiError` compartida en vez de duplicar el parseo del sobre de error
+tres veces.
+
+6 fixtures copiados **literal** a `src/modules/equipos/api/mock/fixtures/`
+(`empresas.json`, `equipos.json`, `errores.json`, `prestamo_demo.json`,
+`permisos_catalogo.json`, `auth_me.json`) — `diff` contra el original de
+`docs/contratos/` salio vacio en los 6. `frontend/e2e/contrato-fixtures.spec.js`
+nuevo: compara ambos lados con `toEqual` profundo, 6/6, no necesita
+navegador (es una comparacion de archivos, corre en ms).
+
+`src/modules/equipos/api/` completo: `equipment.js`, `loans.js`, `media.js`,
+`empresas.js`, `permisos.js` (uno por dominio) + `index.js` (barril). Cada
+dispatcher decide su transporte con `import()` dinamico segun
+`import.meta.env.VITE_EQUIPOS_MOCK === "1"`. `real/*.js` implementa el
+cliente HTTP contra las rutas de `API_EQUIPOS_v1.md` (para cuando el
+servidor real aterrice); `mock/*.js` implementa la maquina de estados
+completa en memoria: `borrador → prestado → pendiente_confirmacion →
+completado | incompleto`, el indice unico "un equipo no puede estar en dos
+prestamos abiertos" replicado en memoria (`equipoTieneAbiertoUnLoan`),
+`confirmar` exige 2 fotos por equipo + 2 firmas o `409 TRANSICION_INVALIDA`,
+`entrega_autorizada: false` bloquea `completado`, `decision != "ok"` exige
+`nota` o `422`.
+
+Inyeccion de errores por `localStorage["equipos-mock-error"]`
+(`getInjectedError`/`setInjectedError`/`checkGlobalInjection`/
+`checkInjection`): `SIN_PERMISO` truena en cualquier accion (chequeo global
+al inicio de cada funcion del mock, sin excepcion), los otros 4 son
+puntuales (`EQUIPO_OCUPADO` en `addLoanItem`, `PERMISOS_NO_DISPONIBLES` en
+`fetchPermisosCatalogo`, `MEDIA_MUY_GRANDE` en `uploadMedia`,
+`SESION_EXPIRADA` en `addLoanMedia`/`confirmLoan` — paso 3 y 4 del wizard,
+tal como pide la asignacion).
+
+**El "Como se acepta este paquete" pide 5 capturas mostrando que la UI se ve
+bien en cada codigo feo — pero I4 (donde vivirian las vistas reales de
+Equipos) todavia no existe.** Se resolvio con un panel de diagnostico
+temporal (`DevMockHarness.jsx`, ruta `/equipos/_mock-harness`, montado solo
+si `import.meta.env.DEV`): dispara cada codigo contra el mock real y muestra
+el resultado via `Toast` (el componente de I1), con el JSON crudo del error
+debajo para verificar `status`/`codigo`/`message` a simple vista. Se anota
+explicito: **este panel se borra cuando I4 tenga sus propias 7 vistas
+reaccionando a estos mismos codigos** — no es infraestructura permanente.
+
+**Verificado, no solo asumido**, mirando el `dist/` real de un build sin
+`VITE_EQUIPOS_MOCK`:
+
+```
+grep -rl "EQUIPO_OCUPADO\|estado_fisico\|equipos-mock-error\|DevMockHarness" dist/
+# exit 1 — cero coincidencias en TODO dist/, no solo fuera del chunk principal
+ls dist/assets/*.js | wc -l   # 25 (el mismo numero que sin el modulo de Equipos)
+```
+
+El modulo completo de Equipos (fixtures, mock, harness) desaparece del build
+de produccion porque nada mas lo importa todavia — no es solo que el mock
+quede en un chunk aparte, es que Rollup elimina la rama muerta completa por
+`import.meta.env.DEV`/`VITE_EQUIPOS_MOCK` ser constantes conocidas en build
+time.
+
+**Riesgo nuevo — R-I13**: `API_EQUIPOS_v1.md` §3 no da un ejemplo de body
+para `POST /loans/{id}/devolucion` (a diferencia de
+`/confirmar-devolucion`, que si trae uno). `real/loans.js:returnLoan`
+adivino la forma (`{items: [...]}`); anotado en el codigo y en
+`docs/riesgos/interfaz.md` para que sea el primer lugar a revisar cuando el
+servidor real aterrice. No bloquea I3/I4 porque el mock no depende de esa
+adivinanza.
+
+**Evidencia**
+
+```
+npm run build verde. Sin cambio de peso real: index-*.js 14.88 kB gz,
+CSS 6.89 kB gz (igual que I2 — ApiError pesa lo que pesa una clase de 20
+lineas). Payload real de /login: ~120.8 kB gz, igual que I2.
+```
+
+Los 3 e2e de Presupuestos (uvicorn reiniciado + DB fresca entre cada uno):
+`auth.spec.js` 7/7, `presupuesto-flujo-completo.spec.js` 9/9,
+`gastos-generales.spec.js` 9/9. Mas `pantallas.spec.js` 23/23 y
+`contrato-fixtures.spec.js` 6/6 en la misma invocacion (29/29 total).
+
+Capturas reales en `C:\dev\prompts-interfaz\respaldos\I3\`: el harness en
+su estado inicial, y una por cada uno de los 5 codigos feos
+(`409-equipo-ocupado`, `403-sin-permiso` en 1280x800 y 390x844,
+`503-permisos-no-disponibles`, `413-media-muy-grande`,
+`401-sesion-expirada`), cada una mostrando el toast real con el mensaje y
+codigo exactos de `fixtures/errores.json`.
+
+**No verificado en pantalla real**: Playwright headless otra vez, sin ojo
+humano. Tampoco se verifico el cliente `real/*.js` contra un servidor de
+verdad (no existe todavia) — solo se revisó que las rutas/metodos/body
+coincidan con lo que documenta `API_EQUIPOS_v1.md`, con la excepcion
+anotada en R-I13.
+
+### ISSUE I5, I6, I4 — en progreso, ver entradas mas abajo en esta misma sesion.
 
 ## 2026-07-28 (sesion 2)
 
