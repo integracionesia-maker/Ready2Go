@@ -1,5 +1,22 @@
 # Changelog — interfaz
 
+## 2026-07-29 (I4e — Aprobaciones — modo 09-ejecutar-todo)
+
+### Agregado
+
+- `frontend/src/modules/equipos/components/ConfirmarDevolucionModal.jsx`
+  — decisión `ok|dañado|faltante` por equipo, nota obligatoria si no es
+  `ok`, bloqueo explícito si `entrega_autorizada` sigue en `false`.
+- `frontend/src/modules/equipos/components/CerrarIncidenciaModal.jsx` —
+  nota obligatoria, regresa los equipos de "revisión" a "activo".
+
+### Cambiado
+
+- `frontend/src/modules/equipos/pages/AprobacionesPage.jsx` — de
+  placeholder (I4a) a las tres colas reales (autorizaciones de entrega,
+  devoluciones por confirmar, incidencias abiertas), cada una gateada por
+  su propio permiso.
+
 ## 2026-07-29 (I4d — Préstamos activos — modo 09-ejecutar-todo)
 
 ### Agregado

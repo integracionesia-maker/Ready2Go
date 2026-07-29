@@ -721,7 +721,72 @@ el filtro en acción.
 
 **Riesgo nuevo**: ninguno.
 
-#### Commits I4e..I4g — pendientes, ver entradas mas abajo en esta misma sesion conforme se cierren.
+#### Commit I4e — Aprobaciones (cerrado)
+
+Tres colas **separadas**, cada una detrás de su propio permiso
+(`equipos_aprobacion:autorizar_entrega`/`:confirmar_devolucion`/
+`:cerrar_incidencia`) — mezclarlas en una sola tabla habría escondido que
+el contrato (§4) las trata como tres acciones y tres permisos distintos:
+
+- **Autorizaciones de entrega**: `!entrega_autorizada` sobre cualquier
+  estado no terminal (ni `borrador` ni `cancelado`) — no solo `prestado`,
+  porque el mock no impide que un préstamo llegue a `pendiente_confirmacion`
+  sin autorización previa (confirmado leyendo `confirmLoan`: no valida
+  `entrega_autorizada`), así que un préstamo puede necesitar autorización
+  retroactiva estando ya en cualquiera de los dos estados.
+- **Devoluciones por confirmar**: `estado === "pendiente_confirmacion"`.
+  **Regla dura verificada en pantalla real, no solo leída**: un préstamo
+  con `entrega_autorizada:false` nunca puede llegar a `completado` (409
+  `TRANSICION_INVALIDA`) — `ConfirmarDevolucionModal.jsx` lo explica
+  **antes** de intentarlo (mensaje de bloqueo en vez del formulario de
+  decisiones), no después de un error del servidor.
+- **Incidencias abiertas**: `estado === "incompleto"`. Cerrar con nota
+  obligatoria regresa los equipos de "revisión" a "activo" — sin esto,
+  `incompleto` es terminal y el equipo queda varado en revisión para
+  siempre (hallazgo 12 del plan).
+
+**Componentes nuevos**: `ConfirmarDevolucionModal.jsx` (una decisión
+`ok|dañado|faltante` por equipo, nota obligatoria si no es `ok`, y el
+bloqueo de `entrega_autorizada` de arriba); `CerrarIncidenciaModal.jsx`
+(nota obligatoria).
+
+**Evidencia**
+
+```
+npm run build verde. index-*.js 16.68 -> 16.69 kB gz, CSS sin cambio
+(7.07 kB gz). Payload de /login: 122.86 kB gz (anterior: 122.85 kB gz),
+contra el techo de 250. AprobacionesPage-*.js (chunk lazy): 9.10 kB /
+2.63 kB gz. dist/ grep sigue sin rastro de mock/harness/permisos-demo.
+```
+
+**Verificado en pantalla real de punta a punta** contra el préstamo demo
+`CE-0007` (`VITE_EQUIPOS_MOCK=1`, 1280x800 y 390x844): se registró su
+devolución (I4d) SIN autorizar antes la entrega, dejándolo exactamente en
+el estado límite que el prompt pedía cubrir — `pendiente_confirmacion` +
+`entrega_autorizada:false`. Confirmado: aparece en ambas colas
+("Autorizaciones" y "Devoluciones") a la vez; intentar "Confirmar
+devolución" en ese momento muestra el mensaje de bloqueo, no el
+formulario; tras "Autorizar entrega" la cola de autorizaciones baja a 0;
+tras "Confirmar devolución" (todo `ok`) la cola de devoluciones baja a 0 —
+el préstamo pasó a `completado`. Historial de toasts capturado en pantalla
+mostrando la secuencia completa: "Devolución registrada" →
+"Entrega autorizada — CE-0007" → "Devolución confirmada".
+
+Los 4 e2e de Presupuestos: `auth.spec.js` 7/7,
+`presupuesto-flujo-completo.spec.js` 9/9, `gastos-generales.spec.js` 9/9,
+`pantallas.spec.js` 23/23 (48/48).
+
+**No verificado en pantalla real**: la cola de "Incidencias abiertas"
+(el fixture no trae hoy un préstamo `incompleto` — para generarlo hay que
+confirmar una devolución con alguna decisión distinta de `ok`, lo cual
+consumiría el único préstamo demo disponible antes de poder probar
+también el camino feliz; revisado por lectura de código: mismo patrón de
+modal con nota obligatoria que `RegistrarDevolucionModal`, ya verificado
+en I4d).
+
+**Riesgo nuevo**: ninguno.
+
+#### Commits I4f..I4g — pendientes, ver entradas mas abajo en esta misma sesion conforme se cierren.
 
 ## 2026-07-28 (sesion 2)
 

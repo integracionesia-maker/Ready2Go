@@ -109,7 +109,16 @@
         nunca a medias. "Ver responsiva" resuelve la URL async antes de
         abrir pestaña (mismo cuidado que `mediaUrl` en I4c). Bundle:
         122.80 → 122.85 kB gz. Los 4 e2e de Presupuestos: 48/48.
-  - [ ] **I4e — Aprobaciones.**
+  - [x] **I4e — Aprobaciones.** Tres colas separadas, cada una detras de
+        su propio permiso (autorizar_entrega/confirmar_devolucion/
+        cerrar_incidencia). "Confirmar devolucion" explica ANTES de
+        intentarlo que un prestamo con entrega_autorizada:false no puede
+        llegar a completado (bloqueo verificado en pantalla real, no solo
+        leido). "Cerrar incidencia" regresa los equipos de revision a
+        activo. Verificado de punta a punta contra CE-0007 en el estado
+        limite exacto que pedia el prompt (pendiente_confirmacion +
+        entrega no autorizada a la vez). Bundle: 122.85 → 122.86 kB gz.
+        Los 4 e2e de Presupuestos: 48/48.
   - [ ] **I4f — Historial.**
   - [ ] **I4g — Ficha de prestamo.**
 - [x] **I5 — Permisos en la UI.** Commit de este issue (modo 09-ejecutar-todo,
