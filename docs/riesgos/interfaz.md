@@ -156,7 +156,7 @@ exportado desde `@/api`. `uploadTicket`/`createGeneralExpense` (los dos
 multipart existentes) tambien migraron a la misma `throwApiError` compartida,
 por consistencia — antes duplicaban el parseo del sobre de error a mano.
 
-## R-I10 — `fixtures/equipos.json` trae 3 campos fuera del contrato congelado
+## R-I10 — `fixtures/equipos.json` trae 3 campos fuera del contrato congelado (RESUELTO en I8 lote 2)
 
 Verificado en disco: `docs/contratos/fixtures/equipos.json` incluye
 `estado_fisico`, `comentario_auditoria` y `fecha_auditoria` en cada equipo.
@@ -171,6 +171,14 @@ Ninguno de los tres aparece en la forma de fila que documenta
 los dos manda. Mientras no haya respuesta de quien congelo el contrato o del
 carril de servidor: en I3/I4 estos tres campos se pintan **solo si vienen**
 en la respuesta real, nunca se asumen ni se inventan en el mock.
+
+**Resuelto (I8 lote 2)**: con el servidor real de Equipos ya en pie, `GET
+/api/equipment/` confirma que los 3 campos **SI vienen poblados** — a
+favor del fixture, en contra del contrato humano. B-I11 cerrado con esta
+misma evidencia. Los 3 campos quedan tambien congelados en
+`docs/contratos/openapi_equipos_v1.json` (I8 lote 6). Sigue pendiente que
+alguien con permiso de editar `API_EQUIPOS_v1.md` (CONGELADO, fuera de mi
+alcance) lo actualice a v2 con esta confirmacion.
 
 ## R-I11 — La razon social emisora de la responsiva sigue "pendiente de confirmar"
 
@@ -215,7 +223,7 @@ alcanzadas por ningun estilo ni logica. Se quitaron sin sustituto
 (`<body class="antialiased">`); cero regresion visual, los 47 e2e (25 de
 Presupuestos + 22 del verificador) siguen verdes tras el cambio.
 
-## R-I13 — El contrato no da un ejemplo de body para `POST /loans/{id}/devolucion`
+## R-I13 — El contrato no da un ejemplo de body para `POST /loans/{id}/devolucion` (RESUELTO en I8 lote 1)
 
 Verificado en disco: `API_EQUIPOS_v1.md` §3 describe la *regla* de
 `/devolucion` ("por cada equipo: 2 fotos de devolucion, o no_devuelto: true
@@ -232,7 +240,14 @@ servidor real de Equipos aterrice, `real/loans.js:returnLoan` es el primer
 lugar a revisar si el body no calza. Se reporta, no se resuelve solo: falta
 que quien congelo el contrato confirme la forma real.
 
-## R-I14 — El contrato ejemplifica las respuestas GET pero no los bodies de escritura (patrón, no un solo endpoint)
+**Resuelto (I8 lote 1)**: contra el servidor real, la estructura adivinada
+(`{items: [...]}`) resultó correcta; las llaves de cada item no —
+`DevolucionItem` real exige snake_case (`loan_item_id`, `no_devuelto`,
+`nota_devolucion`), y el caller mandaba camelCase. 422 real reproducido y
+arreglado (`RegistrarDevolucionModal.jsx`). Forma confirmada y congelada
+en `docs/contratos/openapi_equipos_v1.json` (I8 lote 6).
+
+## R-I14 — El contrato ejemplifica las respuestas GET pero no los bodies de escritura (patrón, no un solo endpoint) (RESUELTO en I8 lotes 1 y 4)
 
 Verificado en disco escribiendo `equipos-flujo-completo.spec.js` (I6) contra
 `API_EQUIPOS_v1.md` de punta a punta: §3 y §4 dan un ejemplo JSON completo
@@ -263,3 +278,46 @@ Pregunta concreta para quien congeló el contrato / el carril de servidor:
 Mientras no haya respuesta: `real/loans.js` y el spec fixme quedan con la
 asunción anotada explícita en el código (no oculta), y son los primeros
 lugares a revisar cuando el servidor real aterrice.
+
+**Resuelto (I8 lotes 1 y 4)**: contra el servidor real, la inferencia fue
+correcta para `LoanItemCreate` y `autorizar-entrega` (sin body), tal cual
+se había asumido. Para `LoanCreate` la inferencia estaba INCOMPLETA:
+`responsable` no es un campo — son tres campos planos
+(`responsable_user_id/nombre/email`); `NuevoPrestamoPage.jsx` mandaba un
+objeto anidado, ignorado en silencio por Pydantic (bug latente real,
+nunca visible porque el wizard es autoservicio — arreglado). Los 3
+confirmados de punta a punta contra el servidor real en
+`equipos-flujo-completo.spec.js` (I8 lote 4, 8/8) y congelados en
+`docs/contratos/openapi_equipos_v1.json` (I8 lote 6).
+
+## R-I15 — `GeneralExpense.upload_date` en UTC real vs filtro de fecha en hora local (Presupuestos, no es mi carril)
+
+Encontrado en I8 lote 5 corriendo la regresión completa por la tarde/noche
+(hora de Ciudad de México, UTC-6): `gastos-generales.spec.js` — "admin
+crea un gasto general y aparece en la tabla" — empezó a fallar de forma
+reproducible (3 corridas seguidas, con reinicio completo de backend y
+frontend de por medio) exactamente en la misma aserción: la tabla queda
+vacía ("No hay gastos generales registrados.") justo después de un toast
+de éxito real.
+
+Verificado en disco: `backend/app/models.py` —
+`upload_date = Column(DateTime, nullable=False, default=lambda:
+datetime.now(timezone.utc))` — sella la fecha en UTC real. El filtro de
+`GeneralExpensesPage.jsx` calcula "hoy" con `new Date()` del navegador —
+hora local. Confirmado con el reloj del sistema en el momento exacto de
+la corrida: `date` → `2026-07-29 19:04` local, `date -u` →
+`2026-07-30 01:04` UTC. Un gasto creado en ese momento queda sellado
+`2026-07-30`, un día adelante del filtro "este mes" (que termina en
+`29/07/2026`, hora local) — invisible hasta que la hora local también
+cruce medianoche.
+
+No es mi carril (Presupuestos, no Equipos) y no lo toco — se reporta
+aquí tal como pide la regla del archivo. Ventana de la falla: aprox.
+18:00–00:00 hora de Ciudad de México (cuando UTC ya cruzó el día pero la
+hora local no). `models.Ticket.upload_date` usa el mismo patrón
+(`models.py` línea 121) — el mismo riesgo aplica a Transacciones, no
+solo a Gastos Generales. Las demás 8 pruebas de `gastos-generales.spec.js`
+y las 39 de `auth`/`presupuesto-flujo-completo`/`pantallas` corrieron
+limpias en la misma sesión, antes y después de esta franja horaria —
+esto no es una regresión de I8, es una condición pre-existente que
+simplemente nunca se había ejercitado a esta hora del día.

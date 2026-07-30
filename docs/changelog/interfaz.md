@@ -1,5 +1,24 @@
 # Changelog — interfaz
 
+## 2026-07-29/30 (I8 lote 6 — Cierre e integración)
+
+### Agregado
+
+- `docs/contratos/openapi_equipos_v1.json` — snapshot congelado del
+  `/openapi.json` real del servidor, filtrado a los 22 endpoints de
+  Equipos con sus 35 schemas resueltos (autocontenido). Companion
+  machine-readable de `API_EQUIPOS_v1.md`: aquí sí están los bodies de
+  escritura completos, verificados contra el servidor real.
+
+### Documentado
+
+- `docs/backlog_interfaz.md` — B-I11/B-I13/B-I15 cerrados con evidencia;
+  línea huérfana/contradictoria en la entrada de B-I06 eliminada.
+- `docs/riesgos/interfaz.md` — R-I10/R-I13/R-I14 marcados RESUELTO;
+  R-I15 nuevo (hallazgo real de Presupuestos, fuera de este carril:
+  `GeneralExpense.upload_date` en UTC real vs filtro de fecha en hora
+  local, ventana ~18:00–00:00 CDMX — reportado, no tocado).
+
 ## 2026-07-29/30 (I8 lote 1 — Paridad de bodies de escritura)
 
 ### Agregado

@@ -1,0 +1,3806 @@
+{
+  "components": {
+    "schemas": {
+      "AuditoriaCreate": {
+        "properties": {
+          "comentario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comentario"
+          },
+          "condicion": {
+            "description": "bueno | atencion | danado",
+            "title": "Condicion",
+            "type": "string"
+          },
+          "espacio_disponible": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Espacio Disponible"
+          },
+          "estado_fisico": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "nuevo | usado",
+            "title": "Estado Fisico"
+          },
+          "fecha": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha"
+          }
+        },
+        "required": [
+          "condicion"
+        ],
+        "title": "AuditoriaCreate",
+        "type": "object"
+      },
+      "AuditoriaResponse": {
+        "properties": {
+          "actor_nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Nombre"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "comentario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comentario"
+          },
+          "condicion": {
+            "title": "Condicion",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "espacio_disponible": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Espacio Disponible"
+          },
+          "estado_fisico": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado Fisico"
+          },
+          "fecha": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "condicion"
+        ],
+        "title": "AuditoriaResponse",
+        "type": "object"
+      },
+      "BajaRequest": {
+        "properties": {
+          "motivo": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo"
+          }
+        },
+        "title": "BajaRequest",
+        "type": "object"
+      },
+      "Body_subir_media_api_loans__loan_id__media_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "loan_item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Item Id"
+          }
+        },
+        "required": [
+          "file",
+          "kind"
+        ],
+        "title": "Body_subir_media_api_loans__loan_id__media_post",
+        "type": "object"
+      },
+      "CancelarRequest": {
+        "properties": {
+          "motivo": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo"
+          }
+        },
+        "title": "CancelarRequest",
+        "type": "object"
+      },
+      "CerrarIncidenciaRequest": {
+        "properties": {
+          "nota": {
+            "minLength": 1,
+            "title": "Nota",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nota"
+        ],
+        "title": "CerrarIncidenciaRequest",
+        "type": "object"
+      },
+      "ConfirmarDevolucionRequest": {
+        "properties": {
+          "decisiones": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionItem"
+            },
+            "title": "Decisiones",
+            "type": "array"
+          }
+        },
+        "required": [
+          "decisiones"
+        ],
+        "title": "ConfirmarDevolucionRequest",
+        "type": "object"
+      },
+      "DashboardEquiposResponse": {
+        "properties": {
+          "atrasados": {
+            "title": "Atrasados",
+            "type": "integer"
+          },
+          "disponibles": {
+            "title": "Disponibles",
+            "type": "integer"
+          },
+          "pendientes_confirmacion": {
+            "title": "Pendientes Confirmacion",
+            "type": "integer"
+          },
+          "por_estado": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Por Estado",
+            "type": "object"
+          },
+          "prestados": {
+            "title": "Prestados",
+            "type": "integer"
+          },
+          "requiere_atencion": {
+            "items": {
+              "$ref": "#/components/schemas/RequiereAtencionItem"
+            },
+            "title": "Requiere Atencion",
+            "type": "array"
+          }
+        },
+        "required": [
+          "prestados",
+          "atrasados",
+          "pendientes_confirmacion",
+          "disponibles",
+          "por_estado",
+          "requiere_atencion"
+        ],
+        "title": "DashboardEquiposResponse",
+        "type": "object"
+      },
+      "DecisionItem": {
+        "properties": {
+          "decision": {
+            "description": "ok | danado | faltante",
+            "title": "Decision",
+            "type": "string"
+          },
+          "loan_item_id": {
+            "title": "Loan Item Id",
+            "type": "integer"
+          },
+          "nota": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota"
+          }
+        },
+        "required": [
+          "loan_item_id",
+          "decision"
+        ],
+        "title": "DecisionItem",
+        "type": "object"
+      },
+      "DevolucionItem": {
+        "properties": {
+          "loan_item_id": {
+            "title": "Loan Item Id",
+            "type": "integer"
+          },
+          "no_devuelto": {
+            "default": false,
+            "title": "No Devuelto",
+            "type": "boolean"
+          },
+          "nota_devolucion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota Devolucion"
+          }
+        },
+        "required": [
+          "loan_item_id"
+        ],
+        "title": "DevolucionItem",
+        "type": "object"
+      },
+      "DevolucionRequest": {
+        "description": "El contrato fija la regla (2 fotos por equipo o `no_devuelto` con nota)\npero no la forma del cuerpo. Esta sigue el estilo de `/confirmar-devolucion`\ndel §4, que si esta congelado. Reportado como hueco.",
+        "properties": {
+          "fecha_regreso_real": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Regreso Real"
+          },
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DevolucionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "DevolucionRequest",
+        "type": "object"
+      },
+      "EmpresaCreate": {
+        "properties": {
+          "ciudad": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ciudad"
+          },
+          "direccion": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direccion"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "razon_social": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Razon Social",
+            "type": "string"
+          },
+          "rfc": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rfc"
+          }
+        },
+        "required": [
+          "razon_social"
+        ],
+        "title": "EmpresaCreate",
+        "type": "object"
+      },
+      "EmpresaResponse": {
+        "properties": {
+          "ciudad": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ciudad"
+          },
+          "direccion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direccion"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "razon_social": {
+            "title": "Razon Social",
+            "type": "string"
+          },
+          "rfc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rfc"
+          }
+        },
+        "required": [
+          "id",
+          "razon_social",
+          "is_active"
+        ],
+        "title": "EmpresaResponse",
+        "type": "object"
+      },
+      "EmpresaUpdate": {
+        "properties": {
+          "ciudad": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ciudad"
+          },
+          "direccion": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direccion"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "razon_social": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Razon Social"
+          },
+          "rfc": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rfc"
+          }
+        },
+        "title": "EmpresaUpdate",
+        "type": "object"
+      },
+      "EquipmentCreate": {
+        "properties": {
+          "accesorios_tipicos": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Accesorios Tipicos",
+            "type": "array"
+          },
+          "activo_fijo": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activo Fijo"
+          },
+          "categoria": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria"
+          },
+          "codigo": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codigo"
+          },
+          "cuenta_gmail": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuenta Gmail"
+          },
+          "descripcion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descripcion"
+          },
+          "espacio_disponible": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Espacio Disponible"
+          },
+          "fotos_originales_url": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fotos Originales Url"
+          },
+          "marca": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marca"
+          },
+          "modelo": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelo"
+          },
+          "nombre": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Nombre",
+            "type": "string"
+          },
+          "numero_serie": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Serie"
+          }
+        },
+        "required": [
+          "nombre"
+        ],
+        "title": "EquipmentCreate",
+        "type": "object"
+      },
+      "EquipmentDetail": {
+        "description": "Ficha: la fila del listado + descripcion, auditorias e historial.\n\nEl contrato §2 congela la ruta y el permiso pero no el cuerpo del detalle.\nEsta forma es propuesta del servidor; documentada en docs/avances/servidor.md.",
+        "properties": {
+          "accesorios_tipicos": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Accesorios Tipicos",
+            "type": "array"
+          },
+          "activo_fijo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activo Fijo"
+          },
+          "atrasado": {
+            "default": false,
+            "title": "Atrasado",
+            "type": "boolean"
+          },
+          "auditorias": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AuditoriaResponse"
+            },
+            "title": "Auditorias",
+            "type": "array"
+          },
+          "categoria": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria"
+          },
+          "codigo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codigo"
+          },
+          "comentario_auditoria": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comentario Auditoria"
+          },
+          "condicion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condicion"
+          },
+          "cuenta_gmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuenta Gmail"
+          },
+          "descripcion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descripcion"
+          },
+          "dias_atraso": {
+            "default": 0,
+            "title": "Dias Atraso",
+            "type": "integer"
+          },
+          "disponible": {
+            "title": "Disponible",
+            "type": "boolean"
+          },
+          "espacio_disponible": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Espacio Disponible"
+          },
+          "estado_fisico": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado Fisico"
+          },
+          "estado_operativo": {
+            "title": "Estado Operativo",
+            "type": "string"
+          },
+          "fecha_auditoria": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Auditoria"
+          },
+          "fecha_regreso_esperada": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Regreso Esperada"
+          },
+          "fotos_originales_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fotos Originales Url"
+          },
+          "historial": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HistorialPrestamoItem"
+            },
+            "title": "Historial",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "marca": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marca"
+          },
+          "modelo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelo"
+          },
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          },
+          "numero_serie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Serie"
+          },
+          "tenedor_actual": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TenedorActual"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "estado_operativo",
+          "disponible"
+        ],
+        "title": "EquipmentDetail",
+        "type": "object"
+      },
+      "EquipmentItem": {
+        "description": "Fila del listado. Espejo de `docs/contratos/fixtures/equipos.json`.",
+        "properties": {
+          "accesorios_tipicos": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Accesorios Tipicos",
+            "type": "array"
+          },
+          "activo_fijo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activo Fijo"
+          },
+          "atrasado": {
+            "default": false,
+            "title": "Atrasado",
+            "type": "boolean"
+          },
+          "categoria": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria"
+          },
+          "codigo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codigo"
+          },
+          "comentario_auditoria": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comentario Auditoria"
+          },
+          "condicion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condicion"
+          },
+          "cuenta_gmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuenta Gmail"
+          },
+          "dias_atraso": {
+            "default": 0,
+            "title": "Dias Atraso",
+            "type": "integer"
+          },
+          "disponible": {
+            "title": "Disponible",
+            "type": "boolean"
+          },
+          "espacio_disponible": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Espacio Disponible"
+          },
+          "estado_fisico": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado Fisico"
+          },
+          "estado_operativo": {
+            "title": "Estado Operativo",
+            "type": "string"
+          },
+          "fecha_auditoria": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Auditoria"
+          },
+          "fecha_regreso_esperada": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Regreso Esperada"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "marca": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marca"
+          },
+          "modelo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelo"
+          },
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          },
+          "numero_serie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Serie"
+          },
+          "tenedor_actual": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TenedorActual"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "estado_operativo",
+          "disponible"
+        ],
+        "title": "EquipmentItem",
+        "type": "object"
+      },
+      "EquipmentListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EquipmentItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "EquipmentListResponse",
+        "type": "object"
+      },
+      "EquipmentUpdate": {
+        "properties": {
+          "accesorios_tipicos": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accesorios Tipicos"
+          },
+          "activo_fijo": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activo Fijo"
+          },
+          "categoria": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria"
+          },
+          "codigo": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codigo"
+          },
+          "cuenta_gmail": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuenta Gmail"
+          },
+          "descripcion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descripcion"
+          },
+          "espacio_disponible": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Espacio Disponible"
+          },
+          "fotos_originales_url": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fotos Originales Url"
+          },
+          "marca": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marca"
+          },
+          "modelo": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelo"
+          },
+          "nombre": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          },
+          "numero_serie": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Serie"
+          }
+        },
+        "title": "EquipmentUpdate",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HistorialPrestamoItem": {
+        "properties": {
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "devuelto_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Devuelto At"
+          },
+          "estado": {
+            "title": "Estado",
+            "type": "string"
+          },
+          "fecha_entrega": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Entrega"
+          },
+          "fecha_regreso_esperada": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Regreso Esperada"
+          },
+          "folio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folio"
+          },
+          "loan_id": {
+            "title": "Loan Id",
+            "type": "integer"
+          },
+          "responsable": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsable"
+          }
+        },
+        "required": [
+          "loan_id",
+          "estado"
+        ],
+        "title": "HistorialPrestamoItem",
+        "type": "object"
+      },
+      "LoanCreate": {
+        "description": "Todo opcional: el borrador se crea al abrir el formulario, antes de que\nla persona haya escrito nada. Si no se manda responsable, el servidor pone\nal usuario de la sesion.",
+        "properties": {
+          "area": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "empresa": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empresa"
+          },
+          "fecha_entrega": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Entrega"
+          },
+          "fecha_regreso_esperada": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Regreso Esperada"
+          },
+          "motivo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo"
+          },
+          "notas_responsiva": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notas Responsiva"
+          },
+          "responsable_email": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsable Email"
+          },
+          "responsable_nombre": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsable Nombre"
+          },
+          "responsable_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsable User Id"
+          }
+        },
+        "title": "LoanCreate",
+        "type": "object"
+      },
+      "LoanDetail": {
+        "properties": {
+          "area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "atrasado": {
+            "default": false,
+            "title": "Atrasado",
+            "type": "boolean"
+          },
+          "confirmada_por": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonaRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dias_atraso": {
+            "default": 0,
+            "title": "Dias Atraso",
+            "type": "integer"
+          },
+          "empresa": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empresa"
+          },
+          "entrega_autorizada": {
+            "default": false,
+            "title": "Entrega Autorizada",
+            "type": "boolean"
+          },
+          "entrega_autorizada_por": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonaRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entregado_por": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonaRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "estado": {
+            "title": "Estado",
+            "type": "string"
+          },
+          "eventos": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LoanEventDetail"
+            },
+            "title": "Eventos",
+            "type": "array"
+          },
+          "fecha_autorizacion_entrega": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Autorizacion Entrega"
+          },
+          "fecha_confirmacion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Confirmacion"
+          },
+          "fecha_entrega": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Entrega"
+          },
+          "fecha_regreso_esperada": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Regreso Esperada"
+          },
+          "fecha_regreso_real": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Regreso Real"
+          },
+          "firmas": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Firmas",
+            "type": "object"
+          },
+          "folio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folio"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LoanItemDetail"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "motivo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo"
+          },
+          "notas_responsiva": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notas Responsiva"
+          },
+          "responsable": {
+            "$ref": "#/components/schemas/ResponsableRef"
+          },
+          "responsiva": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponsivaRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "estado",
+          "responsable"
+        ],
+        "title": "LoanDetail",
+        "type": "object"
+      },
+      "LoanEventDetail": {
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "detalle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detalle"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tipo"
+        ],
+        "title": "LoanEventDetail",
+        "type": "object"
+      },
+      "LoanItemCreate": {
+        "properties": {
+          "accesorios_otros": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accesorios Otros"
+          },
+          "accesorios_seleccionados": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Accesorios Seleccionados",
+            "type": "array"
+          },
+          "cargador_con": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cargador Con"
+          },
+          "equipment_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Equipment Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "equipment_id"
+        ],
+        "title": "LoanItemCreate",
+        "type": "object"
+      },
+      "LoanItemDetail": {
+        "properties": {
+          "accesorios_otros": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accesorios Otros"
+          },
+          "accesorios_seleccionados": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Accesorios Seleccionados",
+            "type": "array"
+          },
+          "cargador_con": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cargador Con"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "devuelto_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Devuelto At"
+          },
+          "equipment_id": {
+            "title": "Equipment Id",
+            "type": "integer"
+          },
+          "equipo_nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equipo Nombre"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "media": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Media",
+            "type": "object"
+          },
+          "no_devuelto": {
+            "default": false,
+            "title": "No Devuelto",
+            "type": "boolean"
+          },
+          "nota_decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota Decision"
+          },
+          "nota_devolucion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota Devolucion"
+          }
+        },
+        "required": [
+          "id",
+          "equipment_id"
+        ],
+        "title": "LoanItemDetail",
+        "type": "object"
+      },
+      "LoanListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LoanRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "LoanListResponse",
+        "type": "object"
+      },
+      "LoanRow": {
+        "description": "Fila del listado.\n\nEl contrato define la ficha pero **nunca** la fila del listado: es el hueco\nmas grande del §3. Esta forma sigue la disciplina del §2 de inventario —traer\nen la fila lo que la tabla pinta, para no pedir un detalle por renglon— y esta\nreportada en `docs/avances/servidor.md` para que el cliente la confirme.",
+        "properties": {
+          "area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "atrasado": {
+            "default": false,
+            "title": "Atrasado",
+            "type": "boolean"
+          },
+          "dias_atraso": {
+            "default": 0,
+            "title": "Dias Atraso",
+            "type": "integer"
+          },
+          "empresa": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empresa"
+          },
+          "entrega_autorizada": {
+            "default": false,
+            "title": "Entrega Autorizada",
+            "type": "boolean"
+          },
+          "equipos": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Equipos",
+            "type": "array"
+          },
+          "estado": {
+            "title": "Estado",
+            "type": "string"
+          },
+          "fecha_entrega": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Entrega"
+          },
+          "fecha_regreso_esperada": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Regreso Esperada"
+          },
+          "fecha_regreso_real": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Regreso Real"
+          },
+          "folio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folio"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "motivo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo"
+          },
+          "responsable": {
+            "$ref": "#/components/schemas/ResponsableRef"
+          },
+          "total_equipos": {
+            "default": 0,
+            "title": "Total Equipos",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "estado",
+          "responsable"
+        ],
+        "title": "LoanRow",
+        "type": "object"
+      },
+      "MediaResponse": {
+        "description": "Tres claves, exactamente las del contrato §5. No se devuelve `file_path`\nni `url`: no exponer la ruta de disco es parte de la mitigacion del IDOR.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "sha256"
+        ],
+        "title": "MediaResponse",
+        "type": "object"
+      },
+      "PersonaRef": {
+        "properties": {
+          "nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "title": "PersonaRef",
+        "type": "object"
+      },
+      "RequiereAtencionItem": {
+        "properties": {
+          "equipos": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Equipos",
+            "type": "array"
+          },
+          "folio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folio"
+          },
+          "loan_id": {
+            "title": "Loan Id",
+            "type": "integer"
+          },
+          "motivo": {
+            "title": "Motivo",
+            "type": "string"
+          },
+          "responsable": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsable"
+          }
+        },
+        "required": [
+          "loan_id",
+          "motivo"
+        ],
+        "title": "RequiereAtencionItem",
+        "type": "object"
+      },
+      "ResponsableRef": {
+        "description": "El unico que lleva correo: es a quien se le manda su copia del PDF.",
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "title": "ResponsableRef",
+        "type": "object"
+      },
+      "ResponsivaRef": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "url"
+        ],
+        "title": "ResponsivaRef",
+        "type": "object"
+      },
+      "TenedorActual": {
+        "properties": {
+          "nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "title": "TenedorActual",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Snapshot CONGELADO de /openapi.json filtrado a los endpoints de Equipos (prestamos, inventario, media, empresas). Generado en I8 lote 6 contra el servidor real ya corriendo (no a mano, no adivinado) — closes B-I13/B-I15: aqui SI estan los bodies de escritura completos (LoanCreate, LoanItemCreate, DevolucionRequest, etc.), que API_EQUIPOS_v1.md (el contrato humano, CONGELADO desde 2026-07-27) no ejemplificaba. Companion, no reemplazo: API_EQUIPOS_v1.md sigue siendo la fuente de las REGLAS de negocio (codigos de error, permisos); este archivo es la fuente de la FORMA exacta de cada body/response, verificada contra codigo real, no supuesta.",
+    "title": "Control de Equipos - API v1 (congelado, generado desde el servidor real)",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/empresas/": {
+      "get": {
+        "operationId": "listar_empresas_api_empresas__get",
+        "parameters": [
+          {
+            "description": "Excluye las dadas de baja",
+            "in": "query",
+            "name": "solo_activas",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Excluye las dadas de baja",
+              "title": "Solo Activas",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EmpresaResponse"
+                  },
+                  "title": "Response Listar Empresas Api Empresas  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Listar Empresas",
+        "tags": [
+          "empresas"
+        ]
+      },
+      "post": {
+        "operationId": "crear_empresa_api_empresas__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmpresaCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Crear Empresa",
+        "tags": [
+          "empresas"
+        ]
+      }
+    },
+    "/api/empresas/{empresa_id}": {
+      "put": {
+        "operationId": "actualizar_empresa_api_empresas__empresa_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "empresa_id",
+            "required": true,
+            "schema": {
+              "title": "Empresa Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmpresaUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Actualizar Empresa",
+        "tags": [
+          "empresas"
+        ]
+      }
+    },
+    "/api/equipment/": {
+      "get": {
+        "operationId": "listar_equipos_api_equipment__get",
+        "parameters": [
+          {
+            "description": "Busca en nombre, codigo, categoria, marca, modelo, serie",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Busca en nombre, codigo, categoria, marca, modelo, serie",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "categoria",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Categoria"
+            }
+          },
+          {
+            "description": "bueno | atencion | danado",
+            "in": "query",
+            "name": "condicion",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "bueno | atencion | danado",
+              "title": "Condicion"
+            }
+          },
+          {
+            "in": "query",
+            "name": "disponible",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Disponible"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Listar Equipos",
+        "tags": [
+          "equipment"
+        ]
+      },
+      "post": {
+        "operationId": "crear_equipo_api_equipment__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Crear Equipo",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/api/equipment/dashboard": {
+      "get": {
+        "operationId": "dashboard_equipos_api_equipment_dashboard_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardEquiposResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Dashboard Equipos",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/api/equipment/{equipment_id}": {
+      "get": {
+        "operationId": "ficha_de_equipo_api_equipment__equipment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "title": "Equipment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ficha De Equipo",
+        "tags": [
+          "equipment"
+        ]
+      },
+      "put": {
+        "operationId": "editar_equipo_api_equipment__equipment_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "title": "Equipment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Editar Equipo",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/api/equipment/{equipment_id}/auditoria": {
+      "post": {
+        "operationId": "registrar_auditoria_api_equipment__equipment_id__auditoria_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "title": "Equipment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditoriaCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Registrar Auditoria",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/api/equipment/{equipment_id}/baja": {
+      "post": {
+        "operationId": "dar_de_baja_api_equipment__equipment_id__baja_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "title": "Equipment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BajaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dar De Baja",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/api/loans/": {
+      "get": {
+        "operationId": "listar_prestamos_api_loans__get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "estado",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mios",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Mios",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "desde",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Desde"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hasta",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hasta"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Listar Prestamos",
+        "tags": [
+          "loans"
+        ]
+      },
+      "post": {
+        "operationId": "crear_prestamo_api_loans__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Crear Prestamo",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/loans/by-folio/{folio}": {
+      "get": {
+        "operationId": "ficha_por_folio_api_loans_by_folio__folio__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "folio",
+            "required": true,
+            "schema": {
+              "title": "Folio",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ficha Por Folio",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/loans/export": {
+      "get": {
+        "description": "CSV con los mismos filtros y el mismo scoping que el listado.\n\nHoy `exportar` solo lo tienen `admin` y `superadmin`, que ya traen\n`ver_global`, pero el scoping se escribe igual: el dia que un paquete aditivo\nconceda `exportar` sin `ver_global`, la exportacion no puede volverse una\nfuga de todos los prestamos.\n\nColumnas, separador y BOM: el contrato no los define. Ver\n`crud_loans.COLUMNAS_CSV` y el reporte en docs/avances/servidor.md.",
+        "operationId": "exportar_csv_api_loans_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "estado",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mios",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Mios",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "desde",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Desde"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hasta",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hasta"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exportar Csv",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}": {
+      "get": {
+        "operationId": "ficha_de_prestamo_api_loans__loan_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ficha De Prestamo",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}/autorizar-entrega": {
+      "post": {
+        "description": "Ortogonal al estado: no lo cambia. Idempotente: reintentar no reescribe\nquien autorizo ni cuando.\n\nSe acepta desde `prestado`, `pendiente_confirmacion` e `incompleto`. Que\n`incompleto` entre es lo menos obvio y lo mas importante: sin eso, un\nprestamo que llego a incompleto sin autorizacion no se podria cerrar nunca.",
+        "operationId": "autorizar_entrega_api_loans__loan_id__autorizar_entrega_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Autorizar Entrega",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}/cancelar": {
+      "post": {
+        "description": "Solo desde `borrador`: es la unica flecha de cancelacion del diagrama del\ncontrato. El plan §5 decia \"borrador/prestado sin devolucion\"; manda el\ncontrato. Reportado, porque sin cancelacion desde `prestado` no hay forma de\nanular un prestamo mal capturado que ya quemo folio.\n\n**Ojo con el permiso:** `equipos_prestamos:cancelar` no lo concede ningun\npaquete del catalogo congelado — solo el comodin de `superadmin`. Como un\nborrador con renglones ya reserva sus equipos, hoy un borrador abandonado\nsolo lo puede liberar el superadmin. Reportado como defecto de contrato.",
+        "operationId": "cancelar_prestamo_api_loans__loan_id__cancelar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancelar Prestamo",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}/cerrar-incidencia": {
+      "post": {
+        "description": "`incompleto -> completado`, con nota obligatoria.\n\nEn la maqueta `incompleto` era terminal: un equipo danado quedaba en revision\npara siempre (§10.12). Esta es su salida.",
+        "operationId": "cerrar_incidencia_api_loans__loan_id__cerrar_incidencia_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CerrarIncidenciaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cerrar Incidencia",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}/confirmar": {
+      "post": {
+        "operationId": "confirmar_prestamo_api_loans__loan_id__confirmar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirmar Prestamo",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}/confirmar-devolucion": {
+      "post": {
+        "operationId": "confirmar_devolucion_api_loans__loan_id__confirmar_devolucion_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarDevolucionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirmar Devolucion",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}/devolucion": {
+      "post": {
+        "operationId": "registrar_devolucion_api_loans__loan_id__devolucion_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevolucionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Registrar Devolucion",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}/items": {
+      "post": {
+        "operationId": "agregar_equipo_api_loans__loan_id__items_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanItemCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Agregar Equipo",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}/items/{item_id}": {
+      "delete": {
+        "operationId": "quitar_equipo_api_loans__loan_id__items__item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quitar Equipo",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}/media": {
+      "post": {
+        "description": "Multipart, un archivo por request. Validacion por magic bytes.\n\nEl permiso es `solicitar` incluso para las fotos de devolucion: es el unico\nendpoint de subida que el contrato define. Hoy funciona porque todo paquete\ncon `registrar_devolucion` trae tambien `solicitar`, pero el acoplamiento es\nfragil y esta reportado.",
+        "operationId": "subir_media_api_loans__loan_id__media_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_subir_media_api_loans__loan_id__media_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Subir Media",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/loans/{loan_id}/responsiva.pdf": {
+      "get": {
+        "description": "Ultima version por defecto; `?version=n` para una historica.\n\nEl parametro esta en el plan §5 pero **no** en el contrato congelado. Se\nimplementa porque es puramente aditivo —no cambia la forma de ningun\npayload y el default sigue siendo la ultima version— y porque sin el, el\nversionado que la base ya sostiene no tiene forma de consultarse. Reportado\npara que entre al contrato v2 junto con la forma de enumerar versiones.",
+        "operationId": "descargar_responsiva_api_loans__loan_id__responsiva_pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Version historica. Sin el parametro se sirve la ultima.",
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Version historica. Sin el parametro se sirve la ultima.",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Descargar Responsiva",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/media/{media_id}": {
+      "get": {
+        "operationId": "descargar_media_api_media__media_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "media_id",
+            "required": true,
+            "schema": {
+              "title": "Media Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Omitir para el original; 'thumb' para 96px",
+            "in": "query",
+            "name": "tamano",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Omitir para el original; 'thumb' para 96px",
+              "title": "Tamano"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Descargar Media",
+        "tags": [
+          "media"
+        ]
+      }
+    }
+  }
+}

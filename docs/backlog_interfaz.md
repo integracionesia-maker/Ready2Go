@@ -147,8 +147,11 @@
     cero regresiones, 9 bugs reales encontrados y arreglados en el mismo
     commit que los encontro (ninguno quedo abierto). Bundle final 122.89
     kB gz contra el techo de 250.
-- [ ] **I8 — Integracion real (7 lotes).** El carril de servidor aterrizo
+- [x] **I8 — Integracion real (7 lotes).** El carril de servidor aterrizo
       (S0..S7); I4 quedo verificado solo contra el mock. Cierra esa brecha.
+      Lotes 1-6 (los obligatorios) cerrados, cada uno en su commit propio.
+      Lote 7 es opcional ("solo si 1-6 cerraron verdes") y queda a
+      discrecion -- no se hace sin pedirlo explicito.
   - [x] **Lote 1 — Paridad de bodies de escritura.** 422 reproducido de
         verdad contra el servidor real antes de arreglarlo (wizard
         completo sin un solo 422; el unico 422 fue /devolucion, como
@@ -337,7 +340,6 @@
       anterior — sigue en 23/23 (era 22/22 en el cierre de I1; subio a
       23/23 en I2 al agregar el chequeo de contraste en `/dashboard`, y se
       mantiene ahi tras el refactor, sin regresion).
-      pero no es reusable por otros specs todavia.
 - [ ] **B-I07 — Promover `useMobile` a un lugar compartido** cuando el modulo de
       equipos lo necesite. Quedo dentro de `modules/presupuestos/hooks/` por I0;
       es infra generica, no del modulo. Al moverlo, corregir tambien la ruta que
@@ -369,25 +371,40 @@
       No bloqueo I1 (R-I06): cerro con la pila de respaldo autohospedada
       (`210e735`) y el nombre de marca primero en `src/design/fonts.css`.
       Cuando lleguen los woff2, es cambiar ese unico archivo.
-- [ ] **B-I11 — Preguntar cual manda**: `fixtures/equipos.json` trae
-      `estado_fisico`, `comentario_auditoria` y `fecha_auditoria`, ausentes en
-      `API_EQUIPOS_v1.md` §2. Ver R-I10. Mientras no haya respuesta, en I3/I4
-      esos tres campos se pintan solo si vienen, nunca se asumen.
+- [x] **B-I11 — Preguntar cual manda**: cerrado en I8 lote 2, a favor del
+      fixture. `GET /api/equipment/` real (servidor ya en pie) confirma que
+      `estado_fisico`, `comentario_auditoria` y `fecha_auditoria` SI vienen
+      poblados del servidor real — verificado con datos reales, no
+      supuesto. El contrato humano (`API_EQUIPOS_v1.md` §2) sigue sin
+      documentarlos; queda como pedido pendiente a quien mantiene ese
+      archivo (ahora hay evidencia dura para la actualizacion: los 3
+      campos estan tambien en `docs/contratos/openapi_equipos_v1.json`,
+      congelado en I8 lote 6 desde el servidor real).
 - [ ] **B-I12 — Seguir la confirmacion de marketing** sobre la razon social
       emisora de la responsiva (`fixtures/empresas.json` trae
       "Quantum de Occidente" marcada `PENDIENTE`). Ver R-I11. No bloquea mi
       carril; bloquea el PDF final (WP5, no es mio). Mencionar una vez por
       reporte mientras siga abierto.
-- [ ] **B-I13 — Confirmar la forma del body de `POST /loans/{id}/devolucion`**.
-      Ver R-I13: el contrato da la regla pero no un ejemplo JSON (a diferencia
-      de `/confirmar-devolucion`, que si trae uno). `real/loans.js:returnLoan`
-      adivino `{items: [...]}` para poder escribir el cliente; revisar ahi
-      primero cuando el servidor real de Equipos aterrice.
-- [ ] **B-I15 — Confirmar los nombres de campo de los bodies de escritura**
+- [x] **B-I13 — Confirmar la forma del body de `POST /loans/{id}/devolucion`**.
+      Cerrado en I8 lote 1, contra el servidor real. La estructura
+      adivinada (`{items: [...]}`) era correcta; las llaves de cada item
+      NO — `real/loans.js` mandaba camelCase (`itemId`, `noDevuelto`,
+      `notaDevolucion`) y el servidor exige snake_case
+      (`loan_item_id`, `no_devuelto`, `nota_devolucion`), con
+      `loan_item_id` obligatorio sin default — 422 real reproducido antes
+      de arreglarlo. `RegistrarDevolucionModal.jsx` corregido; prueba de
+      paridad nueva (`paridad-bodies-equipos.spec.js`) evita que vuelva a
+      pasar. Forma confirmada y congelada en
+      `docs/contratos/openapi_equipos_v1.json` (I8 lote 6, `DevolucionRequest`/
+      `DevolucionItem`).
+- [x] **B-I15 — Confirmar los nombres de campo de los bodies de escritura**
       de `POST /loans/`, `POST /loans/{id}/items` y
-      `POST /loans/{id}/autorizar-entrega`. Ver R-I14: el contrato solo
-      ejemplifica el *response* de `GET /loans/{id}`, nunca estos bodies —
-      es el mismo patron que R-I13, pero encontrado escribiendo
-      `equipos-flujo-completo.spec.js` (I6) contra el contrato completo, no
-      un caso aislado. `real/loans.js` (I3) tiene la asuncion anotada
-      explicita en el codigo (snake_case, calcado del ejemplo de lectura).
+      `POST /loans/{id}/autorizar-entrega`. Cerrado en I8 lotes 1 y 4
+      contra el servidor real. `LoanCreate` exige `responsable_user_id/
+      nombre/email` PLANOS (`NuevoPrestamoPage.jsx` mandaba un objeto
+      `responsable` anidado, ignorado en silencio por Pydantic — bug
+      latente real, arreglado). `LoanItemCreate` y `autorizar-entrega`
+      (sin body) confirmados tal como los adivino `real/loans.js` (I3),
+      sin sorpresas. Los 3 confirmados de punta a punta en
+      `equipos-flujo-completo.spec.js` (I8 lote 4, 8/8 reales) y
+      congelados en `docs/contratos/openapi_equipos_v1.json` (I8 lote 6).

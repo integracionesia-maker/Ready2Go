@@ -402,6 +402,75 @@ horaria).
 
 **Riesgo nuevo**: ninguno de código de Equipos.
 
+### Lote 6 — Cierre e integración (cerrado)
+
+**Cerrados con evidencia real** (los tres, contra el servidor real ya en
+pie, no contra supuestos):
+- **B-I11** (a favor del fixture): `estado_fisico`/`comentario_auditoria`/
+  `fecha_auditoria` sí vienen de `GET /api/equipment/` real.
+- **B-I13**: forma de `/devolucion` confirmada (`{items:[{loan_item_id,
+  no_devuelto, nota_devolucion}]}`, snake_case) — el 422 real que motivó
+  todo I8 lote 1.
+- **B-I15**: `LoanCreate`/`LoanItemCreate`/`autorizar-entrega` confirmados
+  de punta a punta en `equipos-flujo-completo.spec.js` (8/8 reales).
+
+Los tres, más R-I10/R-I13/R-I14 (mismos hallazgos, lado riesgos), se
+marcaron RESUELTO en `docs/riesgos/interfaz.md` con la evidencia
+correspondiente.
+
+**`docs/contratos/openapi_equipos_v1.json` (nuevo, congelado)**: snapshot
+del `/openapi.json` real del servidor, filtrado a los 22 endpoints de
+Equipos (préstamos, inventario, media, empresas) con sus 35 schemas
+resueltos transitivamente — autocontenido, no depende del resto del
+OpenAPI de Presupuestos. Es el companion machine-readable que
+`API_EQUIPOS_v1.md` (CONGELADO, fuera de mi alcance editar sin v2) no
+tiene: aquí SÍ están los bodies de escritura completos, verificados
+contra código real corriendo, no adivinados. Se recomienda a quien
+mantiene `API_EQUIPOS_v1.md` una actualización v2 usando este archivo
+como fuente.
+
+**Pedidos que siguen abiertos, no son míos** (se mencionan una vez más y
+se sigue, como pide la regla del archivo de riesgos):
+- **B-I08** — contradicción `CLAUDE.md`/`models.py` en gastos generales.
+- **B-I09** — llave SSH sin autorizar (mitigado por HTTPS, no resuelto).
+- **B-I10** — woff2 de Blauer Nue/Conthic pendientes.
+- **B-I12** — razón social emisora de la responsiva: el servidor sigue
+  tratándola como heurística ("primera empresa activa con RFC"), no como
+  regla confirmada — `crud_empresas.emisora_por_defecto` lo dice explícito
+  en su propio docstring, verificado en I8 lote 3. Sigue esperando que
+  marketing confirme cuál es la emisora correcta.
+
+**Limpieza**: línea colgada en `docs/backlog_interfaz.md` (fragmento
+huérfano y además contradictorio — "pero no es reusable por otros specs
+todavía" pegado a una descripción de `sembrar-demo.mjs` que lo describe
+como genérico y parametrizable — encontrado comparando contra el commit
+donde aparecía por primera vez). Borrado.
+
+**Los 4 reportes al día**: este archivo, `backlog_interfaz.md`,
+`changelog/interfaz.md` y `riesgos/interfaz.md`, con una entrada por lote
+en los tres primeros y las 5 actualizaciones (R-I10/R-I13/R-I14 resueltos
++ R-I15 nuevo) en el cuarto.
+
+**Bundle final**: build verde, sin chunks nuevos en el grafo eager de
+`/login` (index + react-vendor + motion + CSS ≈ 121.5 kB gz, dentro del
+mismo orden que el histórico ~122.89 kB — la diferencia es ruido de
+contenido, no una regresión de code-splitting). `grep` en `dist/` sigue
+en cero para mock/fixtures/fallbackPorRol.
+
+**I8 — cierre general**: lotes 1-6 cerrados, cada uno en su propio commit
+sin push (`BeniBranch`), 6 hallazgos severos encontrados y arreglados en
+el mismo commit que los encontró (LoanRow/LoanDetail en 3 lugares, mock
+divergente de 2 formas distintas, "Continuar borrador" roto, "Equipos
+disponibles" sin refrescar, `<img>` sin manejo de error, un hueco de
+ambiente real — reportlab nunca instalado), 3 hallazgos de contrato
+cerrados con evidencia dura (B-I11/B-I13/B-I15), 1 hallazgo real y
+pre-existente fuera de mi carril reportado sin tocar (R-I15, Presupuestos).
+Ningún commit rompió el anterior: la regresión completa (48 Presupuestos
++ 22 Equipos mock + 8 `equipos-flujo-completo.spec.js` reales = 78) se
+corrió después de cada lote. Lote 7 (opcional) queda a discreción: solo
+si se pide explícitamente, ya que I8 lo marca "solo si 1-6 cerraron
+verdes" — y cerraron.
+
 ## 2026-07-29 (sesion 3 — modo 09-ejecutar-todo, cinco issues sin push)
 
 ### ISSUE I2 — Piel de Presupuestos (cerrada, 1 commit)
