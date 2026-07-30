@@ -1,6 +1,6 @@
 # Responsividad Móvil — Qué se implementó
 
-> Implementa `docs/auditoria-responsividad-movil.md` (auditoría original, 21 hallazgos en 4 niveles de severidad). Este documento es el registro de qué se hizo, cómo, y qué queda pendiente — la auditoría original queda como referencia histórica del diagnóstico.
+> Implementa `docs/historico/auditoria-responsividad-movil.md` (auditoría original, 21 hallazgos en 4 niveles de severidad). Este documento es el registro de qué se hizo, cómo, y qué queda pendiente — la auditoría original queda como referencia histórica del diagnóstico.
 
 ---
 

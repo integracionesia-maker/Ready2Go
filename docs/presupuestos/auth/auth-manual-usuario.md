@@ -1,6 +1,6 @@
 # Manual de usuario — Autenticación, roles, presupuestos y validación
 
-> Incluye los flujos del paquete R1-R11 (temas, header/popover, ciclos de presupuesto, validación de tickets, prioridad de marcas, visor de comprobantes, PDF, responsividad) y del paquete R12 (gastos generales, borrado lógico/físico de tickets). Reglas de negocio detalladas en `doc/presupuestos-y-validacion.md`, `doc/gastos-generales-manual.md` y `doc/borrado-tickets.md`.
+> Incluye los flujos del paquete R1-R11 (temas, header/popover, ciclos de presupuesto, validación de tickets, prioridad de marcas, visor de comprobantes, PDF, responsividad) y del paquete R12 (gastos generales, borrado lógico/físico de tickets). Reglas de negocio detalladas en `docs/presupuestos/presupuestos-y-validacion.md`, `docs/presupuestos/gastos-generales-manual.md` y `docs/presupuestos/borrado-tickets.md`.
 
 ## Iniciar sesión
 
@@ -77,7 +77,7 @@ Sección **Gastos Generales** (barra lateral, entre Validación y Administració
 - **Exportar**: elige uno o más de los últimos 12 meses y genera un PDF propio (independiente del PDF del Dashboard) con el detalle y el total.
 - **Eliminar**: igual mecanismo de dos niveles que los tickets — ver la siguiente sección.
 
-El Dashboard incluye una gráfica y un KPI de Gastos Generales para el período filtrado, y el PDF del Dashboard también los incluye. Detalle completo: `doc/gastos-generales-manual.md`.
+El Dashboard incluye una gráfica y un KPI de Gastos Generales para el período filtrado, y el PDF del Dashboard también los incluye. Detalle completo: `docs/presupuestos/gastos-generales-manual.md`.
 
 ## Para Admin/Superadmin: eliminar tickets
 
@@ -86,7 +86,7 @@ Cualquier ticket (en Transacciones o en Validación) tiene un botón **"Eliminar
 1. **Eliminar** (borrado lógico): el ticket deja de contar en listados, Dashboard y reportes, pero el registro y el comprobante se conservan — es reversible en el sentido de que queda auditado, aunque no hay un botón de "restaurar" en la UI todavía. Si el ticket estaba **aprobado**, su monto se devuelve al ciclo de presupuesto del creador.
 2. **Eliminar permanentemente**: un segundo paso con advertencia en rojo, ⚠️ **irreversible** — borra el registro y el archivo para siempre. Úsalo solo cuando estés seguro.
 
-Un creador nunca ve estos botones (ni en su propia vista de Transacciones). Detalle completo, incluida la tabla de impacto por estado del ticket: `doc/borrado-tickets.md`.
+Un creador nunca ve estos botones (ni en su propia vista de Transacciones). Detalle completo, incluida la tabla de impacto por estado del ticket: `docs/presupuestos/borrado-tickets.md`.
 
 ## Para Creadores: tu presupuesto y tickets
 
@@ -133,4 +133,4 @@ E2E_SUPERADMIN_PASSWORD="SuperClaveE2E123!" E2E_BASE_URL="http://127.0.0.1:5175"
 ```
 Borra `backend/test_e2e.db` antes de repetir el flujo completo desde cero (el superadmin es idempotente, pero los usuarios/creadores que crea la prueba no lo son entre corridas con la misma base).
 
-**Nota sobre el rate limit de login**: el backend limita a 30 intentos de login por IP cada 15 minutos (defensa contra fuerza bruta, ver `doc/auth-arquitectura.md` §4). Cada archivo de la suite se mantiene bien por debajo de eso, pero si el superadmin ya no tiene la contraseña sembrada (por ejemplo, porque `auth.spec.js` la cambió en una corrida anterior en la misma DB), usa `python reset_superadmin_password.py --password "..."` antes de repetir.
+**Nota sobre el rate limit de login**: el backend limita a 30 intentos de login por IP cada 15 minutos (defensa contra fuerza bruta, ver `docs/presupuestos/auth/auth-arquitectura.md` §4). Cada archivo de la suite se mantiene bien por debajo de eso, pero si el superadmin ya no tiene la contraseña sembrada (por ejemplo, porque `auth.spec.js` la cambió en una corrida anterior en la misma DB), usa `python reset_superadmin_password.py --password "..."` antes de repetir.

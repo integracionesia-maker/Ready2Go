@@ -2,14 +2,14 @@
 
 > Fase 5 del proyecto. Dos carriles sin solape: **servidor y datos** (Damian) e **interfaz** (Beni).
 > La frontera entre ambos es el contrato HTTP, no un archivo.
-> Plan tecnico completo: `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md`.
+> Plan tecnico completo: `docs/equipos/plan-quirurgico.md`.
 
 ---
 
 ## Asignacion de trabajo — Control de Equipos (servidor y datos)
 
 > Fase 5 del proyecto. Tu carril: **servidor y datos**. Paquetes WP1 a WP6 del plan.
-> Plan tecnico completo: `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md` (secciones 3, 4, 5, 6, 7).
+> Plan tecnico completo: `docs/equipos/plan-quirurgico.md` (secciones 3, 4, 5, 6, 7).
 > Contrato de API: `docs/contratos/` — **solo lectura**.
 > Este documento manda sobre el plan si algo se contradice. Si algo no esta aqui, preguntalo antes de escribirlo.
 
@@ -41,7 +41,7 @@ backend/scripts/                     (directorio nuevo completo)
 backend/tests/rbac/, backend/tests/equipos/   (con __init__.py y conftest.py propios)
 backend/tests/test_contrato_openapi.py
 backend/requirements.txt, requirements-dev.txt, pytest.ini (sin cambiar testpaths)
-doc/rbac-aditivo.md
+docs/equipos/rbac-aditivo.md
 docs/deploy/recordatorios_launchagent.md
 docs/backlog_servidor.md, docs/avances/servidor.md, docs/changelog/servidor.md, docs/riesgos/servidor.md
 ```
@@ -69,7 +69,7 @@ merge_duplicates.py, trim_overbudget.py, reset_superadmin_password.py, migrate_*
 raiz: BACKLOG.md, CHANGELOG.md, status.md, context.md, MVP_BREAKDOWN.md, RISKS.md,
       CLAUDE.md, DESIGN_SYSTEM.md, avances_diarios.md, .env.example, .gitignore
 docs/contratos/                      solo lectura
-docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md, doc/deploy-runbook.md, doc/auth-arquitectura.md
+docs/equipos/plan-quirurgico.md, docs/deploy/runbook.md, docs/presupuestos/auth/auth-arquitectura.md
 ```
 
 Hay trabajo en paralelo sobre varios de esos archivos. Si necesitas cambiar algo de esta lista, **pidelo, no lo edites**.
@@ -145,7 +145,7 @@ Se para y se reporta. **No improvises el endpoint ni cambies la forma del payloa
 ## Asignacion de trabajo — Control de Equipos (interfaz)
 
 > Fase 5 del proyecto. Tu carril: **interfaz**. Paquetes WP7 y WP8 del plan, mas el endurecimiento que vive en el cliente.
-> Plan tecnico completo: `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md` (seccion 8) y `DESIGN_SYSTEM.md`.
+> Plan tecnico completo: `docs/equipos/plan-quirurgico.md` (seccion 8) y `DESIGN_SYSTEM.md`.
 > Contrato de API: `docs/contratos/` — **solo lectura**.
 > Este documento manda sobre el plan si algo se contradice. Si algo no esta aqui, preguntalo antes de escribirlo.
 
@@ -183,7 +183,7 @@ backend/                 el directorio completo. Ni codigo, ni pruebas, ni migra
 raiz: BACKLOG.md, CHANGELOG.md, status.md, context.md, MVP_BREAKDOWN.md, RISKS.md,
       CLAUDE.md, avances_diarios.md, .env.example, .gitignore
 docs/contratos/          solo lectura. De ahi copias los fixtures a tus mocks; no los editas.
-docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md y doc/ completo
+docs/equipos/plan-quirurgico.md y docs/ completo
 ```
 
 Hay trabajo en paralelo sobre varios de esos archivos. Si necesitas cambiar algo de esta lista, **pidelo, no lo edites**.

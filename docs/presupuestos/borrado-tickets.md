@@ -1,6 +1,6 @@
 # Sistema de Borrado de Tickets y Gastos Generales (R12)
 
-> Feature del paquete R12 (`docs/plan-gastos-generales-y-borrado-tickets.md`). Complementa `doc/presupuestos-y-validacion.md` (estados de ticket, ciclos) y `doc/gastos-generales-manual.md`.
+> Feature del paquete R12 (`docs/historico/plan-gastos-generales-y-borrado-tickets.md`). Complementa `docs/presupuestos/presupuestos-y-validacion.md` (estados de ticket, ciclos) y `docs/presupuestos/gastos-generales-manual.md`.
 
 ## Por qué dos niveles de borrado
 

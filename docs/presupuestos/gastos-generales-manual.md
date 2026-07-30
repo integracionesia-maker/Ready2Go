@@ -1,6 +1,6 @@
 # Gastos Generales — Manual de Administrador (R12)
 
-> Feature del paquete R12 (`docs/plan-gastos-generales-y-borrado-tickets.md`). Complementa `doc/presupuestos-y-validacion.md` (que cubre presupuestos de creadores) — los Gastos Generales usan tabla propia (`general_expenses`) independiente de `tickets`, pero están vinculados a la tabla de `brands` (marcas) para trazabilidad.
+> Feature del paquete R12 (`docs/historico/plan-gastos-generales-y-borrado-tickets.md`). Complementa `docs/presupuestos/presupuestos-y-validacion.md` (que cubre presupuestos de creadores) — los Gastos Generales usan tabla propia (`general_expenses`) independiente de `tickets`, pero están vinculados a la tabla de `brands` (marcas) para trazabilidad.
 
 ## ¿Qué son?
 
@@ -37,11 +37,11 @@ La tabla principal lista los gastos generales (más recientes primero), con un f
 2. Selecciona uno o más de los últimos 12 meses (checkboxes).
 3. **"Generar PDF"** produce un reporte con: título, período seleccionado, tabla (Fecha | Marca | Descripción | Monto | Comprobante), total general, y pie de página con fecha de generación y quién lo generó.
 
-Esta exportación es independiente del reporte PDF del Dashboard (`doc/presupuestos-y-validacion.md` §6) — es un documento propio, más simple, enfocado solo en gastos generales.
+Esta exportación es independiente del reporte PDF del Dashboard (`docs/presupuestos/presupuestos-y-validacion.md` §6) — es un documento propio, más simple, enfocado solo en gastos generales.
 
 ## Eliminar un gasto general
 
-Botón **"Eliminar"** en cada fila, con dos niveles (mismo mecanismo que el borrado de tickets, ver `doc/borrado-tickets.md`):
+Botón **"Eliminar"** en cada fila, con dos niveles (mismo mecanismo que el borrado de tickets, ver `docs/presupuestos/borrado-tickets.md`):
 
 - **Eliminar** (borrado lógico): el gasto deja de contar en listados, gráficas y exportaciones, pero el registro y el archivo se conservan (auditable).
 - **Eliminar permanentemente**: ⚠️ irreversible — borra el registro de la base de datos y el archivo del disco. Requiere un paso adicional de confirmación con advertencia en rojo.

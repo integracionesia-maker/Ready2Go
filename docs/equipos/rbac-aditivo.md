@@ -1,8 +1,8 @@
 # RBAC aditivo (patron Bruckner) — Ready2Go
 
-> Modulo Control de Equipos, paquete WP1/S1. Diseño original: `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md` §3.
+> Modulo Control de Equipos, paquete WP1/S1. Diseño original: `docs/equipos/plan-quirurgico.md` §3.
 > Contrato de la respuesta: `docs/contratos/API_EQUIPOS_v1.md` §1 y §7, `docs/contratos/permisos_catalogo.json`.
-> Sistema viejo (roles fijos, `require_role`): `doc/auth-arquitectura.md`. Sigue vigente y funcionando.
+> Sistema viejo (roles fijos, `require_role`): `docs/presupuestos/auth/auth-arquitectura.md`. Sigue vigente y funcionando.
 
 ## Que problema resuelve
 

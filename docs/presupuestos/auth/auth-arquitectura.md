@@ -1,10 +1,10 @@
 # Arquitectura del sistema de autenticación, usuarios, roles y permisos
 
-> Diseño final implementado (Fases 2-3 completas: código en `dami-branch`, 167 pruebas pytest + 16 E2E Playwright en verde). Complementa — y en algunos puntos corrige — el diseño preliminar de `doc/auth-diseno-fase1.md`.
+> Diseño final implementado (Fases 2-3 completas: código en `dami-branch`, 167 pruebas pytest + 16 E2E Playwright en verde). Complementa — y en algunos puntos corrige — el diseño preliminar de Fase 1 (archivado, ver `docs/historico/prompt-sistema-autenticacion.md`).
 >
-> **Actualizado por el paquete R1-R11** (`doc/prompt-mejoras-integrales.md`): la matriz de permisos cambió (R4-R6, ver §3.1) y se agregaron endpoints nuevos (ciclos de presupuesto, validación de tickets). Reglas de negocio completas de esa parte en `doc/presupuestos-y-validacion.md`.
+> **Actualizado por el paquete R1-R11** (`docs/historico/prompt-mejoras-integrales.md`): la matriz de permisos cambió (R4-R6, ver §3.1) y se agregaron endpoints nuevos (ciclos de presupuesto, validación de tickets). Reglas de negocio completas de esa parte en `docs/presupuestos/presupuestos-y-validacion.md`.
 >
-> **Actualizado por el paquete R12** (`docs/plan-gastos-generales-y-borrado-tickets.md`): endpoints nuevos de gastos generales y borrado lógico/físico de tickets, todos exclusivos de `admin`/`superadmin` (ver §3.1). Reglas de negocio completas en `doc/gastos-generales-manual.md` y `doc/borrado-tickets.md`.
+> **Actualizado por el paquete R12** (`docs/historico/plan-gastos-generales-y-borrado-tickets.md`): endpoints nuevos de gastos generales y borrado lógico/físico de tickets, todos exclusivos de `admin`/`superadmin` (ver §3.1). Reglas de negocio completas en `docs/presupuestos/gastos-generales-manual.md` y `docs/presupuestos/borrado-tickets.md`.
 
 ---
 
@@ -66,7 +66,7 @@ erDiagram
 
 **R6 — El alcance del `creador` se mantiene sin cambios de fondo**, pero ahora incluye más superficie a auditar: no ve el histórico de ciclos de otro creador (`GET /api/creators/{id}/ciclos` → 403 si `creator_id` no es el suyo), no ve la bandeja de Validación (ruta y endpoints `aprobar`/`rechazar` con `require_role("admin", "superadmin")`), y sus tickets propios siempre nacen `pendiente` (nunca auto-aprueban, a diferencia de los de admin/superadmin).
 
-Endpoints nuevos de este paquete (matriz completa, ver `doc/presupuestos-y-validacion.md` para las reglas de negocio detrás):
+Endpoints nuevos de este paquete (matriz completa, ver `docs/presupuestos/presupuestos-y-validacion.md` para las reglas de negocio detrás):
 
 | Endpoint | Rol requerido | Notas |
 |---|---|---|
@@ -76,7 +76,7 @@ Endpoints nuevos de este paquete (matriz completa, ver `doc/presupuestos-y-valid
 | `GET /api/tickets/?status=` | Cualquiera autenticado | Filtro adicional por estado, respeta el scoping de creador |
 | `POST/PUT /api/brands/` con `priority` | `admin`, `superadmin` | 400 si `priority` no es `alta`/`media`/`baja` |
 
-**Endpoints del paquete R12** (borrado de tickets y gastos generales, ver `doc/borrado-tickets.md` y `doc/gastos-generales-manual.md`):
+**Endpoints del paquete R12** (borrado de tickets y gastos generales, ver `docs/presupuestos/borrado-tickets.md` y `docs/presupuestos/gastos-generales-manual.md`):
 
 | Endpoint | Rol requerido | Notas |
 |---|---|---|
@@ -135,9 +135,9 @@ Estas surgieron durante la implementación/verificación y **no** estaban en `au
 
 ## 7. Cobertura de pruebas
 
-- **Backend (pytest)**: `backend/tests/` — 167 pruebas. `test_auth.py` (login, bloqueo, rate limit, cambio de contraseña, refresh/rotación/reuso, logout), `test_permissions.py` (401 sin token, matriz por rol incluido R4-R6 y R12, IDOR de tickets/archivos/ciclos), `test_users_management.py` (R4: admin recibe 403 en todo `/api/users/*`, inmutabilidad de superadmin), `test_budget_cycles.py` (R7: ver `doc/presupuestos-y-validacion.md` §7), `test_ticket_validation.py` (R10, ídem), `test_brand_priority.py` (R9, ídem), `test_ticket_soft_delete.py` y `test_general_expenses.py` (R12: ver `doc/borrado-tickets.md` y `doc/gastos-generales-manual.md`). Ejecutar: `cd backend && python -m pytest`.
+- **Backend (pytest)**: `backend/tests/` — 167 pruebas. `test_auth.py` (login, bloqueo, rate limit, cambio de contraseña, refresh/rotación/reuso, logout), `test_permissions.py` (401 sin token, matriz por rol incluido R4-R6 y R12, IDOR de tickets/archivos/ciclos), `test_users_management.py` (R4: admin recibe 403 en todo `/api/users/*`, inmutabilidad de superadmin), `test_budget_cycles.py` (R7: ver `docs/presupuestos/presupuestos-y-validacion.md` §7), `test_ticket_validation.py` (R10, ídem), `test_brand_priority.py` (R9, ídem), `test_ticket_soft_delete.py` y `test_general_expenses.py` (R12: ver `docs/presupuestos/borrado-tickets.md` y `docs/presupuestos/gastos-generales-manual.md`). Ejecutar: `cd backend && python -m pytest`.
 - **E2E (Playwright)**: archivos en `frontend/e2e/`:
   - `auth.spec.js` (7 pruebas): superadmin → crea admin → admin ve dashboard/creadores pero NO usuarios (403 en la API) → superadmin vincula el usuario `creador` → creador ve solo lo suyo → usuario desactivado no puede entrar.
-  - `presupuesto-flujo-completo.spec.js` (9 pruebas): el flujo de negocio completo del paquete R1-R11 — bootstrap de admin/creador/marca, ticket pendiente sin descuento, validación con visor y rechazo motivado, re-subida y aprobación con descuento del ciclo, tema persistente, popover, PDF con contenido real, y el recorrido en 375px. Detalle de reglas en `doc/presupuestos-y-validacion.md` §7.
+  - `presupuesto-flujo-completo.spec.js` (9 pruebas): el flujo de negocio completo del paquete R1-R11 — bootstrap de admin/creador/marca, ticket pendiente sin descuento, validación con visor y rechazo motivado, re-subida y aprobación con descuento del ciclo, tema persistente, popover, PDF con contenido real, y el recorrido en 375px. Detalle de reglas en `docs/presupuestos/presupuestos-y-validacion.md` §7.
   - `gastos-generales.spec.js` (paquete R12): creación y borrado de gastos generales, exportación a PDF, acceso denegado para el rol `creador`, borrado lógico/físico de un ticket reflejado en Dashboard y Transacciones.
-  - Todos requieren un backend + frontend dedicados a pruebas (ver `doc/auth-manual-usuario.md` §Pruebas E2E). **Nota**: el rate limit de login (30/15min por IP, §4) puede alcanzarse si se corren varios archivos juntos en una sola invocación — se recomienda correrlos por separado (cada uno se mantiene bien por debajo del límite).
+  - Todos requieren un backend + frontend dedicados a pruebas (ver `docs/presupuestos/auth/auth-manual-usuario.md` §Pruebas E2E). **Nota**: el rate limit de login (30/15min por IP, §4) puede alcanzarse si se corren varios archivos juntos en una sola invocación — se recomienda correrlos por separado (cada uno se mantiene bien por debajo del límite).

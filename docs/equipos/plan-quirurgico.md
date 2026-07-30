@@ -2,7 +2,7 @@
 
 > Fase 3.5 del framework (Planeacion Quirurgica). Estado: **PLAN — sin construir**. Requiere luz verde de Jose.
 > Fecha: 27/07/2026 (lunes) · Rama: `jose-branch` · Repo: `github.com/integracionesia-maker/Ready2Go`
-> Conexiones: [[CLAUDE]] | [[context]] | [[status]] | [[BACKLOG]] | [[RISKS]] | [[MVP_BREAKDOWN]] | [[DESIGN_SYSTEM]] | [[doc/auth-arquitectura]] | [[doc/presupuestos-y-validacion]]
+> Conexiones: [[CLAUDE]] | [[context]] | [[status]] | [[BACKLOG]] | [[RISKS]] | [[MVP_BREAKDOWN]] | [[DESIGN_SYSTEM]] | [[docs/presupuestos/auth/auth-arquitectura]] | [[docs/presupuestos/presupuestos-y-validacion]]
 
 ---
 
@@ -351,7 +351,7 @@ Validacion de subidas (aplica a `/media`): allowlist `image/jpeg`+`image/png` ve
 - `notification_log` con `UNIQUE (loan_id, tipo, destinatario)`: reintentar no duplica correos.
 - Destinatarios **resueltos por rol desde la DB**, no de una constante (la maqueta hardcodea `melisa.avendano@grupo-ortiz.com`). Si Melisa cambia de puesto, se revoca el aditivo y ya.
 - Env nuevas: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_STARTTLS`, `NOTIF_ENABLED`, `APP_PUBLIC_URL`. Van en `.env` (jamas al repo) y a `.env.example` con placeholders.
-- Recordatorios: `scripts/recordatorios_vencimiento.py` en LaunchAgent del Mac mini (mismo patron ya documentado en `doc/deploy-runbook.md`), no un cron dentro de uvicorn.
+- Recordatorios: `scripts/recordatorios_vencimiento.py` en LaunchAgent del Mac mini (mismo patron ya documentado en `docs/deploy/runbook.md`), no un cron dentro de uvicorn.
 
 ---
 
