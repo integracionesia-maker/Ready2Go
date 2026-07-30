@@ -3,8 +3,10 @@ import ThemeToggle from "./ThemeToggle";
 import BrandLogo from "./BrandLogo";
 
 /** Barra superior fija global (R1): logo + Grupo Ortiz, hamburguesa en móvil
- * (abre el drawer del Sidebar, R3), toggle de tema y popover de perfil. */
-export default function Header({ onOpenMobileMenu }) {
+ * (abre el drawer del Sidebar, R3), toggle de tema y popover de perfil.
+ * Compartida entre módulos (Presupuestos/Equipos) — cada Layout pasa su
+ * propio `subtitle`. */
+export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
   return (
     <header
       className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 sm:px-6"
@@ -28,7 +30,7 @@ export default function Header({ onOpenMobileMenu }) {
             Grupo Ortiz
           </h1>
           <p className="truncate font-body text-[10px] tracking-wide" style={{ color: "var(--go-text-secondary)" }}>
-            Control de Presupuestos
+            {subtitle}
           </p>
         </div>
       </div>

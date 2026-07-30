@@ -153,8 +153,11 @@ export default function FichaPrestamoPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-mono text-xl font-bold" style={{ color: "var(--go-orange)" }}>
-            {loan.folio || "Sin folio"}
+          <h1 className="font-display text-lg font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
+            Ficha de préstamo{" "}
+            <span className="font-mono" style={{ color: "var(--go-orange)" }}>
+              {loan.folio || "Sin folio"}
+            </span>
           </h1>
           {/* Tres badges ortogonales — nunca fusionados en uno solo. */}
           <div className="mt-2 flex flex-wrap gap-1.5">

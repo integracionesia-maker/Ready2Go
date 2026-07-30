@@ -24,6 +24,7 @@ function useUrlFilters() {
       condicion: params.get("condicion") || "",
       disponible: params.get("disponible") || "",
       offset: Number(params.get("offset") || 0),
+      limit: Number(params.get("limit") || LIMIT),
     }),
     [params]
   );
@@ -82,7 +83,7 @@ export default function InventarioPage() {
         categoria: filtros.categoria || undefined,
         condicion: filtros.condicion || undefined,
         disponible: filtros.disponible || undefined,
-        limit: LIMIT,
+        limit: filtros.limit,
         offset: filtros.offset,
       });
       setResultado(data);
@@ -107,10 +108,12 @@ export default function InventarioPage() {
   useEffect(() => {
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtros.q, filtros.categoria, filtros.condicion, filtros.disponible, filtros.offset]);
+  }, [filtros.q, filtros.categoria, filtros.condicion, filtros.disponible, filtros.offset, filtros.limit]);
 
-  const totalPages = resultado ? Math.max(1, Math.ceil(resultado.total / LIMIT)) : 1;
-  const currentPage = Math.floor(filtros.offset / LIMIT) + 1;
+  const totalPages = resultado ? Math.max(1, Math.ceil(resultado.total / filtros.limit)) : 1;
+  const currentPage = Math.floor(filtros.offset / filtros.limit) + 1;
+  const rangeStart = resultado && resultado.total > 0 ? filtros.offset + 1 : 0;
+  const rangeEnd = resultado ? Math.min(filtros.offset + filtros.limit, resultado.total) : 0;
 
   if (loading && !resultado) {
     return (
@@ -172,7 +175,10 @@ export default function InventarioPage() {
           </div>
           <RequierePermiso modulo="equipos_inventario" accion="crear">
             <button type="button" onClick={() => setModalCrear(true)} className="btn-go">
-              + Nuevo equipo
+              <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Nuevo equipo
             </button>
           </RequierePermiso>
         </div>
@@ -285,30 +291,54 @@ export default function InventarioPage() {
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
-          <span>
-            Página {currentPage} de {totalPages}
+      {resultado.items.length > 0 && (
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--go-border)" }}>
+        <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+          <span className="hidden sm:inline">
+            Mostrando {rangeStart}–{rangeEnd} de {resultado.total}
           </span>
-          <div className="flex gap-2">
+          <span className="sm:hidden">
+            {rangeStart}–{rangeEnd}/{resultado.total}
+          </span>
+        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="hidden sm:inline font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+            Filas por página
+          </label>
+          <select
+            value={filtros.limit}
+            onChange={(e) => set({ limit: Number(e.target.value) })}
+            className="go-select w-auto py-1.5 text-xs"
+          >
+            {[10, 25, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center gap-2">
             <button
               type="button"
               disabled={filtros.offset === 0}
-              onClick={() => set({ offset: Math.max(0, filtros.offset - LIMIT) })}
+              onClick={() => set({ offset: Math.max(0, filtros.offset - filtros.limit) })}
               className="btn-go-ghost text-xs px-3 py-1.5 disabled:opacity-40"
             >
               Anterior
             </button>
+            <span className="font-body text-xs tabular-nums" style={{ color: "var(--go-text-secondary)" }}>
+              Página {currentPage} de {totalPages}
+            </span>
             <button
               type="button"
               disabled={currentPage >= totalPages}
-              onClick={() => set({ offset: filtros.offset + LIMIT })}
+              onClick={() => set({ offset: filtros.offset + filtros.limit })}
               className="btn-go-ghost text-xs px-3 py-1.5 disabled:opacity-40"
             >
               Siguiente
             </button>
           </div>
         </div>
+      </div>
       )}
 
       {modalCrear && (

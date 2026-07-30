@@ -92,10 +92,14 @@ export default function InicioPage() {
 
   return (
     <div className="space-y-8">
+      <h1 className="font-display text-lg font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
+        Inicio
+      </h1>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiTile label="Prestados" value={dashboard.prestados} accentColor="#FB670B" />
-        <KpiTile label="Atrasados" value={dashboard.atrasados} accentColor="#E53E3E" glass />
-        <KpiTile label="Pend. confirmación" value={dashboard.pendientes_confirmacion} accentColor="#F59E0B" glass />
+        <KpiTile label="Atrasados" value={dashboard.atrasados} accentColor="#E53E3E" />
+        <KpiTile label="Pend. confirmación" value={dashboard.pendientes_confirmacion} accentColor="#F59E0B" />
         <KpiTile label="Disponibles" value={dashboard.disponibles} accentColor="#00A36E" />
       </div>
 

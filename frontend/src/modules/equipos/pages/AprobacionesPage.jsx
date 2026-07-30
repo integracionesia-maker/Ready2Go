@@ -158,8 +158,11 @@ export default function AprobacionesPage() {
                     type="button"
                     onClick={() => handleAutorizar(loan)}
                     disabled={autorizandoId === loan.id}
-                    className="btn-go text-xs px-3 py-1.5"
+                    className="btn-go text-xs px-3 py-1.5 flex items-center gap-1.5"
                   >
+                    <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                     {autorizandoId === loan.id ? "Autorizando..." : "Autorizar entrega"}
                   </button>
                 </li>
@@ -193,8 +196,11 @@ export default function AprobacionesPage() {
                     type="button"
                     onClick={() => abrirConfirmarDevolucion(loan)}
                     disabled={abriendoDevolucionId === loan.id}
-                    className="btn-go text-xs px-3 py-1.5"
+                    className="btn-go text-xs px-3 py-1.5 flex items-center gap-1.5"
                   >
+                    <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 12.5l4 4L13 8.5M9.5 12.5l4 4L21 8.5" />
+                    </svg>
                     {abriendoDevolucionId === loan.id ? "Abriendo..." : "Confirmar devolución"}
                   </button>
                 </li>

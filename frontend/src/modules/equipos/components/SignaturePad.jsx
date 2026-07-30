@@ -133,7 +133,15 @@ const SignaturePad = forwardRef(function SignaturePad(_props, ref) {
     <div>
       <canvas
         ref={canvasRef}
-        style={{ width: "100%", height: "160px", touchAction: "none", background: "#fff", borderRadius: "var(--go-radius)" }}
+        className="border"
+        style={{
+          width: "100%",
+          height: "160px",
+          touchAction: "none",
+          background: "var(--go-white)",
+          borderRadius: "var(--go-radius)",
+          borderColor: "var(--go-border)",
+        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={finishStroke}

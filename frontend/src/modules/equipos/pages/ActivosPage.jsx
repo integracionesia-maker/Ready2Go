@@ -7,7 +7,6 @@ import { usePermisos } from "../permisos/usePermisos";
 import RegistrarDevolucionModal from "../components/RegistrarDevolucionModal";
 
 const ESTADOS_ACTIVOS = ["prestado", "pendiente_confirmacion", "incompleto"];
-const LIMIT = 20;
 
 const ESTADO_LABEL = {
   prestado: "Prestado",
@@ -34,6 +33,7 @@ export default function ActivosPage() {
   const [qDebounced, setQDebounced] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const [devolucionLoan, setDevolucionLoan] = useState(null);
   const [cargandoDevolucion, setCargandoDevolucion] = useState(null); // id del loan en vuelo
@@ -99,9 +99,11 @@ export default function ActivosPage() {
     return items;
   }, [todos, estadoFiltro, qDebounced]);
 
-  const totalPages = Math.max(1, Math.ceil(filtrados.length / LIMIT));
+  const totalPages = Math.max(1, Math.ceil(filtrados.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const pageItems = filtrados.slice((currentPage - 1) * LIMIT, currentPage * LIMIT);
+  const pageItems = filtrados.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const rangeStart = filtrados.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, filtrados.length);
 
   async function verResponsiva(loan) {
     const url = await loanResponsivaUrl(loan.id);
@@ -243,12 +245,35 @@ export default function ActivosPage() {
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
-          <span>
-            Página {currentPage} de {totalPages}
+      {pageItems.length > 0 && (
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--go-border)" }}>
+        <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+          <span className="hidden sm:inline">
+            Mostrando {rangeStart}–{rangeEnd} de {filtrados.length}
           </span>
-          <div className="flex gap-2">
+          <span className="sm:hidden">
+            {rangeStart}–{rangeEnd}/{filtrados.length}
+          </span>
+        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="hidden sm:inline font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+            Filas por página
+          </label>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+            className="go-select w-auto py-1.5 text-xs"
+          >
+            {[10, 25, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center gap-2">
             <button
               type="button"
               disabled={currentPage === 1}
@@ -257,6 +282,9 @@ export default function ActivosPage() {
             >
               Anterior
             </button>
+            <span className="font-body text-xs tabular-nums" style={{ color: "var(--go-text-secondary)" }}>
+              Página {currentPage} de {totalPages}
+            </span>
             <button
               type="button"
               disabled={currentPage >= totalPages}
@@ -267,6 +295,7 @@ export default function ActivosPage() {
             </button>
           </div>
         </div>
+      </div>
       )}
 
       {devolucionLoan && (

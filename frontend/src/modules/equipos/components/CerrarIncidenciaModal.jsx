@@ -37,7 +37,13 @@ export default function CerrarIncidenciaModal({ loan, onClose, onSuccess }) {
           <button type="button" onClick={onClose} disabled={enviando} className="btn-go-ghost">
             Cancelar
           </button>
-          <button type="button" onClick={handleSubmit} disabled={enviando} className="btn-go">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={enviando}
+            className="btn-go-ghost"
+            style={{ color: "var(--go-error)" }}
+          >
             {enviando ? "Cerrando..." : "Cerrar incidencia"}
           </button>
         </div>

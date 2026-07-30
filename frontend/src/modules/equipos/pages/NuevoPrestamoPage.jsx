@@ -334,7 +334,7 @@ export default function NuevoPrestamoPage() {
           (confirmado con scrollWidth 428 vs clientWidth 390). Debajo de
           `sm:` se esconde la etiqueta y el conector se acorta — el círculo
           numerado solo ya identifica el paso activo. */}
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center justify-center gap-1 sm:gap-2">
         {PASOS.map((label, i) => (
           <div key={label} className="flex items-center gap-1 sm:gap-2">
             <span
@@ -358,7 +358,7 @@ export default function NuevoPrestamoPage() {
       </div>
 
       {paso === 1 && (
-        <form onSubmit={handleSubmitPaso1} className="go-card max-w-xl space-y-4">
+        <form onSubmit={handleSubmitPaso1} className="go-card mx-auto max-w-xl space-y-4">
           <div>
             <p className="go-eyebrow mb-1.5">Responsable</p>
             <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
@@ -535,7 +535,7 @@ export default function NuevoPrestamoPage() {
       )}
 
       {paso === 4 && loan && (
-        <div className="max-w-xl space-y-6">
+        <div className="mx-auto max-w-xl space-y-6">
           <div className="go-card">
             <p className="go-eyebrow mb-2">Firma de quien entrega</p>
             <SignaturePad ref={firmaEntregaRef} />

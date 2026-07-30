@@ -7,8 +7,8 @@ import RequierePermiso from "../permisos/RequierePermiso";
 const CAMPOS = [
   ["marca", "Marca"],
   ["modelo", "Modelo"],
-  ["numero_serie", "Número de serie"],
-  ["activo_fijo", "Activo fijo"],
+  ["numero_serie", "Número de serie", true],
+  ["activo_fijo", "Activo fijo", true],
   ["cuenta_gmail", "Cuenta de Gmail"],
   ["espacio_disponible", "Espacio disponible"],
 ];
@@ -87,12 +87,14 @@ export default function EquipmentFichaModal({ equipoId, onClose, onEditar, onAud
           </div>
 
           <dl className="grid grid-cols-2 gap-3 font-body text-sm">
-            {CAMPOS.map(([campo, label]) => (
+            {CAMPOS.map(([campo, label, mono]) => (
               <div key={campo}>
                 <dt className="font-body text-xs uppercase tracking-wider" style={{ color: "var(--go-text-muted)" }}>
                   {label}
                 </dt>
-                <dd style={{ color: "var(--go-text-primary)" }}>{equipo[campo] || "—"}</dd>
+                <dd className={mono ? "font-mono" : undefined} style={{ color: "var(--go-text-primary)" }}>
+                  {equipo[campo] || "—"}
+                </dd>
               </div>
             ))}
           </dl>
@@ -109,12 +111,13 @@ export default function EquipmentFichaModal({ equipoId, onClose, onEditar, onAud
           )}
 
           {equipo.tenedor_actual && (
-            <div
-              className="rounded-go p-3 font-body text-sm"
-              style={{ background: "var(--go-surface)", color: "var(--go-text-secondary)" }}
-            >
+            <div className="go-card font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
               Con <span style={{ color: "var(--go-text-primary)" }}>{equipo.tenedor_actual.nombre}</span>
-              {equipo.fecha_regreso_esperada && ` · regresa ${equipo.fecha_regreso_esperada}`}
+              {equipo.fecha_regreso_esperada && (
+                <>
+                  {" "}· regresa <span className="font-mono">{equipo.fecha_regreso_esperada}</span>
+                </>
+              )}
               {equipo.atrasado && (
                 <span className="go-badge go-badge-error ml-2">Atrasado {equipo.dias_atraso}d</span>
               )}
@@ -126,7 +129,8 @@ export default function EquipmentFichaModal({ equipoId, onClose, onEditar, onAud
           {(equipo.estado_fisico || equipo.comentario_auditoria) && (
             <div className="border-t pt-3" style={{ borderColor: "var(--go-border)" }}>
               <p className="mb-1 font-body text-xs uppercase tracking-wider" style={{ color: "var(--go-text-muted)" }}>
-                Última auditoría {equipo.fecha_auditoria && `· ${equipo.fecha_auditoria}`}
+                Última auditoría{" "}
+                {equipo.fecha_auditoria && <>· <span className="font-mono">{equipo.fecha_auditoria}</span></>}
               </p>
               {equipo.estado_fisico && (
                 <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>

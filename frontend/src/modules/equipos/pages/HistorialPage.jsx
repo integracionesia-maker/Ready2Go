@@ -5,8 +5,6 @@ import { esCodigo, ApiError } from "@/api";
 import { fetchLoans, fetchLoansExport } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
 
-const LIMIT = 20;
-
 const ESTADO_LABEL = {
   borrador: "Borrador",
   prestado: "Prestado",
@@ -40,6 +38,7 @@ export default function HistorialPage() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [offset, setOffset] = useState(0);
+  const [limit, setLimit] = useState(20);
 
   useEffect(() => {
     const t = setTimeout(() => setQDebounced(qInput), 300);
@@ -60,7 +59,7 @@ export default function HistorialPage() {
         q: qDebounced || undefined,
         desde: desde || undefined,
         hasta: hasta || undefined,
-        limit: LIMIT,
+        limit,
         offset,
       });
       setResultado(data);
@@ -75,7 +74,7 @@ export default function HistorialPage() {
   useEffect(() => {
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estado, desde, hasta, qDebounced, offset]);
+  }, [estado, desde, hasta, qDebounced, offset, limit]);
 
   async function handleExportar() {
     setExportando(true);
@@ -104,8 +103,10 @@ export default function HistorialPage() {
     }
   }
 
-  const totalPages = resultado ? Math.max(1, Math.ceil(resultado.total / LIMIT)) : 1;
-  const currentPage = Math.floor(offset / LIMIT) + 1;
+  const totalPages = resultado ? Math.max(1, Math.ceil(resultado.total / limit)) : 1;
+  const currentPage = Math.floor(offset / limit) + 1;
+  const rangeStart = resultado && resultado.total !== 0 ? offset + 1 : 0;
+  const rangeEnd = resultado ? Math.min(offset + limit, resultado.total) : 0;
 
   if (loading && !resultado) {
     return (
@@ -149,8 +150,17 @@ export default function HistorialPage() {
           Historial <span style={{ color: "var(--go-orange)" }}>({resultado.total})</span>
         </h1>
         {puede("equipos_prestamos", "exportar") && (
-          <button type="button" onClick={handleExportar} disabled={exportando} className="btn-go">
-            {exportando ? "Exportando..." : "Exportar CSV"}
+          <button type="button" onClick={handleExportar} disabled={exportando} className="btn-go flex items-center gap-1.5">
+            {exportando ? (
+              "Exportando..."
+            ) : (
+              <>
+                <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                Exportar CSV
+              </>
+            )}
           </button>
         )}
       </div>
@@ -229,28 +239,55 @@ export default function HistorialPage() {
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
-          <span>
-            Página {currentPage} de {totalPages}
+      {resultado.items.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--go-border)" }}>
+          <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+            <span className="hidden sm:inline">
+              Mostrando {rangeStart}–{rangeEnd} de {resultado.total}
+            </span>
+            <span className="sm:hidden">
+              {rangeStart}–{rangeEnd}/{resultado.total}
+            </span>
           </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={offset === 0}
-              onClick={() => setOffset((o) => Math.max(0, o - LIMIT))}
-              className="btn-go-ghost text-xs px-3 py-1.5 disabled:opacity-40"
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="hidden sm:inline font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+              Filas por página
+            </label>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setOffset(0);
+              }}
+              className="go-select w-auto py-1.5 text-xs"
             >
-              Anterior
-            </button>
-            <button
-              type="button"
-              disabled={currentPage >= totalPages}
-              onClick={() => setOffset((o) => o + LIMIT)}
-              className="btn-go-ghost text-xs px-3 py-1.5 disabled:opacity-40"
-            >
-              Siguiente
-            </button>
+              {[10, 25, 50, 100].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={offset === 0}
+                onClick={() => setOffset((o) => Math.max(0, o - limit))}
+                className="btn-go-ghost text-xs px-3 py-1.5 disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <span className="font-body text-xs tabular-nums" style={{ color: "var(--go-text-secondary)" }}>
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage >= totalPages}
+                onClick={() => setOffset((o) => o + limit)}
+                className="btn-go-ghost text-xs px-3 py-1.5 disabled:opacity-40"
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         </div>
       )}

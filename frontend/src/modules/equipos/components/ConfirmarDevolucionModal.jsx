@@ -78,7 +78,10 @@ export default function ConfirmarDevolucionModal({ loan, onClose, onSuccess }) {
           <button type="button" onClick={onClose} disabled={enviando} className="btn-go-ghost">
             Cancelar
           </button>
-          <button type="button" onClick={handleSubmit} disabled={enviando} className="btn-go">
+          <button type="button" onClick={handleSubmit} disabled={enviando} className="btn-go flex items-center gap-1.5">
+            <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
             {enviando ? "Guardando..." : "Confirmar"}
           </button>
         </div>

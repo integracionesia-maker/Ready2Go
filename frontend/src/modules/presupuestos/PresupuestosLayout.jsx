@@ -116,7 +116,7 @@ export default function PresupuestosLayout() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--go-bg)" }}>
-      <Header onOpenMobileMenu={() => setMobileMenuOpen(true)} />
+      <Header onOpenMobileMenu={() => setMobileMenuOpen(true)} subtitle="Control de Presupuestos" />
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={handleToggleSidebar}
