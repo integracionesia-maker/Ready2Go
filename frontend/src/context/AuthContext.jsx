@@ -43,13 +43,12 @@ export function AuthProvider({ children }) {
   }, [checkSession]);
 
   const login = useCallback(async (identificador, password) => {
-    // login no resuelve permisos (es caro, y /auth/me es el unico endpoint que
-    // el cliente vuelve a consultar cuando algo cambia) — por eso el cuerpo de
-    // login trae `permisos: {}`. Si nos quedaramos con eso, EquiposSidebar
-    // (que filtra por usePermisos) se veria vacio hasta el proximo F5 (B1).
+    // B1 (fix, dami-branch + BeniBranch): login no resuelve permisos — solo
+    // /auth/me los llena. Si nos quedaramos con `permisos: {}`, EquiposSidebar
+    // (que filtra por usePermisos) se veria vacio hasta el proximo F5.
     const { user: loggedInUser } = await apiLogin(identificador, password);
-    setUser(loggedInUser);
-    const me = await fetchMe();
+    setUser(loggedInUser); // respuesta rapida del login (sin permisos: {})
+    const me = await fetchMe(); // permisos reales — login/refresh no los llenan (ver auth.py:166-175)
     setUser(me);
     return me;
   }, []);

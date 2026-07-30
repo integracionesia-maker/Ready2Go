@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { EmptyState, SkeletonShimmer, RowActions } from "@/design";
+import { EmptyState, SkeletonShimmer, RowActions, ICONS } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchEquipmentList } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -269,15 +269,17 @@ export default function InventarioPage() {
                     <td onClick={(e) => e.stopPropagation()}>
                       <RowActions
                         actions={[
-                          { key: "ficha", label: "Ver ficha", onClick: () => setFichaId(eq.id) },
+                          { key: "ficha", label: "Ver ficha", icon: ICONS.ver, onClick: () => setFichaId(eq.id) },
                           puede("equipos_inventario", "editar") && {
                             key: "editar",
                             label: "Editar",
+                            icon: ICONS.editar,
                             onClick: () => setModalEditar(eq),
                           },
                           puede("equipos_inventario", "auditar_condicion") && {
                             key: "auditar",
                             label: "Auditar",
+                            icon: ICONS.auditar,
                             onClick: () => setModalAuditar(eq),
                           },
                         ]}

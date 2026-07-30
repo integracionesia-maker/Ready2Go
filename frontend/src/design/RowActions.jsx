@@ -7,10 +7,21 @@ import { useMobile } from "./useMobile";
  * "⋯" que agrupa las mismas acciones en un menú desplegable — evita que 2-4
  * botones de texto se encimen o desborden en celdas angostas.
  *
- * `actions`: Array<{ key, label, mobileLabel?, onClick, variant?: "danger" } | falsy>
+ * `actions`: Array<{ key, label, mobileLabel?, onClick, variant?: "danger", icon? } | falsy>
  * Los valores falsy (ej. `canDelete && {...}`) se filtran — así cada
  * consumidor puede condicionar una acción sin un `if` aparte.
+ * `icon`: SVG path opcional (mismo formato que `Sidebar.jsx`/`EquiposSidebar.jsx`,
+ * viewBox 24x24). Si no se pasa, el botón queda solo con texto como antes.
  */
+function ActionIcon({ d, className }) {
+  if (!d) return null;
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d={d} />
+    </svg>
+  );
+}
+
 export default function RowActions({ actions }) {
   const isMobile = useMobile();
   const [open, setOpen] = useState(false);
@@ -39,9 +50,10 @@ export default function RowActions({ actions }) {
             key={a.key}
             type="button"
             onClick={a.onClick}
-            className="btn-go-ghost text-xs px-3 py-1.5"
+            className="btn-go-ghost flex items-center gap-1.5 text-xs px-3 py-1.5"
             style={a.variant === "danger" ? { color: "var(--go-error)" } : undefined}
           >
+            <ActionIcon d={a.icon} className="h-3.5 w-3.5 flex-shrink-0" />
             {a.label}
           </button>
         ))}
@@ -77,9 +89,10 @@ export default function RowActions({ actions }) {
                 setOpen(false);
                 a.onClick();
               }}
-              className="block w-full whitespace-nowrap px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
+              className="flex w-full items-center gap-3 whitespace-nowrap px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
               style={{ color: a.variant === "danger" ? "var(--go-error)" : "var(--go-text-primary)" }}
             >
+              <ActionIcon d={a.icon} className="h-4 w-4 flex-shrink-0" />
               {a.mobileLabel || a.label}
             </button>
           ))}

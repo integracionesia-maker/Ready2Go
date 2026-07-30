@@ -3,7 +3,7 @@ import DateRangeFilter from "../components/DateRangeFilter";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import GeneralExpenseModal from "../components/GeneralExpenseModal";
 import GeneralExpensesExportModal from "../components/GeneralExpensesExportModal";
-import { RowActions } from "@/design";
+import { RowActions, ICONS } from "@/design";
 import { fetchGeneralExpenses, softDeleteGeneralExpense, hardDeleteGeneralExpense, generalExpenseFileUrl } from "@/api";
 
 function formatCurrency(amount) {
@@ -223,12 +223,14 @@ export default function GeneralExpensesPage({ brands = [] }) {
                           {
                             key: "ver",
                             label: "Ver",
+                            icon: ICONS.ver,
                             onClick: () =>
                               window.open(generalExpenseFileUrl(expense.id), "_blank", "noopener,noreferrer"),
                           },
                           {
                             key: "eliminar",
                             label: "Eliminar",
+                            icon: ICONS.eliminar,
                             variant: "danger",
                             onClick: () => setDeleteTarget(expense),
                           },

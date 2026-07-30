@@ -12,4 +12,6 @@ export { ToastProvider, useToast } from "./Toast";
 export { CommandPaletteProvider, useCommandPalette, useRegisterCommand } from "./CommandPalette";
 export { default as RowActions } from "./RowActions";
 export { useMobile } from "./useMobile";
+export { ICONS } from "./icons";
+export { createApexOptions, formatChartCurrency, GO_CHART_COLORS } from "./apexTheme";
 export * as motionTokens from "./motion";
