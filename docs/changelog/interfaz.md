@@ -78,6 +78,24 @@
   todo `GET /loans/{id}/responsiva.pdf` en 404 pese a que el registro en
   base ya existía.
 
+## 2026-07-29/30 (I8 lote 5 — B-I14: retirar fallbackPorRol.js)
+
+### Quitado
+
+- `frontend/src/modules/equipos/permisos/fallbackPorRol.js` — borrado.
+  Confirmado que `/auth/me` manda `permisos` poblado para los 4 roles
+  base (superadmin, admin, creador, colaborador_mkt), igual que
+  `docs/contratos/permisos_catalogo.json`; el respaldo temporal ya no
+  hace falta.
+
+### Cambiado
+
+- `frontend/src/modules/equipos/permisos/usePermisos.js` — sin la rama de
+  fallback: `permisos = user?.permisos ?? {}`.
+- `frontend/src/modules/equipos/permisos/PermisosDemo.jsx` — sus 3
+  personas sintéticas traen `permisos` ya resueltos (antes 2 de 3 usaban
+  `{}` a propósito para forzar el fallback retirado).
+
 ## 2026-07-29/30 (I8 lote 4 — Despertar equipos-flujo-completo.spec.js)
 
 ### Cambiado

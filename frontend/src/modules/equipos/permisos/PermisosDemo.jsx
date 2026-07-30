@@ -9,17 +9,29 @@ import { setInjectedError } from "../api/mock/errorInjection";
 // I4). Usuarios sintéticos vía `userOverride` de usePermisos/RequierePermiso
 // (pensado justo para esto: probar los tres roles del cierre sin necesitar
 // tres sesiones reales con esos permisos exactos).
+//
+// Los tres traen `permisos` ya resueltos (rol base + aditivos, unión con
+// `_PISO`) tal como los manda un `/auth/me` real hoy — confirmado en I8
+// lote 5 (B-I14) contra los 4 roles base. Ya no existe `fallbackPorRol.js`
+// (se retiró en el mismo lote), así que un objeto vacío aquí ya no
+// derivaría nada: mostraría todo oculto, no el rol simulado.
 const USUARIOS_DEMO = {
   colaborador_mkt: {
     etiqueta: "colaborador_mkt (puede solicitar)",
-    user: { role: "colaborador_mkt", permisos: {} }, // {} => fuerza el fallback por rol
+    user: {
+      role: "colaborador_mkt",
+      permisos: {
+        inicio: ["ver"],
+        perfil: ["ver", "editar_propio"],
+        equipos_inventario: ["ver"],
+        equipos_prestamos: ["solicitar", "ver_propios", "registrar_devolucion"],
+      },
+    },
   },
   colaborador_mkt_aprobador: {
     etiqueta: "colaborador_mkt + APROBADOR_EQUIPO (ve autorizaciones)",
     user: {
       role: "colaborador_mkt",
-      // permisos reales (no fallback): rol base + paquete aditivo ya resuelto,
-      // tal como lo mandaría un /auth/me de WP1.
       permisos: {
         inicio: ["ver"],
         perfil: ["ver", "editar_propio"],
@@ -31,7 +43,16 @@ const USUARIOS_DEMO = {
   },
   admin: {
     etiqueta: "admin (ve global, no autoriza)",
-    user: { role: "admin", permisos: {} }, // {} => fallback por rol: admin no tiene equipos_aprobacion
+    user: {
+      role: "admin",
+      permisos: {
+        inicio: ["ver"],
+        perfil: ["ver", "editar_propio"],
+        presupuestos: ["ver_global", "ver_propio", "subir_ticket", "validar_ticket", "borrar_ticket", "gestionar_ciclos", "gastos_generales", "exportar"],
+        equipos_inventario: ["ver"],
+        equipos_prestamos: ["solicitar", "ver_propios", "ver_global", "registrar_devolucion", "exportar"],
+      },
+    },
   },
 };
 

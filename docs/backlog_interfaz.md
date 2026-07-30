@@ -231,7 +231,21 @@
         (equipos-seleccionados, equipos-devolucion, decisiones-devolucion,
         badge-estado, badge-autorizacion); los dos modales de aprobacion
         pasaron de div a ul/li real. Regresion completa: 78/78.
-  - [ ] **Lote 5 — B-I14: retirar fallbackPorRol.js.**
+  - [x] **Lote 5 — B-I14: retirar fallbackPorRol.js.** Confirmado con un
+        usuario real de cada rol base: /auth/me manda permisos poblado
+        para los 4 (superadmin, admin, creador, colaborador_mkt), union
+        exacta de _PISO + su paquete, igual byte a byte a
+        permisos_catalogo.json. (Nota: /auth/login manda permisos:{} a
+        proposito -- eso no es el hallazgo, el endpoint correcto es
+        /auth/me). fallbackPorRol.js borrado; usePermisos.js sin la rama
+        de fallback; PermisosDemo.jsx actualizado (2 de sus 3 personas
+        dependian del fallback). Regresion completa: equipos-flujo-
+        completo 8/8 (x3), equipos mock 22/22, auth/presupuesto/pantallas
+        39/39. gastos-generales 8/9 -- el fallo es un huso horario real
+        de Presupuestos (upload_date en UTC vs filtro de fecha en hora
+        local, cruzan distinto entre ~18h y medianoche CDMX), no
+        relacionado con este lote ni con Equipos -- reportado, no
+        tocado (fuera de equipos/).
   - [ ] **Lote 6 — Cierre e integracion.**
   - [ ] **Lote 7 — OPCIONAL: B-I07 (useMobile/RowActions compartidos).**
 - [x] **I5 — Permisos en la UI.** Commit de este issue (modo 09-ejecutar-todo,
@@ -333,12 +347,14 @@
       RowActions.jsx` en vez de `frontend/src/modules/presupuestos/
       components/RowActions.jsx`). Si se promueve a compartido, hacerlo junto
       con `useMobile` y corregir ambas referencias a la vez.
-- [ ] **B-I14 — Retirar `fallbackPorRol.js`** cuando WP1 (RBAC aditivo del
-      servidor) este en pie y `/auth/me` mande siempre `permisos` con
-      contenido real. Vive en `src/modules/equipos/permisos/`, marcado
-      "TEMPORAL" en su cabecera. Al retirarlo, `usePermisos` deja de
-      necesitar la rama de fallback y el import de `catalogo.js` en ese
-      archivo especifico ya no hace falta.
+- [x] **B-I14 — Retirar `fallbackPorRol.js`** — cerrado en I8 lote 5.
+      WP1 aterrizo y /auth/me confirmado mandando `permisos` real para
+      los 4 roles base. Archivo borrado, rama de fallback retirada de
+      `usePermisos.js`. Correccion a esta nota: el import de
+      `catalogo.js` (`accionExiste`) en `usePermisos.js` SI sigue
+      haciendo falta -- es para el chequeo de "clave desconocida contra
+      el catalogo" (independiente del fallback), no para el fallback en
+      si; no se retiro.
 
 ## Pedidos a otros carriles
 

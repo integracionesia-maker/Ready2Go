@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { accionExiste } from "./catalogo";
-import { fallbackPorRol } from "./fallbackPorRol";
 
 // Dedupe por clave: cada (modulo, accion) desconocida se avisa una sola vez
 // por sesión de página, no en cada render/click.
@@ -30,14 +29,13 @@ export function usePermisos(userOverride) {
   const { user: authUser } = useAuth();
   const user = userOverride !== undefined ? userOverride : authUser;
 
-  const permisos = useMemo(() => {
-    if (!user) return {};
-    const propios = user.permisos;
-    const tieneContenido = propios && typeof propios === "object" && Object.keys(propios).length > 0;
-    if (tieneContenido) return propios;
-    // Fallback TEMPORAL (fallbackPorRol.js) mientras WP1 no aterriza.
-    return fallbackPorRol(user.role);
-  }, [user]);
+  // I8 lote 5 (B-I14): confirmado que /auth/me manda `permisos` con
+  // contenido real para los 4 roles base (superadmin, admin, creador,
+  // colaborador_mkt) — WP1 aterrizó. Se retiró `fallbackPorRol.js`, el
+  // respaldo temporal que derivaba permisos del rol base cuando el
+  // servidor mandaba `{}`; deny-by-default ahora aplica también si por
+  // algún motivo `permisos` llegara vacío (nunca debería, salvo un bug).
+  const permisos = useMemo(() => user?.permisos ?? {}, [user]);
 
   function permisosDe(modulo) {
     if (permisos === "*") return ["*"];

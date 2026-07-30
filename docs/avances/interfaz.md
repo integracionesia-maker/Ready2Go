@@ -345,6 +345,63 @@ romper nada (48 Presupuestos + 22 Equipos mock + 8 de este archivo).
 **Riesgo nuevo**: ninguno — el único bug de código (`cargarDisponibles`)
 se arregló en este mismo commit.
 
+### Lote 5 — B-I14: retirar fallbackPorRol.js (cerrado)
+
+Se creó 1 usuario real de cada rol base (`superadmin`, `admin`, `creador`
+— requiere un Creador vinculado, `colaborador_mkt`) y se peleó
+`GET /api/auth/me` con cada sesión. **Los 4 mandan `permisos` poblado**,
+unión exacta de `_PISO` + su paquete de rol base, byte a byte igual a
+`docs/contratos/permisos_catalogo.json` (comparado campo por campo, no
+solo "no está vacío"):
+
+```
+superadmin:      {inicio, perfil, presupuestos, equipos_inventario,
+                   equipos_prestamos, equipos_aprobacion, usuarios} — TODO
+admin:            presupuestos completo + equipos_inventario:[ver] +
+                   equipos_prestamos sin "cancelar"
+creador:          presupuestos:[ver_propio, subir_ticket]
+colaborador_mkt:  equipos_inventario:[ver] +
+                   equipos_prestamos:[solicitar, ver_propios, registrar_devolucion]
+```
+
+Nota aparte (no es el hallazgo de este lote, solo para no confundir a
+quien lea el JSON crudo de `/auth/login`): ese endpoint manda `permisos:
+{}` a propósito — el propio código de `/auth/me` lo dice ("Los permisos
+van aquí y no en login/refresh"). El endpoint que hay que mirar para
+B-I14 es `/auth/me`, no `/auth/login`.
+
+**Retirado `fallbackPorRol.js`** (borrado) y su rama en `usePermisos.js`
+(`permisos = user?.permisos ?? {}`, sin derivar nada del rol si llega
+vacío — deny-by-default real ahora, no solo mientras WP1 no aterrizaba).
+`PermisosDemo.jsx` (I5, demo temporal) tenía 2 de sus 3 personas
+sintéticas con `permisos: {}` a propósito para forzar el fallback — se
+actualizaron a permisos ya resueltos (mismo patrón que su tercera persona
+ya usaba, "tal como lo mandaría un /auth/me de WP1") para que la demo
+siga funcionando sin el fallback.
+
+**Evidencia**: `npm run build` verde (bundle ~1.5 kB más chico, el
+fallback ya no entra). Regresión completa sin romper nada:
+`equipos-flujo-completo.spec.js` 8/8 (repetido 3 veces, `usePermisos`
+gatea toda la UI de Equipos), `equipos-errores`/`contrato-fixtures`/
+`paridad-bodies-equipos` 22/22, `auth`/`presupuesto-flujo-completo`/
+`pantallas` 39/39. `gastos-generales.spec.js`: 8/9 — el 9no ("admin crea
+un gasto general y aparece en la tabla") falló por un huso horario real,
+no relacionado con este lote ni con Equipos: `GeneralExpense.upload_date`
+se sella con `datetime.now(timezone.utc)` (UTC real) mientras el filtro
+de fecha del frontend usa "hoy" del navegador (hora local, Ciudad de
+México, UTC-6). Corriendo esta prueba entre ~18:00 y medianoche hora
+local, UTC ya cruzó a "mañana" — el gasto recién creado queda sellado un
+día adelante del filtro "este mes" y no aparece hasta que la hora local
+también cruce medianoche. Confirmado leyendo `models.py` y comparando
+`date`/`date -u` del sistema (19:04 local vs 01:04 UTC del día
+siguiente, en el momento exacto de la corrida). Es un hallazgo real de
+Presupuestos (no de este carril ni de I8) — se reporta, no se toca
+(fuera de `equipos/`, y la prueba volvió a pasar con normalidad en
+corridas de lotes anteriores del mismo día, antes de esta franja
+horaria).
+
+**Riesgo nuevo**: ninguno de código de Equipos.
+
 ## 2026-07-29 (sesion 3 — modo 09-ejecutar-todo, cinco issues sin push)
 
 ### ISSUE I2 — Piel de Presupuestos (cerrada, 1 commit)
