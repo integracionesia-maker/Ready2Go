@@ -110,6 +110,15 @@ PAQUETES: dict[str, dict] = {
             "equipos_prestamos": ("solicitar", "ver_propios", "registrar_devolucion"),
         },
     },
+    "usuario": {
+        "kind": KIND_BASE,
+        "descripcion": "Empleado general. Acceso minimo: solo inicio y perfil propio. "
+        "Los permisos a modulos se conceden via paquetes aditivos.",
+        "permisos": {
+            # Solo piso -- sin acceso a presupuestos ni equipos por defecto.
+            # Los modulos se abren con paquetes aditivos.
+        },
+    },
     "APROBADOR_EQUIPO": {
         "kind": KIND_ADITIVO,
         "descripcion": "Autoriza entregas y confirma devoluciones de equipo. Cero permisos de presupuestos.",

@@ -6,6 +6,8 @@ const ROLE_LABELS = {
   superadmin: "Superadministrador",
   admin: "Administrador",
   creador: "Creador",
+  colaborador_mkt: "Marketing",
+  usuario: "Usuario",
 };
 
 function formatCurrency(amount) {

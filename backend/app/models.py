@@ -21,6 +21,10 @@ class UserRole(str, enum.Enum):
     # Rol base del area de marketing (Control de Equipos). No abre nada de
     # presupuestos: su paquete vive en rbac_catalog.py, no aqui.
     COLABORADOR_MKT = "colaborador_mkt"
+    # Empleado general sin acceso por defecto a ningun modulo (solo el piso:
+    # inicio + perfil propio). Todo acceso se concede via paquetes aditivos.
+    # Su paquete base (vacio) vive en rbac_catalog.py, no aqui.
+    USUARIO = "usuario"
 
 
 class CyclePeriod(str, enum.Enum):

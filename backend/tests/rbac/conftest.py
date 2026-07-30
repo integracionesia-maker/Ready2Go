@@ -17,8 +17,8 @@ from app.models_rbac import UserRoleGrant
 from ..conftest import make_user
 
 RAIZ_REPO = Path(__file__).resolve().parents[3]
-CONTRATO_PERMISOS = RAIZ_REPO / "docs" / "contratos" / "permisos_catalogo.json"
-CONTRATO_AUTH_ME = RAIZ_REPO / "docs" / "contratos" / "auth_me.json"
+CONTRATO_PERMISOS = RAIZ_REPO / "docs" / "equipos" / "contratos" / "permisos_catalogo.json"
+CONTRATO_AUTH_ME = RAIZ_REPO / "docs" / "equipos" / "contratos" / "auth_me.json"
 
 PASSWORD_MKT = "MarketingClave123!"
 

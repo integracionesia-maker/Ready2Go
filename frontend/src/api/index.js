@@ -71,6 +71,27 @@ export function setUserActive(id, isActive) {
   });
 }
 
+/* ── Roles y permisos (RBAC aditivo, solo superadmin) ───────────────────── */
+
+export function fetchRoles() {
+  return request("/roles/");
+}
+
+export function fetchUserRoles(userId) {
+  return request(`/users/${userId}/roles`);
+}
+
+export function grantUserRole(userId, roleName) {
+  return request(`/users/${userId}/roles`, {
+    method: "POST",
+    body: JSON.stringify({ role_name: roleName }),
+  });
+}
+
+export function revokeUserRole(userId, roleName) {
+  return request(`/users/${userId}/roles/${roleName}`, { method: "DELETE" });
+}
+
 /* ── Creators ────────────────────────────────────────────────────────────── */
 
 export function fetchCreators(activeOnly = false) {

@@ -73,8 +73,13 @@ test.describe.serial("Flujo de autenticación por rol", () => {
     await login(page, SUPERADMIN.username, SUPERADMIN.password);
     await changePasswordOnForcedPerfil(page, SUPERADMIN.password, "SuperClaveE2ENueva123!");
 
-    await page.goto("/administracion");
-    await page.click('button:has-text("Usuarios")');
+    // El botón "Administración" (del sistema) del menú de perfil es exclusivo
+    // de superadmin.
+    await page.click('button[aria-haspopup="true"]');
+    await expect(page.getByRole("menuitem", { name: "Administración" })).toBeVisible();
+    await page.click('button:has-text("Administración")');
+    await expect(page).toHaveURL(/\/administracion-sistema/);
+
     await page.click('button:has-text("Nuevo Usuario")');
 
     const modal = page.locator(".fixed.inset-0");
@@ -103,9 +108,22 @@ test.describe.serial("Flujo de autenticación por rol", () => {
     await expect(page).not.toHaveURL(/\/403/);
 
     await page.goto("/administracion");
-    // R4: "Usuarios" ya no es una pestaña visible/operable para admin.
+    // R4: gestión de usuarios ya no vive aquí en absoluto (se movió a
+    // /administracion-sistema, exclusiva de superadmin) — "Usuarios" no
+    // aparece como pestaña para ningún rol en esta vista.
     await expect(page.getByRole("button", { name: "Usuarios", exact: true })).toHaveCount(0);
 
+    // El botón "Administración" (del sistema) del menú de perfil es exclusivo
+    // de superadmin — un admin no lo ve.
+    await page.click('button[aria-haspopup="true"]');
+    await expect(page.getByRole("menuitem", { name: "Administración" })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    // Navegación directa también está bloqueada (ProtectedRoute roles=["superadmin"]).
+    await page.goto("/administracion-sistema");
+    await expect(page).toHaveURL(/\/403/);
+
+    await page.goto("/administracion");
     await page.click('button:has-text("Creadores")');
     await page.click('button:has-text("Nuevo Creador")');
 
@@ -131,8 +149,7 @@ test.describe.serial("Flujo de autenticación por rol", () => {
     test.skip(!SUPERADMIN.password, "Requiere que el test anterior haya creado el creador");
 
     await login(page, SUPERADMIN.username, "SuperClaveE2ENueva123!");
-    await page.goto("/administracion");
-    await page.click('button:has-text("Usuarios")');
+    await page.goto("/administracion-sistema");
     await page.click('button:has-text("Nuevo Usuario")');
 
     const userModal = page.locator(".fixed.inset-0");
@@ -177,8 +194,7 @@ test.describe.serial("Flujo de autenticación por rol", () => {
 
     // Login como superadmin para desactivar al admin recién creado.
     await login(page, SUPERADMIN.username, "SuperClaveE2ENueva123!");
-    await page.goto("/administracion");
-    await page.click('button:has-text("Usuarios")');
+    await page.goto("/administracion-sistema");
 
     const row = page.locator("tr", { hasText: ADMIN.username });
     await row.getByRole("button", { name: "Desactivar" }).click();

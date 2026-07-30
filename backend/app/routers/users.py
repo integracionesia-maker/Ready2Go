@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud, models, schemas, security
 from ..database import get_db
-from ..dependencies import require_role
+from ..rbac import require_perm
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -45,7 +45,7 @@ def _get_target_or_404(db: Session, user_id: int) -> models.User:
 def list_users(
     role: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("superadmin")),
+    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
 ):
     return crud.list_users(db, role=role)
 
@@ -54,7 +54,7 @@ def list_users(
 def create_user(
     data: schemas.UserCreateRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("superadmin")),
+    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
 ):
     _ensure_assignable_role(data.role)
 
@@ -113,7 +113,7 @@ def create_user(
 def get_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("superadmin")),
+    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
 ):
     return _get_target_or_404(db, user_id)
 
@@ -123,7 +123,7 @@ def update_user(
     user_id: int,
     data: schemas.UserUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("superadmin")),
+    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
 ):
     target = _get_target_or_404(db, user_id)
     _ensure_not_superadmin_target(target)
@@ -158,7 +158,7 @@ def update_user(
 def reset_password(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("superadmin")),
+    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
 ):
     target = _get_target_or_404(db, user_id)
     _ensure_not_superadmin_target(target)
@@ -182,7 +182,7 @@ def set_user_estado(
     user_id: int,
     data: schemas.SetUserActiveRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("superadmin")),
+    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
 ):
     target = _get_target_or_404(db, user_id)
     _ensure_not_superadmin_target(target)

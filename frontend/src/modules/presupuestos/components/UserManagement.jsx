@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createUser, fetchUsers, resetUserPassword, setUserActive, updateUser } from "@/api";
+import { createUser, fetchUserRoles, fetchUsers, resetUserPassword, setUserActive, updateUser } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import Modal from "./Modal";
 import { RowActions } from "@/design";
@@ -10,11 +10,15 @@ const ROLE_LABELS = {
   superadmin: "Superadministrador",
   admin: "Administrador",
   creador: "Creador",
+  colaborador_mkt: "Marketing",
+  usuario: "Usuario",
 };
 
 const ROLE_OPTIONS = [
   { value: "admin", label: "Administrador" },
   { value: "creador", label: "Creador" },
+  { value: "colaborador_mkt", label: "Marketing" },
+  { value: "usuario", label: "Usuario" },
 ];
 
 const USER_COLUMNS = [
@@ -39,6 +43,7 @@ export default function UserManagement({ creators }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [rolesPorUsuario, setRolesPorUsuario] = useState({});
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -56,12 +61,28 @@ export default function UserManagement({ creators }) {
     setLoading(true);
     setError(null);
     try {
-      setUsers(await fetchUsers());
+      const fetchedUsers = await fetchUsers();
+      setUsers(fetchedUsers);
+      loadRolesPorUsuario(fetchedUsers);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadRolesPorUsuario = async (usersToLoad) => {
+    const entries = await Promise.all(
+      usersToLoad.map(async (u) => {
+        try {
+          const detalle = await fetchUserRoles(u.id);
+          return [u.id, detalle.aditivos || []];
+        } catch {
+          return [u.id, []];
+        }
+      })
+    );
+    setRolesPorUsuario(Object.fromEntries(entries));
   };
 
   useEffect(() => {
@@ -201,6 +222,7 @@ export default function UserManagement({ creators }) {
                 <SortableHeaderCell label="Nombre" columnKey="full_name" activeKey={sortKey} dir={sortDir} onSort={cycleSort} />
                 <th>Correo</th>
                 <SortableHeaderCell label="Rol" columnKey="role" activeKey={sortKey} dir={sortDir} onSort={cycleSort} />
+                <th>Paquetes aditivos</th>
                 <SortableHeaderCell
                   label="Estado"
                   columnKey="is_active"
@@ -242,6 +264,21 @@ export default function UserManagement({ creators }) {
                       >
                         {ROLE_LABELS[u.role] || u.role}
                       </span>
+                    </td>
+                    <td>
+                      {(rolesPorUsuario[u.id] || []).length === 0 ? (
+                        <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                          —
+                        </span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {rolesPorUsuario[u.id].map((a) => (
+                            <span key={a.role_name} className="go-badge go-badge-warning">
+                              {a.role_name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="text-center">
                       <span className={`go-badge ${u.is_active ? "go-badge-success" : "go-badge-error"}`}>

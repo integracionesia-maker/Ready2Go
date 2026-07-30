@@ -43,9 +43,15 @@ export function AuthProvider({ children }) {
   }, [checkSession]);
 
   const login = useCallback(async (identificador, password) => {
+    // login no resuelve permisos (es caro, y /auth/me es el unico endpoint que
+    // el cliente vuelve a consultar cuando algo cambia) — por eso el cuerpo de
+    // login trae `permisos: {}`. Si nos quedaramos con eso, EquiposSidebar
+    // (que filtra por usePermisos) se veria vacio hasta el proximo F5 (B1).
     const { user: loggedInUser } = await apiLogin(identificador, password);
     setUser(loggedInUser);
-    return loggedInUser;
+    const me = await fetchMe();
+    setUser(me);
+    return me;
   }, []);
 
   const logout = useCallback(async () => {

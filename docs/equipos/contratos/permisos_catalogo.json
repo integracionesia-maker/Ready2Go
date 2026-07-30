@@ -15,6 +15,7 @@
     "admin":            {"kind":"base",   "permisos":{"presupuestos":["ver_global","ver_propio","subir_ticket","validar_ticket","borrar_ticket","gestionar_ciclos","gastos_generales","exportar"],"equipos_inventario":["ver"],"equipos_prestamos":["solicitar","ver_propios","ver_global","registrar_devolucion","exportar"]}},
     "creador":          {"kind":"base",   "permisos":{"presupuestos":["ver_propio","subir_ticket"]}},
     "colaborador_mkt":  {"kind":"base",   "permisos":{"equipos_inventario":["ver"],"equipos_prestamos":["solicitar","ver_propios","registrar_devolucion"]}},
+    "usuario":          {"kind":"base",   "permisos":{}},
     "APROBADOR_EQUIPO": {"kind":"aditivo","permisos":{"equipos_aprobacion":["autorizar_entrega","confirmar_devolucion","cerrar_incidencia"],"equipos_prestamos":["ver_global"]}},
     "CUSTODIO_EQUIPO":  {"kind":"aditivo","permisos":{"equipos_inventario":["crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["ver_global"]}},
     "AUDITOR":          {"kind":"aditivo","permisos":{"presupuestos":["ver_global"],"equipos_inventario":["ver"],"equipos_prestamos":["ver_global"]}}

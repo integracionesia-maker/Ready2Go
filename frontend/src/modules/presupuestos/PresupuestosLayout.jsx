@@ -22,8 +22,10 @@ const ValidationQueue = lazy(() => import("./components/ValidationQueue"));
 const GeneralExpensesPage = lazy(() => import("./pages/GeneralExpensesPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ForbiddenPage = lazy(() => import("./pages/ForbiddenPage"));
+const SystemAdminPage = lazy(() => import("./pages/SystemAdminPage"));
 
 const ADMIN_ROLES = ["admin", "superadmin"];
+const SUPERADMIN_ONLY = ["superadmin"];
 
 function firstOfMonth(y, m) {
   return new Date(y, m, 1);
@@ -229,6 +231,18 @@ export default function PresupuestosLayout() {
               element={
                 <ProtectedRoute roles={ADMIN_ROLES}>
                   <GeneralExpensesPage brands={brands} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/administracion-sistema"
+              element={
+                <ProtectedRoute roles={SUPERADMIN_ONLY}>
+                  {loading || networkError ? (
+                    <LoadingScreen isOffline={networkError} onRetry={loadData} />
+                  ) : (
+                    <SystemAdminPage creators={creators} />
+                  )}
                 </ProtectedRoute>
               }
             />

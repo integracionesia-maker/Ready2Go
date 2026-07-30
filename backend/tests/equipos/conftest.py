@@ -24,7 +24,7 @@ from app.models_equipos import (
 from ..conftest import make_user
 
 RAIZ_REPO = Path(__file__).resolve().parents[3]
-DIR_FIXTURES = RAIZ_REPO / "docs" / "contratos" / "fixtures"
+DIR_FIXTURES = RAIZ_REPO / "docs" / "equipos" / "contratos" / "fixtures"
 
 PASSWORD_MKT = "MarketingClave123!"
 

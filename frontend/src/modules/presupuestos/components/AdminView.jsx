@@ -3,7 +3,6 @@ import { createCreator, updateCreator, createBrand, updateBrand, fetchCreatorCyc
 import { useAuth } from "@/context/AuthContext";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import Modal from "./Modal";
-import UserManagement from "./UserManagement";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
 import { RowActions } from "@/design";
@@ -28,7 +27,6 @@ function formatCurrency(amount) {
 const SECTIONS = [
   { key: "creators", label: "Creadores" },
   { key: "brands", label: "Marcas" },
-  { key: "users", label: "Usuarios", roles: ["superadmin"] },
 ];
 
 export default function AdminView({ creators, brands, onChange }) {
@@ -537,9 +535,6 @@ export default function AdminView({ creators, brands, onChange }) {
           )}
         </div>
       )}
-
-      {/* ── Users section ──────────────────────────────────────────────── */}
-      {section === "users" && user.role === "superadmin" && <UserManagement creators={creators} />}
 
       {/* ── Creator create/edit modal ──────────────────────────────────── */}
       {creatorFormOpen && (

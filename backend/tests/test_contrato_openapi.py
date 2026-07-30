@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 
 RAIZ_REPO = Path(__file__).resolve().parents[2]
-CONTRATO_OPENAPI = RAIZ_REPO / "docs" / "contratos" / "openapi_equipos_v1.json"
+CONTRATO_OPENAPI = RAIZ_REPO / "docs" / "equipos" / "contratos" / "openapi_equipos_v1.json"
 
 MOTIVO_SKIP = (
     "docs/contratos/openapi_equipos_v1.json no existe todavia (contrato §8: "

@@ -110,8 +110,9 @@ test.describe.serial("Flujo completo de negocio (R1-R11)", () => {
   test("bootstrap: superadmin crea admin, creador con ciclo semanal y marca de prioridad alta", async ({ page }) => {
     await loginSuperadmin(page);
 
-    await page.goto("/administracion");
-    await page.click('button:has-text("Usuarios")');
+    // Gestión de usuarios vive en /administracion-sistema (exclusiva de
+    // superadmin); Creadores/Marcas siguen en /administracion.
+    await page.goto("/administracion-sistema");
     await page.click('button:has-text("Nuevo Usuario")');
     let modal = page.locator(".fixed.inset-0");
     await modal.locator('input[type="text"]').nth(0).fill(ADMIN.username);
@@ -122,6 +123,7 @@ test.describe.serial("Flujo completo de negocio (R1-R11)", () => {
     await modal.locator('button:has-text("Crear")').click();
     await expect(page.getByRole("cell", { name: ADMIN.username, exact: true })).toBeVisible();
 
+    await page.goto("/administracion");
     await page.click('button:has-text("Creadores")');
     await page.click('button:has-text("Nuevo Creador")');
     modal = page.locator(".fixed.inset-0");
@@ -144,7 +146,7 @@ test.describe.serial("Flujo completo de negocio (R1-R11)", () => {
     await expect(brandRow).toBeVisible();
     await expect(brandRow).toContainText("Alta");
 
-    await page.click('button:has-text("Usuarios")');
+    await page.goto("/administracion-sistema");
     await page.click('button:has-text("Nuevo Usuario")');
     modal = page.locator(".fixed.inset-0");
     await modal.locator('input[type="text"]').nth(0).fill(CREADOR.username);
