@@ -3,7 +3,7 @@ import { fetchTickets, softDeleteTicket, hardDeleteTicket } from "@/api";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import MediaViewerModal from "./MediaViewerModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import { RowActions } from "@/design";
+import { RowActions, ICONS } from "@/design";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
 import { useAuth } from "@/context/AuthContext";
@@ -351,10 +351,11 @@ export default function TransactionTable({ creators, brands, onChange }) {
                   <td className="text-center">
                     <RowActions
                       actions={[
-                        { key: "ver", label: "Ver", onClick: () => setViewerTicket(t) },
+                        { key: "ver", label: "Ver", icon: ICONS.ver, onClick: () => setViewerTicket(t) },
                         canDelete && {
                           key: "eliminar",
                           label: "Eliminar",
+                          icon: ICONS.eliminar,
                           variant: "danger",
                           onClick: () => setDeleteTarget(t),
                         },

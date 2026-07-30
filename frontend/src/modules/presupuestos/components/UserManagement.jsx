@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createUser, fetchUsers, resetUserPassword, setUserActive, updateUser } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import Modal from "./Modal";
-import { RowActions } from "@/design";
+import { RowActions, ICONS } from "@/design";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
 
@@ -254,16 +254,23 @@ export default function UserManagement({ creators }) {
                     <td>
                       <RowActions
                         actions={[
-                          !isTargetSuperadmin && { key: "editar", label: "Editar", onClick: () => openEditForm(u) },
+                          !isTargetSuperadmin && {
+                            key: "editar",
+                            label: "Editar",
+                            icon: ICONS.editar,
+                            onClick: () => openEditForm(u),
+                          },
                           !isTargetSuperadmin && {
                             key: "reset",
                             label: "Resetear contraseña",
                             mobileLabel: "Reset",
+                            icon: ICONS.resetear,
                             onClick: () => handleResetPassword(u),
                           },
                           !isTargetSuperadmin && {
                             key: "toggle",
                             label: u.is_active ? "Desactivar" : "Activar",
+                            icon: ICONS.toggle,
                             variant: u.is_active ? "danger" : undefined,
                             onClick: () => openToggleConfirm(u),
                           },

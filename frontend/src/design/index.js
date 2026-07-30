@@ -12,4 +12,5 @@ export { ToastProvider, useToast } from "./Toast";
 export { CommandPaletteProvider, useCommandPalette, useRegisterCommand } from "./CommandPalette";
 export { default as RowActions } from "./RowActions";
 export { useMobile } from "./useMobile";
+export { ICONS } from "./icons";
 export * as motionTokens from "./motion";

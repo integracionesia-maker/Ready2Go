@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { EmptyState, SkeletonShimmer, useToast, RowActions } from "@/design";
+import { EmptyState, SkeletonShimmer, useToast, RowActions, ICONS } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchLoans, fetchLoanById, loanResponsivaUrl } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -222,16 +222,27 @@ export default function ActivosPage() {
                     <td>
                       <RowActions
                         actions={[
-                          { key: "ficha", label: "Ver ficha", onClick: () => navigate(`/equipos/prestamo/${loan.folio}`) },
+                          {
+                            key: "ficha",
+                            label: "Ver ficha",
+                            icon: ICONS.ver,
+                            onClick: () => navigate(`/equipos/prestamo/${loan.folio}`),
+                          },
                           // `LoanRow` no trae `responsiva` (solo `LoanDetail` la
                           // tiene) — el folio se asigna en el mismo momento que
                           // la responsiva (al confirmar), así que su presencia
                           // es la señal disponible en la fila.
-                          loan.folio && { key: "responsiva", label: "Ver responsiva", onClick: () => verResponsiva(loan) },
+                          loan.folio && {
+                            key: "responsiva",
+                            label: "Ver responsiva",
+                            icon: ICONS.responsiva,
+                            onClick: () => verResponsiva(loan),
+                          },
                           loan.estado === "prestado" &&
                             puede("equipos_prestamos", "registrar_devolucion") && {
                               key: "devolucion",
                               label: cargandoDevolucion === loan.id ? "Abriendo..." : "Registrar devolución",
+                              icon: ICONS.devolucion,
                               onClick: () => abrirDevolucion(loan),
                             },
                         ]}

@@ -4,7 +4,7 @@ import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import MediaViewerModal from "./MediaViewerModal";
 import Modal from "./Modal";
-import { RowActions } from "@/design";
+import { RowActions, ICONS } from "@/design";
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("es-MX", {
@@ -165,17 +165,24 @@ export default function ValidationQueue({ onChange }) {
                     <td>
                       <RowActions
                         actions={[
-                          { key: "ver", label: "Ver", onClick: () => setViewerTicket(t) },
-                          { key: "aprobar", label: "Aprobar", onClick: () => setApproveTarget(t) },
+                          { key: "ver", label: "Ver", icon: ICONS.ver, onClick: () => setViewerTicket(t) },
+                          { key: "aprobar", label: "Aprobar", icon: ICONS.aprobar, onClick: () => setApproveTarget(t) },
                           {
                             key: "rechazar",
                             label: "Rechazar",
+                            icon: ICONS.rechazar,
                             onClick: () => {
                               setRejectTarget(t);
                               setRejectReason("");
                             },
                           },
-                          { key: "eliminar", label: "Eliminar", variant: "danger", onClick: () => setDeleteTarget(t) },
+                          {
+                            key: "eliminar",
+                            label: "Eliminar",
+                            icon: ICONS.eliminar,
+                            variant: "danger",
+                            onClick: () => setDeleteTarget(t),
+                          },
                         ]}
                       />
                     </td>

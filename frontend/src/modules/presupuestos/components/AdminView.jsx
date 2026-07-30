@@ -6,7 +6,7 @@ import Modal from "./Modal";
 import UserManagement from "./UserManagement";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
-import { RowActions } from "@/design";
+import { RowActions, ICONS } from "@/design";
 
 const CREATOR_COLUMNS = [
   { key: "name", label: "Nombre", type: "string" },
@@ -425,11 +425,17 @@ export default function AdminView({ creators, brands, onChange }) {
                       <td>
                         <RowActions
                           actions={[
-                            { key: "editar", label: "Editar", onClick: () => openCreatorForm(c) },
-                            { key: "historico", label: "Histórico", onClick: () => openCycleHistory(c) },
+                            { key: "editar", label: "Editar", icon: ICONS.editar, onClick: () => openCreatorForm(c) },
+                            {
+                              key: "historico",
+                              label: "Histórico",
+                              icon: ICONS.historico,
+                              onClick: () => openCycleHistory(c),
+                            },
                             {
                               key: "toggle",
                               label: c.is_active ? "Desactivar" : "Activar",
+                              icon: ICONS.toggle,
                               variant: c.is_active ? "danger" : undefined,
                               onClick: () => openConfirmToggle("creator", c),
                             },
@@ -518,10 +524,11 @@ export default function AdminView({ creators, brands, onChange }) {
                       <td>
                         <RowActions
                           actions={[
-                            { key: "editar", label: "Editar", onClick: () => openBrandForm(b) },
+                            { key: "editar", label: "Editar", icon: ICONS.editar, onClick: () => openBrandForm(b) },
                             {
                               key: "toggle",
                               label: b.is_active ? "Desactivar" : "Activar",
+                              icon: ICONS.toggle,
                               variant: b.is_active ? "danger" : undefined,
                               onClick: () => openConfirmToggle("brand", b),
                             },
