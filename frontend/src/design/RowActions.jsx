@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useMobile } from "../hooks/useMobile";
+import { useMobile } from "./useMobile";
 
 /**
  * Acciones de una fila de tabla (auditoría de responsividad móvil, C2/C3):

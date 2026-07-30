@@ -3,7 +3,7 @@ import DateRangeFilter from "../components/DateRangeFilter";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import GeneralExpenseModal from "../components/GeneralExpenseModal";
 import GeneralExpensesExportModal from "../components/GeneralExpensesExportModal";
-import RowActions from "../components/RowActions";
+import { RowActions } from "@/design";
 import { fetchGeneralExpenses, softDeleteGeneralExpense, hardDeleteGeneralExpense, generalExpenseFileUrl } from "@/api";
 
 function formatCurrency(amount) {

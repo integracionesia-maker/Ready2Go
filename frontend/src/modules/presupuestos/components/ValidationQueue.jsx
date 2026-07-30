@@ -4,7 +4,7 @@ import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import MediaViewerModal from "./MediaViewerModal";
 import Modal from "./Modal";
-import RowActions from "./RowActions";
+import { RowActions } from "@/design";
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("es-MX", {

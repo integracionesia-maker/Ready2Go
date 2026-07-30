@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import Chart from "react-apexcharts";
 import { createApexOptions, GO_CHART_COLORS } from "./apexTheme";
 import { useTheme } from "@/context/ThemeContext";
-import { useMobile } from "../../hooks/useMobile";
+import { useMobile } from "@/design";
 
 function usageColor(pct) {
   if (pct >= 90) return "#E53E3E"; // go-error

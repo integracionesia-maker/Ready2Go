@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { EmptyState, SkeletonShimmer } from "@/design";
+import { EmptyState, SkeletonShimmer, RowActions } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchEquipmentList } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
 import RequierePermiso from "../permisos/RequierePermiso";
-import RowActions from "../../presupuestos/components/RowActions";
 import EquipmentCard from "../components/EquipmentCard";
 import EquipmentFormModal from "../components/EquipmentFormModal";
 import EquipmentAuditModal from "../components/EquipmentAuditModal";

@@ -1,5 +1,28 @@
 # Changelog — interfaz
 
+## 2026-07-29/30 (I8 lote 7 opcional — Promover useMobile/RowActions compartidos)
+
+### Movido
+
+- `frontend/src/modules/presupuestos/hooks/useMobile.js` →
+  `frontend/src/design/useMobile.js`.
+- `frontend/src/modules/presupuestos/components/RowActions.jsx` →
+  `frontend/src/design/RowActions.jsx` (su import interno de `useMobile`
+  actualizado a `./useMobile`).
+- `frontend/src/design/index.js` — exporta `RowActions` y `useMobile`.
+- 13 sitios de importación actualizados a `@/design`: `TransactionTable`,
+  `ValidationQueue`, `AdminView`, `UserManagement`, `GeneralExpensesPage`,
+  `GeneralExpensesExportModal`, 5 `charts/*.jsx` (Presupuestos);
+  `ActivosPage`, `InventarioPage` (Equipos — antes cruzaban a
+  `modules/presupuestos/`, la violación de límite de módulo real detrás
+  de este lote).
+
+### Documentado
+
+- `CLAUDE.md:46` — las dos rutas corregidas a `frontend/src/design/`.
+- `doc/responsividad-movil.md` — rutas corregidas (nunca habían
+  coincidido con la ubicación real, ni antes de este lote).
+
 ## 2026-07-29/30 (I8 lote 6 — Cierre e integración)
 
 ### Agregado

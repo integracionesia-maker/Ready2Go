@@ -3,7 +3,7 @@ import { fetchTickets, softDeleteTicket, hardDeleteTicket } from "@/api";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import MediaViewerModal from "./MediaViewerModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import RowActions from "./RowActions";
+import { RowActions } from "@/design";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
 import { useAuth } from "@/context/AuthContext";

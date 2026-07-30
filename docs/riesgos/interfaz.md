@@ -34,7 +34,7 @@ rojo (ver `1568ff6`).
 
 `CLAUDE.md` esta fuera de mi alcance. **Pido que se corrija arriba.**
 
-## R-I03 — `CLAUDE.md` apunta a una ruta que I0 movio
+## R-I03 — `CLAUDE.md` apunta a una ruta que I0 movio (RESUELTO en I8 lote 7)
 
 `CLAUDE.md:46` dice `frontend/src/hooks/useMobile.js`. Desde `d602e00` vive en
 `frontend/src/modules/presupuestos/hooks/useMobile.js`.
@@ -55,6 +55,14 @@ que sí existe. Mismo tratamiento que arriba: no me toca editar
 `CLAUDE.md`; si `RowActions.jsx` se promueve a un lugar compartido (junto
 con `useMobile.js` en B-I07, o antes), es el momento de corregir ambas
 referencias a la vez.
+
+**Resuelto (I8 lote 7)**: los dos archivos promovidos a `frontend/src/design/`
+(compartido de verdad ahora entre Presupuestos y Equipos — `ActivosPage.jsx`/
+`InventarioPage.jsx` ya no importan cruzando a `modules/presupuestos/`, la
+violación de límite de módulo que motivó B-I07). Las dos referencias de
+`CLAUDE.md:46` corregidas a `frontend/src/design/useMobile.js` y
+`frontend/src/design/RowActions.jsx`. 13 sitios de importación actualizados
+(6 de `useMobile`, 7 de `RowActions`); regresión completa sin romper nada.
 
 ## R-I04 — `seed_demo_year.py` deja una DB que parece sembrada y pinta ceros
 

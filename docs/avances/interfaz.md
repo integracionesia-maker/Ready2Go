@@ -467,9 +467,62 @@ cerrados con evidencia dura (B-I11/B-I13/B-I15), 1 hallazgo real y
 pre-existente fuera de mi carril reportado sin tocar (R-I15, Presupuestos).
 Ningún commit rompió el anterior: la regresión completa (48 Presupuestos
 + 22 Equipos mock + 8 `equipos-flujo-completo.spec.js` reales = 78) se
-corrió después de cada lote. Lote 7 (opcional) queda a discreción: solo
-si se pide explícitamente, ya que I8 lo marca "solo si 1-6 cerraron
-verdes" — y cerraron.
+corrió después de cada lote. Lote 7 (opcional, "solo si 1-6 cerraron
+verdes") se hizo: "Haz todos" ya era la instrucción explícita y 1-6
+cerraron verdes.
+
+### Lote 7 (opcional) — Promover `useMobile`/`RowActions` compartidos (cerrado)
+
+`frontend/src/modules/presupuestos/hooks/useMobile.js` y
+`.../components/RowActions.jsx` promovidos a `frontend/src/design/`
+(mismo lugar ya compartido de `GlassModal`, `EmptyState`, `useToast`,
+etc. — el barril `@/design` que Equipos ya usaba). Contenido sin cambios
+de lógica, solo de ubicación; `RowActions.jsx` actualiza su propio import
+interno de `useMobile` a `./useMobile`.
+
+**El motivo real de este lote, no solo cosmético**: `ActivosPage.jsx` e
+`InventarioPage.jsx` (Equipos) importaban `RowActions` con
+`../../presupuestos/components/RowActions` — una violación real de
+límite de módulo (Equipos alcanzando dentro de la carpeta de
+Presupuestos para un componente que no tiene nada de negocio de
+Presupuestos). Con el archivo en `src/design/`, ambos ahora importan de
+`@/design`, igual que el resto de la app.
+
+13 sitios de importación actualizados: 6 de `useMobile` (5 charts +
+`GeneralExpensesExportModal.jsx`) y 7 de `RowActions`
+(`TransactionTable`, `ValidationQueue`, `AdminView`, `UserManagement`,
+`GeneralExpensesPage` de Presupuestos; `ActivosPage`, `InventarioPage`
+de Equipos) — los dos de Equipos son los que antes cruzaban el límite de
+módulo. `CLAUDE.md:46` corregido a las dos rutas nuevas (R-I03, cerrado);
+`doc/responsividad-movil.md` corregido también (sus rutas nunca
+coincidieron con la realidad ni antes de este lote — documentaba
+`frontend/src/hooks/`/`frontend/src/components/`, que tampoco existió
+nunca; ahora sí documenta la ruta real).
+
+**Evidencia**: `npm run build` verde (mismo bundle eager, sin chunks
+nuevos — el chunk principal ni cambió de hash). Regresión completa: 7
+`auth`, 23 `pantallas` (ejercita `/gastos-generales` y `/administracion`
+en 1280 y 390, las pantallas con más superficie de `RowActions`), 8
+`equipos-flujo-completo.spec.js` reales (`ActivosPage`'s "Registrar
+devolución" es `RowActions` en producción, no un mock), 22 Equipos mock —
+todos verdes. `presupuesto-flujo-completo.spec.js`: 7/9 en cada corrida;
+el fallo repetido ("el PDF del dashboard se descarga con contenido real")
+se investigó a fondo y **no es de este lote**: la captura de pantalla en
+el momento del timeout muestra el dashboard completo, con los 5 charts
+modificados renderizando datos reales y el botón en
+"Generando PDF..." — la generación (rasterizado `html2canvas` de la
+página completa) simplemente tardó más de 30s bajo la presión de memoria
+real del sistema en este punto de la sesión (~3.5-4 GB libres de 15.7 GB,
+confirmado con `Get-CimInstance Win32_OperatingSystem`, incluso después
+de reiniciar backend y ambos frontends). Ningún cambio de este lote toca
+lógica: solo la ruta de un import hacia código byte-idéntico.
+`gastos-generales.spec.js` sigue con el mismo síntoma de R-I15 (huso
+horario, ajeno a este lote) — confirmado por separado con una prueba
+puntual que abre `/gastos-generales` y su modal de exportar (el que usa
+`useMobile`) sin depender de crear un gasto nuevo: ambos renderizan sin
+error.
+
+**Riesgo nuevo**: ninguno. R-I03 y B-I07 cerrados.
 
 ## 2026-07-29 (sesion 3 — modo 09-ejecutar-todo, cinco issues sin push)
 

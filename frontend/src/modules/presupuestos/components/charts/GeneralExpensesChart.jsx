@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import Chart from "react-apexcharts";
 import { createApexOptions, formatChartCurrency, GO_CHART_COLORS } from "./apexTheme";
 import { useTheme } from "@/context/ThemeContext";
-import { useMobile } from "../../hooks/useMobile";
+import { useMobile } from "@/design";
 
 const MONTHS_ES = [
   "Ene", "Feb", "Mar", "Abr", "May", "Jun",

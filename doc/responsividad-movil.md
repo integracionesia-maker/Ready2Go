@@ -6,16 +6,20 @@
 
 ## Infraestructura nueva compartida
 
-### `frontend/src/hooks/useMobile.js`
+### `frontend/src/design/useMobile.js`
+
+> Promovido a `src/design/` en I8 lote 7 (compartido entre Presupuestos y Equipos) — antes vivía en `frontend/src/modules/presupuestos/hooks/useMobile.js`.
 
 Hook `useMobile(breakpoint = 640)` que devuelve `true` si el ancho de ventana es menor al breakpoint (se actualiza con el evento `resize`). Se usa **solo** donde Tailwind no alcanza — es decir, donde se necesita un valor numérico en JS, no una clase CSS. En este proyecto eso es exclusivamente:
-- La prop `height` de los charts de ApexCharts (`frontend/src/components/charts/*.jsx`) — un número, no CSS.
+- La prop `height` de los charts de ApexCharts (`frontend/src/modules/presupuestos/components/charts/*.jsx`) — un número, no CSS.
 - El formato de mes en `GeneralExpensesExportModal.jsx` (`Intl.DateTimeFormat` con `month: "short"` vs `"long"`).
 - `RowActions.jsx` (ver abajo), para decidir si renderiza botones horizontales o el menú `⋯`.
 
 Para cualquier otro caso de responsividad (tamaños, paddings, grids, mostrar/ocultar), usar clases `sm:`/`md:` de Tailwind directamente — no este hook.
 
-### `frontend/src/components/RowActions.jsx`
+### `frontend/src/design/RowActions.jsx`
+
+> Promovido a `src/design/` en I8 lote 7 (compartido entre Presupuestos y Equipos) — antes vivía en `frontend/src/modules/presupuestos/components/RowActions.jsx`.
 
 Componente compartido para las acciones por fila de una tabla (resuelve C2 y C3 de la auditoría). Contrato:
 
@@ -31,7 +35,7 @@ Componente compartido para las acciones por fila de una tabla (resuelve C2 y C3 
 - Valores falsy dentro del arreglo (`condición && {...}`) se filtran automáticamente — así se condiciona una acción sin un `if` aparte.
 - En desktop renderiza los botones horizontales de siempre. En móvil (`useMobile()`) renderiza un botón `⋯` que abre un menú desplegable con las mismas acciones (cierra al hacer click afuera).
 
-Usado en: `TransactionTable.jsx`, `ValidationQueue.jsx`, `AdminView.jsx` (tablas de creadores y marcas), `UserManagement.jsx`, `GeneralExpensesPage.jsx`.
+Usado en: `TransactionTable.jsx`, `ValidationQueue.jsx`, `AdminView.jsx` (tablas de creadores y marcas), `UserManagement.jsx`, `GeneralExpensesPage.jsx` (Presupuestos) y, desde I8 lote 7, `ActivosPage.jsx`/`InventarioPage.jsx` (Equipos) — el motivo original de la promoción a `src/design/`.
 
 ### `frontend/src/index.css` — clases nuevas
 

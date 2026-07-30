@@ -249,8 +249,20 @@
         local, cruzan distinto entre ~18h y medianoche CDMX), no
         relacionado con este lote ni con Equipos -- reportado, no
         tocado (fuera de equipos/).
-  - [ ] **Lote 6 — Cierre e integracion.**
-  - [ ] **Lote 7 — OPCIONAL: B-I07 (useMobile/RowActions compartidos).**
+  - [x] **Lote 6 — Cierre e integracion.** B-I11/B-I13/B-I15 cerrados con
+        evidencia real (ver sus propias entradas mas abajo). Nuevo
+        docs/contratos/openapi_equipos_v1.json: snapshot congelado del
+        /openapi.json real, filtrado a los 22 endpoints de Equipos con 35
+        schemas resueltos -- companion machine-readable de
+        API_EQUIPOS_v1.md (CONGELADO, fuera de mi alcance editar sin v2).
+        B-I08/B-I09/B-I10/B-I12 siguen abiertos, no son mios. Linea
+        huerfana y contradictoria en la entrada de B-I06 (ver mas abajo),
+        borrada. R-I10/R-I13/R-I14 marcados RESUELTO en riesgos/interfaz.md;
+        R-I15 nuevo (hallazgo real de Presupuestos, no de este carril).
+        Build verde, bundle final ~121.5 kB gz de /login (sin cambio real).
+  - [x] **Lote 7 — OPCIONAL: B-I07 (useMobile/RowActions compartidos).**
+        Se hizo: 1-6 cerraron verdes. Ver la entrada propia de B-I07 mas
+        abajo para el detalle completo.
 - [x] **I5 — Permisos en la UI.** Commit de este issue (modo 09-ejecutar-todo,
       1 commit por issue). `src/modules/equipos/permisos/`: `catalogo.js`
       (import directo de la copia congelada de I3), `fallbackPorRol.js`
@@ -340,15 +352,14 @@
       anterior — sigue en 23/23 (era 22/22 en el cierre de I1; subio a
       23/23 en I2 al agregar el chequeo de contraste en `/dashboard`, y se
       mantiene ahi tras el refactor, sin regresion).
-- [ ] **B-I07 — Promover `useMobile` a un lugar compartido** cuando el modulo de
-      equipos lo necesite. Quedo dentro de `modules/presupuestos/hooks/` por I0;
-      es infra generica, no del modulo. Al moverlo, corregir tambien la ruta que
-      `CLAUDE.md:46` documenta (R-I03). **Ampliado en I4b**: `RowActions.jsx`
-      tiene el mismo problema, mismo commit de origen (`d602e00`) — `CLAUDE.md`
-      tambien documenta una ruta vieja para el (`frontend/src/components/
-      RowActions.jsx` en vez de `frontend/src/modules/presupuestos/
-      components/RowActions.jsx`). Si se promueve a compartido, hacerlo junto
-      con `useMobile` y corregir ambas referencias a la vez.
+- [x] **B-I07 — Promover `useMobile` a un lugar compartido** — cerrado en
+      I8 lote 7. Los dos, `useMobile.js` y `RowActions.jsx`, ahora viven en
+      `frontend/src/design/` (mismo lugar ya compartido de `GlassModal`,
+      `EmptyState`, etc.). `ActivosPage.jsx`/`InventarioPage.jsx` (Equipos)
+      ya no cruzan a `modules/presupuestos/` para importarlos — la
+      violacion de limite de modulo que motivo este item. Las dos
+      referencias de `CLAUDE.md:46` corregidas. 13 sitios de importacion
+      actualizados; regresion completa sin romper nada.
 - [x] **B-I14 — Retirar `fallbackPorRol.js`** — cerrado en I8 lote 5.
       WP1 aterrizo y /auth/me confirmado mandando `permisos` real para
       los 4 roles base. Archivo borrado, rama de fallback retirada de

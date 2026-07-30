@@ -10,4 +10,6 @@ export { default as EmptyState } from "./EmptyState";
 export { default as RoleBadge } from "./RoleBadge";
 export { ToastProvider, useToast } from "./Toast";
 export { CommandPaletteProvider, useCommandPalette, useRegisterCommand } from "./CommandPalette";
+export { default as RowActions } from "./RowActions";
+export { useMobile } from "./useMobile";
 export * as motionTokens from "./motion";

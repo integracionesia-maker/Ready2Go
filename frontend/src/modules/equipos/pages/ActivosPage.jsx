@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { EmptyState, SkeletonShimmer, useToast } from "@/design";
+import { EmptyState, SkeletonShimmer, useToast, RowActions } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchLoans, fetchLoanById, loanResponsivaUrl } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
-import RowActions from "../../presupuestos/components/RowActions";
 import RegistrarDevolucionModal from "../components/RegistrarDevolucionModal";
 
 const ESTADOS_ACTIVOS = ["prestado", "pendiente_confirmacion", "incompleto"];

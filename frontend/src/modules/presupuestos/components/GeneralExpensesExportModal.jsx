@@ -4,7 +4,7 @@ import GeneralExpensesPdfTemplate from "./PdfReport/GeneralExpensesPdfTemplate";
 import { generateGeneralExpensesPdf } from "./PdfReport/generateGeneralExpensesPdf";
 import { useAuth } from "@/context/AuthContext";
 import { fetchGeneralExpensesExport } from "@/api";
-import { useMobile } from "../hooks/useMobile";
+import { useMobile } from "@/design";
 
 /** Genera los valores YYYY-MM para los últimos `count` meses (incluyendo el actual). */
 function lastNMonths(count) {

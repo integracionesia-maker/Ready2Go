@@ -6,7 +6,7 @@ import Modal from "./Modal";
 import UserManagement from "./UserManagement";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
-import RowActions from "./RowActions";
+import { RowActions } from "@/design";
 
 const CREATOR_COLUMNS = [
   { key: "name", label: "Nombre", type: "string" },
