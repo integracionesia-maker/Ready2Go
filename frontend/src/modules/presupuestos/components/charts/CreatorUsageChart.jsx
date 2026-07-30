@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import Chart from "react-apexcharts";
-import { createApexOptions, GO_CHART_COLORS } from "./apexTheme";
+import { createApexOptions, GO_CHART_COLORS } from "@/design/apexTheme";
 import { useTheme } from "@/context/ThemeContext";
 import { useMobile } from "@/design";
 
