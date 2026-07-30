@@ -417,7 +417,7 @@ export default function NuevoPrestamoPage() {
       )}
 
       {paso === 2 && loan && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <section>
             <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
               Equipos disponibles

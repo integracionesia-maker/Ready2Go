@@ -98,7 +98,7 @@ export default function InicioPage() {
             <SkeletonShimmer key={i} className="h-24" />
           ))}
         </div>
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <SkeletonShimmer className="h-80" />
           <SkeletonShimmer className="h-80" />
         </div>
@@ -212,7 +212,7 @@ export default function InicioPage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="go-card">
           <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
             Distribución de estados
@@ -246,16 +246,16 @@ export default function InicioPage() {
                 <li key={r.loan_id} className="py-3">
                   <Link
                     to={`/equipos/prestamo/${r.folio}`}
-                    className="flex items-center justify-between gap-3 font-body text-sm transition-colors hover:text-[var(--go-orange)]"
+                    className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 font-body text-sm transition-colors hover:text-[var(--go-orange)]"
                     style={{ color: "var(--go-text-primary)" }}
                   >
-                    <span>
+                    <span className="min-w-0">
                       <span className="font-mono font-semibold" style={{ color: "var(--go-orange)" }}>
                         {r.folio}
                       </span>{" "}
                       — {r.motivo} ({r.responsable})
                     </span>
-                    <span className="shrink-0 font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                    <span className="font-body text-xs sm:shrink-0" style={{ color: "var(--go-text-secondary)" }}>
                       {(r.equipos || []).join(", ")}
                     </span>
                   </Link>
@@ -280,7 +280,7 @@ export default function InicioPage() {
             <LoansByMonthChart data={porMes} />
           </section>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section className="go-card">
               <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
                 Top equipos prestados
