@@ -44,8 +44,10 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (identificador, password) => {
     const { user: loggedInUser } = await apiLogin(identificador, password);
-    setUser(loggedInUser);
-    return loggedInUser;
+    setUser(loggedInUser); // respuesta rápida del login (sin permisos: {})
+    const me = await fetchMe(); // permisos reales — login/refresh no los llenan (ver auth.py)
+    setUser(me);
+    return me;
   }, []);
 
   const logout = useCallback(async () => {
