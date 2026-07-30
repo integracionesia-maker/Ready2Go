@@ -78,6 +78,30 @@
   todo `GET /loans/{id}/responsiva.pdf` en 404 pese a que el registro en
   base ya existía.
 
+## 2026-07-29/30 (I8 lote 4 — Despertar equipos-flujo-completo.spec.js)
+
+### Cambiado
+
+- `frontend/e2e/equipos-flujo-completo.spec.js` — `test.fixme` retirado;
+  reescrito de punta a punta contra la UI real (era selectores
+  aspiracionales contra el contrato, de antes de que I4 existiera). 8
+  pruebas, `describe.serial`, bootstrap propio que crea las 3 personas
+  reales por API (`colaborador_mkt`, `colaborador_mkt` +
+  `APROBADOR_EQUIPO` concedido por API, `admin`).
+- `frontend/src/modules/equipos/pages/NuevoPrestamoPage.jsx` —
+  `confirmarAgregar` refresca "Equipos disponibles" también en el camino
+  feliz (antes solo en el catch de `EQUIPO_OCUPADO`: un equipo recién
+  agregado se quedaba pintado como disponible, invitando un segundo clic
+  que el servidor rechaza). `data-testid="equipos-seleccionados"` en la
+  lista del paso 2.
+- `frontend/src/modules/equipos/pages/FichaPrestamoPage.jsx` —
+  `data-testid="badge-estado"`/`"badge-autorizacion"` en los badges de la
+  ficha.
+- `frontend/src/modules/equipos/components/RegistrarDevolucionModal.jsx`
+  y `ConfirmarDevolucionModal.jsx` — su lista de equipos pasó de `<div>` a
+  `<ul>/<li>` (lista real, no solo visual) con
+  `data-testid="equipos-devolucion"`/`"decisiones-devolucion"`.
+
 ## 2026-07-29 (I4g — Ficha de préstamo — modo 09-ejecutar-todo, cierre de I4)
 
 ### Agregado

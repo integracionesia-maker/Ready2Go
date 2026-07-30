@@ -218,6 +218,13 @@ export default function NuevoPrestamoPage() {
       // mas seguro de cualquier forma: la fuente de verdad es el servidor.
       setLoan(await fetchLoanById(loan.id));
       setAgregandoId(null);
+      // I8 lote 4 (hallazgo): esta llamada faltaba en el camino feliz — solo
+      // el catch de EQUIPO_OCUPADO refrescaba "Equipos disponibles". Un
+      // equipo recién agregado se quedaba pintado como disponible hasta el
+      // siguiente error, invitando a un segundo clic que el servidor
+      // rechaza (409, "ya está en un préstamo abierto" — el mismo código
+      // que un equipo ocupado por alguien más, aunque aquí sea el propio).
+      cargarDisponibles();
     } catch (e) {
       if (esCodigo(e, "EQUIPO_OCUPADO")) {
         // No se tira la selección hecha hasta ahora — solo este equipo sale
@@ -473,7 +480,7 @@ export default function NuevoPrestamoPage() {
             {loan.items.length === 0 ? (
               <EmptyState title="Sin equipos agregados todavía" />
             ) : (
-              <ul className="space-y-2">
+              <ul className="space-y-2" data-testid="equipos-seleccionados">
                 {loan.items.map((it) => (
                   <li key={it.id} className="go-card flex items-center justify-between">
                     <span className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>

@@ -1,206 +1,467 @@
 // @ts-check
-import { test, expect } from "@playwright/test";
+import { test, expect, request as apiModule } from "@playwright/test";
 import { contextoDe } from "./helpers/sesiones.mjs";
 import { pngReal, firmaPng } from "./helpers/imagen.mjs";
 
-// EN test.fixme HASTA QUE EL SERVIDOR REAL EXISTA. Se escribe ahora (I6)
-// porque escribirlo contra el contrato congelado (API_EQUIPOS_v1.md) obliga
-// a leerlo de punta a punta y saca los huecos ANTES de construir las 7
-// vistas de I4 — cada hueco encontrado aquí cuesta minutos; encontrado en
-// la integración real cuesta días. Los huecos que sí se encontraron ya
-// están en docs/riesgos/interfaz.md (R-I13 de I3, más los de este archivo).
+// I8 lote 4 — el servidor real de Equipos ya existe (S0..S7 aterrizaron en
+// BeniBranch) y WP1 (RBAC aditivo) también: este archivo se despierta
+// (se quita el test.fixme) y sus selectores se ajustan a las 7 vistas
+// reales de I4, verificadas a mano en I8 lotes 1-3. El flujo de negocio en
+// sí (qué paso sigue a cuál, qué códigos de error esperar) no cambió — el
+// contrato ya lo tenía bien.
 //
-// Condición que lo despierta (quita el test.fixme de la línea del
-// describe): los endpoints de API_EQUIPOS_v1.md §2-§6 en pie en el
-// servidor real (inventario, préstamos, aprobación, media, empresas) + el
-// seed de WP2 (8 equipos + 2 razones sociales, `seed_prestamo_demo.py` o
-// equivalente).
+// Dos ajustes de fondo, no solo de selector, encontrados al escribir esto:
 //
-// Los selectores de abajo son ASPIRACIONALES: describen la interacción tal
-// como la exige el contrato (campos, mensajes, badges), pero I4 (las 7
-// vistas reales) todavía no existe — nadie ha visto el markup real todavía.
-// Cuando I4 aterrice, este archivo necesita una pasada de ajuste de
-// selectores, no un rediseño del flujo (el flujo en sí ya está validado
-// contra el contrato).
+// 1. La UI real tiene guardas del lado del cliente que el archivo
+//    aspiracional no anticipaba: el botón "Siguiente" del paso 3 (Fotos)
+//    está DESHABILITADO mientras falte una sola foto de cualquier equipo
+//    (`disabled={!loan.items.every(itemListo)}`), y
+//    `ConfirmarDevolucionModal` ni siquiera pinta el formulario de
+//    decisiones si `entrega_autorizada` es falso (solo una advertencia,
+//    sin footer con botones). Ambas reglas SÍ existen en el servidor (409
+//    TRANSICION_INVALIDA en los dos casos), pero un clic real nunca las
+//    dispara porque el cliente ya las bloquea antes. Se verifica cada
+//    regla por los dos lados: la guarda del cliente (UI) y el 409 del
+//    servidor (llamada directa a la API con el `request` fixture,
+//    exactamente el mismo body que mandaría el cliente si el botón no
+//    estuviera deshabilitado).
+// 2. El rol base `admin` NO tiene ningún permiso de `equipos_aprobacion`
+//    (`rbac_catalog.py`: "Sin aprobacion de equipos") — un admin real
+//    jamás puede autorizar entregas ni confirmar devoluciones. La persona
+//    ADMIN de este archivo se usa para lo que el rol sí puede hacer
+//    (solicitar préstamos, `equipos_prestamos:solicitar`): crea el
+//    préstamo competidor de la carrera EQUIPO_OCUPADO y el préstamo nunca
+//    autorizado del caso 10.
 
 const SUPERADMIN_SEED_PASSWORD = process.env.E2E_SUPERADMIN_PASSWORD || "";
 const RUN_ID = Date.now();
 
-// Personas del flujo (WP1/RBAC aditivo todavía no aterriza en el servidor
-// real — estos usuarios no se pueden crear hoy vía la UI de Administración,
-// que solo sabe de admin/creador. Aspiracional también, a la espera de WP1).
 const SOLICITANTE = { usuario: `colaborador.equipos.${RUN_ID}`, password: `ColaboradorEquiposE2E${RUN_ID}!` };
 const APROBADORA = { usuario: `melisa.equipos.${RUN_ID}`, password: `AprobadoraEquiposE2E${RUN_ID}!` };
 const ADMIN = { usuario: `admin.equipos.${RUN_ID}`, password: `AdminEquiposE2E${RUN_ID}!` };
+const MOTIVO = `Prueba E2E ${RUN_ID}`;
+const MOTIVO_SIN_AUTORIZAR = `Prueba E2E sin-autorizar ${RUN_ID}`;
 
-test.describe("Flujo completo de un préstamo de Equipos (extremo a extremo)", () => {
+/** Crea un usuario ya con contraseña definitiva (sin el cambio forzado del
+ * primer login) — el bootstrap lo resuelve una vez por su cuenta en vez de
+ * dejárselo a cada test, igual que hace `auth.spec.js` con sus personas. */
+async function crearUsuarioDefinitivo(request, { usuario, password, email, fullName, role }) {
+  const creado = await request.post("/api/users/", {
+    data: { username: usuario, email, full_name: fullName, role, password },
+  });
+  expect(creado.ok(), `crear ${usuario}: ${await creado.text()}`).toBeTruthy();
+  const { id } = await creado.json();
+
+  const propio = await apiModule.newContext();
+  const login = await propio.post("/api/auth/login", { data: { identificador: usuario, password } });
+  expect(login.ok()).toBeTruthy();
+  const cambio = await propio.post("/api/auth/change-password", {
+    data: { current_password: password, new_password: password },
+  });
+  expect(cambio.ok()).toBeTruthy();
+  await propio.dispose();
+  return id;
+}
+
+/** Fila de un préstamo dentro de UNA sección de Aprobaciones, identificada
+ * por su encabezado — un mismo préstamo (p.ej. nunca autorizado + con
+ * devolución ya registrada) puede aparecer en más de una cola a la vez, así
+ * que matchear "li con este texto" en toda la página es ambiguo. */
+function filaEnSeccion(page, tituloSeccion, texto) {
+  const seccion = page.locator("section", { has: page.getByRole("heading", { name: tituloSeccion }) });
+  return seccion.locator("li", { hasText: texto });
+}
+
+test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extremo, servidor real)", () => {
   test.skip(!SUPERADMIN_SEED_PASSWORD, "Define E2E_SUPERADMIN_PASSWORD con la contraseña sembrada por seed_auth.py");
 
-  // eslint-disable-next-line playwright/no-skipped-test
-  test.fixme(
-    true,
-    "Espera a que el servidor real de Equipos exista: endpoints de " +
-      "API_EQUIPOS_v1.md §2-§6 en pie + seed de WP2 (8 equipos, 2 razones " +
-      "sociales). Hoy solo existe el mock de I3 (ver equipos-errores.spec.js, " +
-      "que sí corre)."
-  );
+  let idAprobadora;
+  let idEquipoOcupado; // id real del 3er equipo de la lista, usado en la carrera EQUIPO_OCUPADO
 
-  test("1-2: solicitante crea borrador, agrega equipos, EQUIPO_OCUPADO visible sin perder pasos previos", async ({ browser }) => {
-    const context = await contextoDe(browser, { usuario: SOLICITANTE.usuario, password: SOLICITANTE.password, baseURL: "" });
+  test("bootstrap: superadmin crea las 3 personas reales y concede APROBADOR_EQUIPO por API", async ({ request }) => {
+    const login = await request.post("/api/auth/login", {
+      data: { identificador: "superadmin", password: SUPERADMIN_SEED_PASSWORD },
+    });
+    expect(login.ok(), await login.text()).toBeTruthy();
+
+    await crearUsuarioDefinitivo(request, {
+      usuario: SOLICITANTE.usuario,
+      password: SOLICITANTE.password,
+      email: `${SOLICITANTE.usuario}@test.com`,
+      fullName: "Colaborador Equipos E2E",
+      role: "colaborador_mkt",
+    });
+    idAprobadora = await crearUsuarioDefinitivo(request, {
+      usuario: APROBADORA.usuario,
+      password: APROBADORA.password,
+      email: `${APROBADORA.usuario}@test.com`,
+      fullName: "Melisa Aprobadora E2E",
+      role: "colaborador_mkt",
+    });
+    await crearUsuarioDefinitivo(request, {
+      usuario: ADMIN.usuario,
+      password: ADMIN.password,
+      email: `${ADMIN.usuario}@test.com`,
+      fullName: "Admin Equipos E2E",
+      role: "admin",
+    });
+
+    // Paquete aditivo (WP1/RBAC): un rol base nunca gana permisos de
+    // aprobación por sí solo — melisa necesita el paquete concedido
+    // explícitamente, exactamente como lo haría un superadmin real desde
+    // /administracion cuando esa pantalla exista.
+    const grant = await request.post(`/api/users/${idAprobadora}/roles`, {
+      data: { role_name: "APROBADOR_EQUIPO" },
+    });
+    expect(grant.ok(), await grant.text()).toBeTruthy();
+    const permisos = (await grant.json()).permisos_efectivos;
+    expect(permisos.equipos_aprobacion).toEqual(
+      expect.arrayContaining(["autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"])
+    );
+
+    // El 3er equipo disponible en el listado real (mismo orden que pinta
+    // el picker del paso 2: GET /equipment/?disponible=true, sin params de
+    // orden propios) es el que se usa para forzar EQUIPO_OCUPADO más
+    // abajo — se resuelve aquí por id real, no por posición asumida.
+    const equipos = await (await request.get("/api/equipment/?disponible=true&limit=200")).json();
+    expect(equipos.items.length).toBeGreaterThanOrEqual(3);
+    idEquipoOcupado = equipos.items[2].id;
+  });
+
+  test("1-2: solicitante crea un préstamo, agrega 2 equipos, un 3ro se marca EQUIPO_OCUPADO sin perder los 2 ya agregados", async ({ browser, request }) => {
+    const context = await contextoDe(browser, { usuario: SOLICITANTE.usuario, password: SOLICITANTE.password });
     const page = await context.newPage();
 
     await page.goto("/equipos/inventario");
     await expect(page.getByRole("heading", { name: /Inventario/i })).toBeVisible();
 
-    await page.getByRole("link", { name: /Nuevo préstamo/i }).click();
-    await page.getByLabel(/Motivo/i).fill(`Prueba E2E ${RUN_ID}`);
-    await page.getByLabel(/Área/i).fill("Contenido");
-    await page.getByRole("button", { name: /Siguiente/i }).click();
+    await page.goto("/equipos/nuevo");
+    await page.locator('input[type="text"]').first().fill("Contenido");
+    await page.locator("select.go-select").first().selectOption({ index: 1 });
+    await page.locator('input[type="text"]').nth(1).fill(MOTIVO);
+    await page.locator('input[type="date"]').fill("2026-09-15");
+    await page.locator('button[type="submit"]').click();
+    await page.waitForSelector("text=Equipos disponibles", { timeout: 10_000 });
 
-    // Dos equipos disponibles.
-    await page.getByRole("button", { name: /Agregar equipo/i }).first().click();
-    await page.getByRole("button", { name: /Agregar equipo/i }).first().click();
+    async function agregarPrimeroDisponible() {
+      await page.getByRole("button", { name: "+ Agregar" }).first().click();
+      const cargador = page.locator("select.go-select");
+      if (await cargador.count()) await cargador.first().selectOption({ index: 1 });
+      await page.getByRole("button", { name: "Confirmar" }).click();
+      await page.waitForTimeout(600);
+    }
 
-    // Un tercero ya ocupado (fixtures/equipos.json: equipment_id=1 vive en
-    // el loan demo CE-0007, estado "prestado").
-    await page.getByRole("button", { name: /Agregar equipo/i }).first().click();
-    await expect(page.getByText(/ya esta en un prestamo abierto/i)).toBeVisible();
-    // Los dos equipos agregados antes del error siguen en la lista — el
-    // wizard no se cae ni pierde los pasos previos.
+    // Dos equipos disponibles se agregan sin problema.
+    await agregarPrimeroDisponible();
+    await agregarPrimeroDisponible();
+    await expect(page.getByTestId("equipos-seleccionados").locator("li")).toHaveCount(2);
+
+    // El tercero: se abre su selector de accesorios en la UI (todavía
+    // aparece disponible, la lista no se refresca sola), pero ANTES de
+    // confirmarlo alguien más (ADMIN, sesión real distinta) se lo lleva
+    // primero por la API — la misma carrera que produciría dos pestañas
+    // reales compitiendo por el mismo equipo.
+    await page.getByRole("button", { name: "+ Agregar" }).first().click();
+    const cargador3 = page.locator("select.go-select");
+    if (await cargador3.count()) await cargador3.first().selectOption({ index: 1 });
+
+    const loginAdmin = await request.post("/api/auth/login", {
+      data: { identificador: ADMIN.usuario, password: ADMIN.password },
+    });
+    expect(loginAdmin.ok()).toBeTruthy();
+    const prestamoCompetidor = await (
+      await request.post("/api/loans/", {
+        data: {
+          responsable_user_id: (await loginAdmin.json()).user.id,
+          responsable_nombre: "Admin Equipos E2E",
+          responsable_email: `${ADMIN.usuario}@test.com`,
+          area: "QA",
+          empresa: "MERCASYSTEM SA DE CV",
+          motivo: `Competidor EQUIPO_OCUPADO ${RUN_ID}`,
+          fecha_regreso_esperada: "2026-09-20",
+        },
+      })
+    ).json();
+    const seLoLlevo = await request.post(`/api/loans/${prestamoCompetidor.id}/items`, {
+      data: { equipment_id: idEquipoOcupado, accesorios_seleccionados: [], accesorios_otros: null, cargador_con: "empresa" },
+    });
+    expect(seLoLlevo.ok(), await seLoLlevo.text()).toBeTruthy();
+
+    await page.getByRole("button", { name: "Confirmar" }).click();
+    await expect(page.getByText(/ya no está disponible/i)).toBeVisible();
+    // Los 2 equipos agregados antes de la carrera siguen ahí — el wizard
+    // no se cae ni pierde los pasos previos.
     await expect(page.getByTestId("equipos-seleccionados").locator("li")).toHaveCount(2);
 
     await context.close();
   });
 
-  test("3-4: sube fotos y accesorios, confirmar con foto faltante da 409 TRANSICION_INVALIDA visible", async ({ browser }) => {
-    const context = await contextoDe(browser, { usuario: SOLICITANTE.usuario, password: SOLICITANTE.password, baseURL: "" });
+  test("3: sube fotos y firmas, confirma → folio real; el 409 TRANSICION_INVALIDA por foto faltante se verifica en ambos lados", async ({ browser, request }) => {
+    const context = await contextoDe(browser, { usuario: SOLICITANTE.usuario, password: SOLICITANTE.password });
     const page = await context.newPage();
 
     await page.goto("/equipos/nuevo"); // continúa el borrador (GET /loans/?estado=borrador&mios=1)
+    await page.getByRole("button", { name: "Continuar borrador" }).click({ timeout: 10_000 });
+    await page.waitForSelector('button:has-text("Tomar / elegir foto")', { timeout: 10_000 });
 
-    // 2 fotos por equipo (frente y atrás) — solo la de "atrás" del segundo
-    // equipo se deja pendiente a propósito, para el 409 del siguiente paso.
-    const equipos = page.getByTestId("equipos-seleccionados").locator("li");
-    for (let i = 0; i < 2; i++) {
-      const item = equipos.nth(i);
-      await item.getByLabel(/Foto de frente/i).setInputFiles({ name: `frente-${i}.png`, mimeType: "image/png", buffer: pngReal(400, 300) });
-      if (i === 0) {
-        await item.getByLabel(/Foto de atrás/i).setInputFiles({ name: `atras-${i}.png`, mimeType: "image/png", buffer: pngReal(400, 300) });
-      }
+    // Lado del cliente: mientras falte UNA foto de CUALQUIER equipo,
+    // "Siguiente" queda deshabilitado — no hay forma de llegar a Firmas
+    // con un renglón a medias desde la UI.
+    const siguienteFotos = page.getByRole("button", { name: "Siguiente" });
+    await expect(siguienteFotos).toBeDisabled();
+
+    const totalBotones = await page.getByRole("button", { name: "Tomar / elegir foto" }).count();
+    for (let i = 0; i < totalBotones; i++) {
+      const fileChooserPromise = page.waitForEvent("filechooser");
+      await page.getByRole("button", { name: "Tomar / elegir foto" }).first().click();
+      const fileChooser = await fileChooserPromise;
+      await fileChooser.setFiles({ name: `foto-${i}.png`, mimeType: "image/png", buffer: pngReal(400, 300) });
+      await page.waitForTimeout(700);
     }
-    await page.getByRole("button", { name: /Siguiente/i }).click();
+    await expect(siguienteFotos).toBeEnabled();
+    await siguienteFotos.click();
+    await page.waitForTimeout(400);
 
-    await page.getByLabel(/Firma de quien entrega/i).setInputFiles({ name: "firma-entrega.png", mimeType: "image/png", buffer: firmaPng() });
-    await page.getByLabel(/Firma de quien recibe/i).setInputFiles({ name: "firma-recibe.png", mimeType: "image/png", buffer: firmaPng() });
+    // Lado del servidor: el mismo 409 que el cliente ya no deja disparar
+    // por clic. El borrador de este test ya quedó completo (todas las
+    // fotos subidas) para no interferir con el folio que 6-9 necesitan
+    // intacto, así que la regla se reproduce contra un préstamo nuevo,
+    // mínimo, creado solo para esta verificación puntual — a quién
+    // pertenece no importa, se reusa la sesión de superadmin (ya definida
+    // arriba) en vez de gastar un login extra en el solicitante.
+    const loginSuperadmin = await request.post("/api/auth/login", {
+      data: { identificador: "superadmin", password: SUPERADMIN_SEED_PASSWORD },
+    });
+    const superadminId = (await loginSuperadmin.json()).user.id;
+    const equiposLibres = await (await request.get("/api/equipment/?disponible=true&limit=200")).json();
+    const prestamoIncompleto = await (
+      await request.post("/api/loans/", {
+        data: {
+          responsable_user_id: superadminId,
+          responsable_nombre: "Superadministrador",
+          responsable_email: "superadmin@grupo-ortiz.com",
+          area: "QA",
+          empresa: "MERCASYSTEM SA DE CV",
+          motivo: `Foto faltante ${RUN_ID}`,
+          fecha_regreso_esperada: "2026-09-20",
+        },
+      })
+    ).json();
+    await request.post(`/api/loans/${prestamoIncompleto.id}/items`, {
+      data: { equipment_id: equiposLibres.items[0].id, accesorios_seleccionados: [], accesorios_otros: null, cargador_con: "responsable" },
+    });
+    const confirmarSinFotos = await request.post(`/api/loans/${prestamoIncompleto.id}/confirmar`);
+    expect(confirmarSinFotos.status()).toBe(409);
+    const cuerpoError = await confirmarSinFotos.json();
+    expect(cuerpoError.codigo).toBe("TRANSICION_INVALIDA");
+    expect(cuerpoError.detail).toMatch(/Faltan las fotos de frente de 1 equipo/i);
+    expect(cuerpoError.detail).toMatch(/Falta la firma/i);
 
-    await page.getByRole("button", { name: /Confirmar préstamo/i }).click();
-    await expect(page.getByText(/Faltan las fotos de atras de 1 equipo/i)).toBeVisible();
+    // De vuelta al flujo real: firmas del préstamo bueno y confirmar.
+    const canvases = page.locator("canvas");
+    for (const idx of [0, 1]) {
+      const box = await canvases.nth(idx).boundingBox();
+      await page.mouse.move(box.x + 20, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 100, box.y + box.height / 2 - 20);
+      await page.mouse.move(box.x + 150, box.y + box.height / 2 + 20);
+      await page.mouse.up();
+    }
 
-    await context.close();
-  });
-
-  test("5: completa la foto faltante, firma, confirma → folio + responsiva descargable", async ({ browser }) => {
-    const context = await contextoDe(browser, { usuario: SOLICITANTE.usuario, password: SOLICITANTE.password, baseURL: "" });
-    const page = await context.newPage();
-
-    await page.goto("/equipos/nuevo");
-    const equipos = page.getByTestId("equipos-seleccionados").locator("li");
-    await equipos.nth(1).getByLabel(/Foto de atrás/i).setInputFiles({ name: "atras-1.png", mimeType: "image/png", buffer: pngReal(400, 300) });
-    await page.getByRole("button", { name: /Confirmar préstamo/i }).click();
-
-    await expect(page.getByText(/CE-\d{4}/)).toBeVisible();
-    await expect(page.getByRole("link", { name: /Descargar responsiva/i })).toBeVisible();
+    await page.getByRole("button", { name: "Confirmar préstamo" }).click();
+    await page.waitForURL(/\/equipos\/prestamo\//, { timeout: 15_000 });
+    await expect(page.getByText(/CE-\d{4,}/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Ver responsiva/i })).toBeVisible();
 
     await context.close();
   });
 
   test("6: la aprobadora autoriza la entrega — estado y autorización son dos badges distintos", async ({ browser }) => {
-    const context = await contextoDe(browser, { usuario: APROBADORA.usuario, password: APROBADORA.password, baseURL: "" });
+    const context = await contextoDe(browser, { usuario: APROBADORA.usuario, password: APROBADORA.password });
     const page = await context.newPage();
 
     await page.goto("/equipos/aprobaciones");
-    const fila = page.locator("tr", { hasText: `Prueba E2E ${RUN_ID}` });
+    const fila = page.locator("li", { hasText: MOTIVO });
+    await expect(fila).toBeVisible();
+    // El folio se captura ANTES de autorizar: la fila sale de esta cola en
+    // cuanto entrega_autorizada pasa a true (deja de matchear el filtro de
+    // "Autorizaciones de entrega pendientes"), así que después del clic el
+    // locator queda apuntando a un elemento que ya no está en el DOM.
+    const folio = (await fila.locator("a.font-mono").textContent()).trim();
     await fila.getByRole("button", { name: /Autorizar entrega/i }).click();
+    await expect(page.getByText(/Entrega autorizada/i)).toBeVisible();
 
-    await expect(fila.getByTestId("badge-estado")).toHaveText(/Prestado/i);
-    await expect(fila.getByTestId("badge-autorizacion")).toHaveText(/Autorizada/i);
+    await page.goto(`/equipos/prestamo/${folio}`);
+    await expect(page.getByTestId("badge-estado")).toHaveText(/Prestado/i);
+    await expect(page.getByTestId("badge-autorizacion")).toHaveText(/Entrega autorizada/i);
 
     await context.close();
   });
 
-  test("7: registra la devolución — 2 fotos por equipo o no_devuelto+nota", async ({ browser }) => {
-    const context = await contextoDe(browser, { usuario: SOLICITANTE.usuario, password: SOLICITANTE.password, baseURL: "" });
+  test("7: el solicitante registra la devolución — 2 fotos en un equipo, no_devuelto+nota en el otro", async ({ browser }) => {
+    const context = await contextoDe(browser, { usuario: SOLICITANTE.usuario, password: SOLICITANTE.password });
     const page = await context.newPage();
 
     await page.goto("/equipos/activos");
-    const fila = page.locator("tr", { hasText: `Prueba E2E ${RUN_ID}` });
+    const fila = page.locator("tbody tr", { hasText: "Colaborador Equipos E2E" });
+    await expect(fila).toBeVisible({ timeout: 10_000 });
     await fila.getByRole("button", { name: /Registrar devolución/i }).click();
 
-    const equipos = page.getByTestId("equipos-devolucion").locator("li");
-    await equipos.nth(0).getByLabel(/Foto de frente/i).setInputFiles({ name: "dev-frente-0.png", mimeType: "image/png", buffer: pngReal(400, 300) });
-    await equipos.nth(0).getByLabel(/Foto de atrás/i).setInputFiles({ name: "dev-atras-0.png", mimeType: "image/png", buffer: pngReal(400, 300) });
-    await equipos.nth(1).getByLabel(/No devuelto/i).check();
-    await equipos.nth(1).getByLabel(/Nota/i).fill("Se quedó con el cliente por logística, se recoge la próxima semana.");
+    const items = page.getByTestId("equipos-devolucion").locator("li");
+    await expect(items).toHaveCount(2);
 
-    await page.getByRole("button", { name: /Registrar devolución/i }).click();
-    await expect(page.getByText(/Pendiente de confirmación/i)).toBeVisible();
+    // Sube ambas fotos del primer equipo.
+    for (let i = 0; i < 2; i++) {
+      const fileChooserPromise = page.waitForEvent("filechooser");
+      await items.nth(0).getByRole("button", { name: "Tomar / elegir foto" }).first().click();
+      const fileChooser = await fileChooserPromise;
+      await fileChooser.setFiles({ name: `dev-${i}.png`, mimeType: "image/png", buffer: pngReal(400, 300) });
+      await page.waitForTimeout(700);
+    }
+
+    await items.nth(1).locator('input[type="checkbox"]').check();
+    await items.nth(1).locator("textarea").fill("Se quedó con el cliente por logística, se recoge la próxima semana.");
+
+    // El botón del pie del modal repite el texto del botón que lo abrió
+    // ("Registrar devolución") — se escopa al diálogo para no ambigüar.
+    await page.getByRole("dialog").getByRole("button", { name: "Registrar devolución" }).click();
+    await expect(page.getByText(/Devolución registrada/i)).toBeVisible();
 
     await context.close();
   });
 
-  test("8: la aprobadora confirma con una decisión por equipo — 'danado' sin nota es 422", async ({ browser }) => {
-    const context = await contextoDe(browser, { usuario: APROBADORA.usuario, password: APROBADORA.password, baseURL: "" });
+  test("8: la aprobadora confirma con una decisión por equipo — 'Dañado' sin nota no deja enviar, con nota sí", async ({ browser }) => {
+    const context = await contextoDe(browser, { usuario: APROBADORA.usuario, password: APROBADORA.password });
     const page = await context.newPage();
 
     await page.goto("/equipos/aprobaciones");
-    const fila = page.locator("tr", { hasText: `Prueba E2E ${RUN_ID}` });
+    // "Devoluciones por confirmar" solo pinta responsable, no motivo (a
+    // diferencia de "Autorizaciones de entrega") — se matchea por nombre,
+    // escopado a su sección.
+    const fila = filaEnSeccion(page, /Devoluciones por confirmar/i, "Colaborador Equipos E2E");
     await fila.getByRole("button", { name: /Confirmar devolución/i }).click();
 
     const decisiones = page.getByTestId("decisiones-devolucion").locator("li");
-    await decisiones.nth(0).getByLabel(/Dañado/i).check();
-    await page.getByRole("button", { name: /Guardar decisiones/i }).click();
-    await expect(page.getByText(/nota.*obligatoria/i)).toBeVisible();
+    await expect(decisiones).toHaveCount(2);
 
-    await decisiones.nth(0).getByLabel(/Nota/i).fill("Lente rayado, requiere revisión.");
-    await decisiones.nth(1).getByLabel(/Ok/i).check();
-    await page.getByRole("button", { name: /Guardar decisiones/i }).click();
+    // "Confirmar" (footer del modal) es substring de "Confirmar devolución"
+    // (el botón que abrió el modal, todavía en el DOM detrás) — se escopa
+    // al diálogo, exact:true de más, para no ambigüar entre los dos.
+    const dialogo = page.getByRole("dialog");
+    await decisiones.nth(0).locator("select").selectOption("danado");
+    await dialogo.getByRole("button", { name: "Confirmar", exact: true }).click();
+    await expect(page.getByText(/Falta la nota en uno o más equipos/i)).toBeVisible();
 
-    await expect(page.getByTestId("badge-estado")).toHaveText(/Incompleto/i);
+    await decisiones.nth(0).locator("textarea").fill("Lente rayado, requiere revisión.");
+    // El segundo ya nace en "ok" por default — no hace falta tocarlo.
+    await dialogo.getByRole("button", { name: "Confirmar", exact: true }).click();
+    await expect(page.getByText(/Devolución confirmada/i)).toBeVisible();
 
     await context.close();
   });
 
-  test("9: cerrar-incidencia con nota obligatoria → completado y el equipo vuelve a activo", async ({ browser }) => {
-    const context = await contextoDe(browser, { usuario: APROBADORA.usuario, password: APROBADORA.password, baseURL: "" });
+  test("9: cerrar-incidencia con nota obligatoria → completado y el equipo vuelve a activo", async ({ browser, request }) => {
+    const context = await contextoDe(browser, { usuario: APROBADORA.usuario, password: APROBADORA.password });
     const page = await context.newPage();
 
     await page.goto("/equipos/aprobaciones");
-    const fila = page.locator("tr", { hasText: `Prueba E2E ${RUN_ID}` });
+    // "Incidencias abiertas" tampoco pinta motivo, solo responsable.
+    const fila = filaEnSeccion(page, /Incidencias abiertas/i, "Colaborador Equipos E2E");
+    await expect(fila).toBeVisible();
     await fila.getByRole("button", { name: /Cerrar incidencia/i }).click();
-    await page.getByRole("button", { name: /Confirmar cierre/i }).click();
+
+    // El botón del pie del modal repite el mismo texto que el botón que lo
+    // abrió ("Cerrar incidencia") — se escopa al `role="dialog"` para no
+    // ambigüar entre los dos.
+    const dialogo = page.getByRole("dialog");
+    await dialogo.getByRole("button", { name: /Cerrar incidencia/i }).click();
     await expect(page.getByText(/La nota es obligatoria/i)).toBeVisible();
 
-    await page.getByLabel(/Nota/i).fill("Lente reemplazado, equipo probado y funcional.");
-    await page.getByRole("button", { name: /Confirmar cierre/i }).click();
-    await expect(fila.getByTestId("badge-estado")).toHaveText(/Completado/i);
+    await dialogo.locator("textarea").fill("Lente reemplazado, equipo probado y funcional.");
+    await dialogo.getByRole("button", { name: /Cerrar incidencia/i }).click();
+    await expect(page.getByText(/Incidencia cerrada/i)).toBeVisible();
 
     await context.close();
   });
 
-  test("10: caso duro — entrega_autorizada:false nunca llega a completado", async ({ browser }) => {
-    const context = await contextoDe(browser, { usuario: ADMIN.usuario, password: ADMIN.password, baseURL: "" });
+  test("10: caso duro — entrega_autorizada:false nunca llega a completado (cliente Y servidor)", async ({ browser, request }) => {
+    // Préstamo distinto, creado por ADMIN (rol sin permiso de aprobación,
+    // usado aquí solo como "solicitante" alterno), nunca autorizado, con
+    // devolución ya registrada.
+    const loginAdmin = await request.post("/api/auth/login", {
+      data: { identificador: ADMIN.usuario, password: ADMIN.password },
+    });
+    const adminId = (await loginAdmin.json()).user.id;
+    const equiposLibres = await (await request.get("/api/equipment/?disponible=true&limit=200")).json();
+    expect(equiposLibres.items.length).toBeGreaterThan(0);
+
+    const prestamo = await (
+      await request.post("/api/loans/", {
+        data: {
+          responsable_user_id: adminId,
+          responsable_nombre: "Admin Equipos E2E",
+          responsable_email: `${ADMIN.usuario}@test.com`,
+          area: "QA",
+          empresa: "MERCASYSTEM SA DE CV",
+          motivo: MOTIVO_SIN_AUTORIZAR,
+          fecha_regreso_esperada: "2026-09-20",
+        },
+      })
+    ).json();
+    const conItem = await (
+      await request.post(`/api/loans/${prestamo.id}/items`, {
+        data: { equipment_id: equiposLibres.items[0].id, accesorios_seleccionados: [], accesorios_otros: null, cargador_con: "responsable" },
+      })
+    ).json();
+    const idItemSinAutorizar = conItem.items[0].id;
+
+    for (const kind of ["foto_entrega_frente", "foto_entrega_atras"]) {
+      await request.post(`/api/loans/${prestamo.id}/media`, {
+        multipart: { file: { name: `${kind}.png`, mimeType: "image/png", buffer: Buffer.from(pngReal(300, 300)) }, kind, loan_item_id: String(idItemSinAutorizar) },
+      });
+    }
+    for (const kind of ["firma_entrega", "firma_responsable"]) {
+      await request.post(`/api/loans/${prestamo.id}/media`, {
+        multipart: { file: { name: `${kind}.png`, mimeType: "image/png", buffer: Buffer.from(firmaPng()) }, kind },
+      });
+    }
+    await request.post(`/api/loans/${prestamo.id}/confirmar`);
+    for (const kind of ["foto_dev_frente", "foto_dev_atras"]) {
+      await request.post(`/api/loans/${prestamo.id}/media`, {
+        multipart: { file: { name: `${kind}.png`, mimeType: "image/png", buffer: Buffer.from(pngReal(300, 300)) }, kind, loan_item_id: String(idItemSinAutorizar) },
+      });
+    }
+    await request.post(`/api/loans/${prestamo.id}/devolucion`, {
+      data: { items: [{ loan_item_id: idItemSinAutorizar, no_devuelto: false, nota_devolucion: null }] },
+    });
+
+    // Servidor: confirmar-devolucion sin autorizar entrega es 409, siempre
+    // — se prueba con la sesión de la aprobadora (ADMIN no tiene ningún
+    // permiso de equipos_aprobacion, así que con su sesión esto daría 403
+    // antes de llegar a la regla de negocio que se quiere verificar aquí).
+    await request.post("/api/auth/login", { data: { identificador: APROBADORA.usuario, password: APROBADORA.password } });
+    const confirmarDirecto = await request.post(`/api/loans/${prestamo.id}/confirmar-devolucion`, {
+      data: { decisiones: [{ loan_item_id: idItemSinAutorizar, decision: "ok", nota: null }] },
+    });
+    expect(confirmarDirecto.status()).toBe(409);
+    expect((await confirmarDirecto.json()).codigo).toBe("TRANSICION_INVALIDA");
+
+    // Cliente: la aprobadora ni siquiera ve el formulario de decisiones —
+    // solo la advertencia — así que tampoco puede llegar a completado por
+    // un clic real.
+    const context = await contextoDe(browser, { usuario: APROBADORA.usuario, password: APROBADORA.password });
     const page = await context.newPage();
-
-    // Préstamo distinto, nunca autorizado, con devolución ya registrada.
     await page.goto("/equipos/aprobaciones");
-    const fila = page.locator("tr", { hasText: /sin-autorizar/i });
+    // Este préstamo aparece en DOS colas a la vez (nunca autorizado +
+    // devolución ya registrada) — se escopa a "Devoluciones por confirmar"
+    // explícitamente, no basta con el nombre del responsable.
+    const fila = filaEnSeccion(page, /Devoluciones por confirmar/i, "Admin Equipos E2E");
+    await expect(fila).toBeVisible();
     await fila.getByRole("button", { name: /Confirmar devolución/i }).click();
-    const decisiones = page.getByTestId("decisiones-devolucion").locator("li");
-    for (const d of await decisiones.all()) await d.getByLabel(/Ok/i).check();
-    await page.getByRole("button", { name: /Guardar decisiones/i }).click();
-
-    await expect(page.getByText(/no puede llegar a completado sin autorizacion/i)).toBeVisible();
-    await expect(fila.getByTestId("badge-estado")).not.toHaveText(/Completado/i);
+    await expect(page.getByText(/todavía no tiene autorizada su entrega/i)).toBeVisible();
+    // exact:true — sin él, "Confirmar" matchea por substring el botón
+    // "Confirmar devolución" que abrió el modal (sigue en el DOM detrás).
+    await expect(page.getByRole("dialog").getByRole("button", { name: "Confirmar", exact: true })).toHaveCount(0);
 
     await context.close();
   });

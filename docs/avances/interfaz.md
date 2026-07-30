@@ -271,6 +271,80 @@ mismo lote (reportlab instalado); si el entorno de otra persona tampoco
 lo tiene, el mismo síntoma (404 silencioso en "Ver responsiva") se
 repetirá hasta que corra `pip install -r requirements.txt`.
 
+### Lote 4 — Despertar equipos-flujo-completo.spec.js (cerrado)
+
+`test.fixme` retirado. El archivo entero era aspiracional (selectores
+contra un contrato leído antes de que I4 construyera las 7 vistas reales)
+— se reescribió contra la UI real, verificada a mano en los lotes 1-3,
+con 3 sesiones reales creadas por API en un bootstrap propio:
+`colaborador.equipos.<run>` (colaborador_mkt, solicitante),
+`melisa.equipos.<run>` (colaborador_mkt + **APROBADOR_EQUIPO concedido
+por `POST /users/{id}/roles`**, aprobadora) y `admin.equipos.<run>`
+(admin — usado para lo que ese rol real sí puede hacer: solicitar, no
+aprobar). 8 pruebas, `describe.serial`, **8/8 contra el servidor real**.
+
+**Dos guardas del cliente que el archivo aspiracional no anticipaba, y
+que hacen sus dos 409 "clásicos" imposibles de disparar con un clic
+real**: el botón "Siguiente" del paso 3 (Fotos) queda deshabilitado
+mientras falte una sola foto (`disabled={!loan.items.every(itemListo)}`),
+y `ConfirmarDevolucionModal` ni pinta el formulario de decisiones si
+`entrega_autorizada` es falso — solo una advertencia estática, sin
+footer. Las dos reglas SÍ viven en el servidor (409 TRANSICION_INVALIDA),
+pero un test que solo hiciera clics nunca las alcanzaría. Se verificaron
+por los dos lados: la guarda del cliente (botón deshabilitado / sin
+formulario) **y** el 409 real, llamado directo con el `request` fixture
+de Playwright, mismo body que mandaría el cliente si el botón no
+estuviera ahí. De paso, confirmado que el rol base `admin` no tiene
+NINGÚN permiso de `equipos_aprobacion` (`rbac_catalog.py`): intentar
+`confirmar-devolucion` con su sesión da 403 antes de llegar siquiera a la
+regla de negocio — deny-by-default funcionando como debe.
+
+**Hallazgo (severo) — "Equipos disponibles" no se refrescaba tras un
+alta exitosa.** `confirmarAgregar()` solo llamaba `cargarDisponibles()`
+en la rama de error (`EQUIPO_OCUPADO`), nunca después de un alta
+correcta. El equipo recién agregado seguía pintado como disponible en la
+columna izquierda hasta el siguiente error — invitando a un segundo clic
+que el servidor rechaza con el mismo 409 `EQUIPO_OCUPADO` ("ya está en un
+préstamo abierto"), aunque esta vez sea el propio préstamo el que ya lo
+tiene. Confirmado por API que el servidor trata "mismo equipo, mismo
+préstamo, dos veces" igual que "equipo de alguien más": mismo código.
+Reproducido en el primer intento de escribir la prueba 1-2 (agregar 2
+equipos reales terminaba en solo 1). Arreglado agregando la misma llamada
+al camino feliz.
+
+**EQUIPO_OCUPADO real, carrera de verdad**: se resuelve el id real del
+3er equipo disponible por API (no por posición asumida), se abre su
+selector de accesorios en la UI, y ANTES de confirmar, una sesión
+distinta (ADMIN) se lo lleva primero por API — mismo timing que dos
+pestañas reales compitiendo. El 409 aparece, los 2 equipos ya agregados
+siguen intactos.
+
+**Ajustes de selector, no de flujo** (mismo texto en dos botones, el del
+disparador y el del pie del modal — "Registrar devolución", "Cerrar
+incidencia", "Confirmar"/"Confirmar devolución" por *substring*): se
+escopan al `role="dialog"` del modal, con `exact:true` donde hace falta.
+"Devoluciones por confirmar" e "Incidencias abiertas" no pintan `motivo`
+(a diferencia de "Autorizaciones de entrega", que sí) — se matchea por
+responsable, escopado a la sección correcta con un helper nuevo
+(`filaEnSeccion`), porque un mismo préstamo puede aparecer en dos colas a
+la vez (nunca autorizado + devolución ya registrada).
+
+**Se agregaron `data-testid`** donde el archivo aspiracional ya los
+esperaba y no existían: `equipos-seleccionados` (paso 2 del wizard),
+`equipos-devolucion` y `decisiones-devolucion` (los dos modales de
+aprobación — sus contenedores pasaron de `<div>` a `<ul>/<li>`, una lista
+real, no solo visualmente), `badge-estado`/`badge-autorizacion` (ficha).
+
+**503 PERMISOS_NO_DISPONIBLES**: se queda en `equipos-errores.spec.js`
+contra el mock, como pedía el paquete — no es provocable a voluntad
+contra el servidor real.
+
+**Evidencia**: `npm run build` verde. Regresión completa: 78/78 sin
+romper nada (48 Presupuestos + 22 Equipos mock + 8 de este archivo).
+
+**Riesgo nuevo**: ninguno — el único bug de código (`cargarDisponibles`)
+se arregló en este mismo commit.
+
 ## 2026-07-29 (sesion 3 — modo 09-ejecutar-todo, cinco issues sin push)
 
 ### ISSUE I2 — Piel de Presupuestos (cerrada, 1 commit)

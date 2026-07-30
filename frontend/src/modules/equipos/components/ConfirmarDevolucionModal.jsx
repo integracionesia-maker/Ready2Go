@@ -85,34 +85,36 @@ export default function ConfirmarDevolucionModal({ loan, onClose, onSuccess }) {
       }
     >
       <div className="space-y-4">
-        {loan.items.map((it) => (
-          <div key={it.id} className="border-b pb-3" style={{ borderColor: "var(--go-border)" }}>
-            <p className="mb-2 font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
-              {it.equipo_nombre}
-            </p>
-            <select
-              value={decisiones[it.id].decision}
-              onChange={(e) => actualizar(it.id, { decision: e.target.value })}
-              className="go-select mb-2"
-            >
-              {OPCIONES_DECISION.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            {decisiones[it.id].decision !== "ok" && (
-              <textarea
-                value={decisiones[it.id].nota}
-                onChange={(e) => actualizar(it.id, { nota: e.target.value })}
-                placeholder="Nota obligatoria..."
-                rows={2}
-                className="go-input resize-none"
-                required
-              />
-            )}
-          </div>
-        ))}
+        <ul className="space-y-4" data-testid="decisiones-devolucion">
+          {loan.items.map((it) => (
+            <li key={it.id} className="border-b pb-3" style={{ borderColor: "var(--go-border)" }}>
+              <p className="mb-2 font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
+                {it.equipo_nombre}
+              </p>
+              <select
+                value={decisiones[it.id].decision}
+                onChange={(e) => actualizar(it.id, { decision: e.target.value })}
+                className="go-select mb-2"
+              >
+                {OPCIONES_DECISION.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              {decisiones[it.id].decision !== "ok" && (
+                <textarea
+                  value={decisiones[it.id].nota}
+                  onChange={(e) => actualizar(it.id, { nota: e.target.value })}
+                  placeholder="Nota obligatoria..."
+                  rows={2}
+                  className="go-input resize-none"
+                  required
+                />
+              )}
+            </li>
+          ))}
+        </ul>
 
         {error && (
           <div

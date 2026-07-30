@@ -212,7 +212,25 @@
         con un prestamo nuevo: PDF real en disco, headers correctos,
         razon social confirmada por codigo que sale de la tabla empresa
         (nunca hardcode). Regresion completa sin romper nada: 70/70.
-  - [ ] **Lote 4 — Despertar equipos-flujo-completo.spec.js.**
+  - [x] **Lote 4 — Despertar equipos-flujo-completo.spec.js.** test.fixme
+        retirado, reescrito contra la UI real (era 100% aspiracional). 8
+        pruebas, 3 sesiones reales por API (colaborador_mkt, colaborador_mkt
+        +APROBADOR_EQUIPO concedido por API, admin), 8/8 contra el servidor
+        real. Dos guardas del cliente no anticipadas hacen imposible
+        disparar 409 TRANSICION_INVALIDA con un clic real (paso 3 "Siguiente"
+        deshabilitado con foto faltante; ConfirmarDevolucionModal sin
+        formulario si entrega no autorizada) -- verificadas por los dos
+        lados (guarda de UI + 409 real via API directa). Confirmado que
+        admin no tiene NINGUN permiso de equipos_aprobacion (403 antes de
+        la regla de negocio). Hallazgo severo arreglado: confirmarAgregar
+        no refrescaba "Equipos disponibles" tras un alta exitosa (solo en
+        el catch de EQUIPO_OCUPADO), invitando un segundo clic sobre un
+        equipo ya agregado que el servidor rechaza igual. EQUIPO_OCUPADO
+        real reproducido con una carrera de verdad (2 sesiones, timing
+        real). data-testid agregados donde el archivo ya los esperaba
+        (equipos-seleccionados, equipos-devolucion, decisiones-devolucion,
+        badge-estado, badge-autorizacion); los dos modales de aprobacion
+        pasaron de div a ul/li real. Regresion completa: 78/78.
   - [ ] **Lote 5 — B-I14: retirar fallbackPorRol.js.**
   - [ ] **Lote 6 — Cierre e integracion.**
   - [ ] **Lote 7 — OPCIONAL: B-I07 (useMobile/RowActions compartidos).**

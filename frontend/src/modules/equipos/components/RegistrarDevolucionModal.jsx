@@ -84,52 +84,54 @@ export default function RegistrarDevolucionModal({ loan, onClose, onSuccess }) {
       }
     >
       <div className="space-y-6">
-        {loan.items.map((it) => {
-          const estadoItem = porItem[it.id];
-          return (
-            <div key={it.id} className="border-b pb-4" style={{ borderColor: "var(--go-border)" }}>
-              <p className="mb-3 font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
-                {it.equipo_nombre}
-              </p>
+        <ul className="space-y-6" data-testid="equipos-devolucion">
+          {loan.items.map((it) => {
+            const estadoItem = porItem[it.id];
+            return (
+              <li key={it.id} className="border-b pb-4" style={{ borderColor: "var(--go-border)" }}>
+                <p className="mb-3 font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
+                  {it.equipo_nombre}
+                </p>
 
-              <label className="mb-3 flex items-center gap-2 font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
-                <input
-                  type="checkbox"
-                  checked={estadoItem.noDevuelto}
-                  onChange={(e) => actualizarItem(it.id, { noDevuelto: e.target.checked })}
-                  className="h-4 w-4"
-                />
-                No devuelto
-              </label>
+                <label className="mb-3 flex items-center gap-2 font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
+                  <input
+                    type="checkbox"
+                    checked={estadoItem.noDevuelto}
+                    onChange={(e) => actualizarItem(it.id, { noDevuelto: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  No devuelto
+                </label>
 
-              {estadoItem.noDevuelto ? (
-                <div>
-                  <label className="go-eyebrow mb-1.5 block">Motivo (obligatorio)</label>
-                  <textarea
-                    value={estadoItem.notaDevolucion}
-                    onChange={(e) => actualizarItem(it.id, { notaDevolucion: e.target.value })}
-                    rows={2}
-                    className="go-input resize-none"
-                    required
-                  />
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-4">
-                  <PhotoCapture
-                    label="Foto de frente"
-                    existingMediaId={estadoItem.fotoFrenteId}
-                    onUpload={(blob) => subirFoto(it, "foto_dev_frente", blob)}
-                  />
-                  <PhotoCapture
-                    label="Foto de atrás"
-                    existingMediaId={estadoItem.fotoAtrasId}
-                    onUpload={(blob) => subirFoto(it, "foto_dev_atras", blob)}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
+                {estadoItem.noDevuelto ? (
+                  <div>
+                    <label className="go-eyebrow mb-1.5 block">Motivo (obligatorio)</label>
+                    <textarea
+                      value={estadoItem.notaDevolucion}
+                      onChange={(e) => actualizarItem(it.id, { notaDevolucion: e.target.value })}
+                      rows={2}
+                      className="go-input resize-none"
+                      required
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <PhotoCapture
+                      label="Foto de frente"
+                      existingMediaId={estadoItem.fotoFrenteId}
+                      onUpload={(blob) => subirFoto(it, "foto_dev_frente", blob)}
+                    />
+                    <PhotoCapture
+                      label="Foto de atrás"
+                      existingMediaId={estadoItem.fotoAtrasId}
+                      onUpload={(blob) => subirFoto(it, "foto_dev_atras", blob)}
+                    />
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
 
         {error && (
           <div

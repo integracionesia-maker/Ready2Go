@@ -158,9 +158,11 @@ export default function FichaPrestamoPage() {
           </h1>
           {/* Tres badges ortogonales — nunca fusionados en uno solo. */}
           <div className="mt-2 flex flex-wrap gap-1.5">
-            <span className={`go-badge ${ESTADO_BADGE[loan.estado]}`}>{ESTADO_LABEL[loan.estado] || loan.estado}</span>
+            <span data-testid="badge-estado" className={`go-badge ${ESTADO_BADGE[loan.estado]}`}>
+              {ESTADO_LABEL[loan.estado] || loan.estado}
+            </span>
             {loan.atrasado && <span className="go-badge go-badge-error">Atrasado {loan.dias_atraso}d</span>}
-            <span className={`go-badge ${loan.entrega_autorizada ? "go-badge-success" : "go-badge-neutral"}`}>
+            <span data-testid="badge-autorizacion" className={`go-badge ${loan.entrega_autorizada ? "go-badge-success" : "go-badge-neutral"}`}>
               {loan.entrega_autorizada ? "Entrega autorizada" : "Entrega no autorizada"}
             </span>
           </div>
