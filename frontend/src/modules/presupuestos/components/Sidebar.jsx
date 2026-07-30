@@ -80,16 +80,15 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
       )}
 
       <aside
-        className={`fixed left-0 top-16 z-40 flex h-[calc(100%-4rem)] w-60 flex-col border-r transition-all duration-300 ${
+        className={`glass fixed left-0 top-16 z-40 flex h-[calc(100%-4rem)] w-60 flex-col border-r transition-all duration-300 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 ${collapsed ? "md:w-16" : "md:w-60"}`}
-        style={{
-          background: "var(--go-surface)",
-          borderColor: "var(--go-border)",
-        }}
+        style={{ borderColor: "var(--go-border)" }}
       >
+        <div className="veil absolute inset-0 -z-10" aria-hidden="true" />
+
         {/* ── Navigation ────────────────────────────────────────────────── */}
-        <nav aria-label="Navegacion de Presupuestos" className="flex-1 space-y-1 overflow-y-auto px-2.5 py-4">
+        <nav aria-label="Navegacion de Presupuestos" className="relative z-10 flex-1 space-y-1 overflow-y-auto px-2.5 py-4">
           {visibleItems.map((item) => (
             <NavLink
               key={item.to}
@@ -148,7 +147,7 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
         </nav>
 
         {/* ── Nuevo Ticket ──────────────────────────────────────────────── */}
-        <div className="px-2.5 pb-3">
+        <div className="relative z-10 px-2.5 pb-3">
           <button
             onClick={onNewTicket}
             title="Nuevo Ticket"
@@ -165,7 +164,7 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
         <button
           onClick={onToggle}
           title={collapsed ? "Expandir menú" : "Minimizar menú"}
-          className="hidden items-center justify-center border-t py-3 transition-colors hover:bg-white/5 md:flex"
+          className="relative z-10 hidden items-center justify-center border-t py-3 transition-colors hover:bg-white/5 md:flex"
           style={{ borderColor: "var(--go-border)", color: "var(--go-text-secondary)" }}
         >
           <svg

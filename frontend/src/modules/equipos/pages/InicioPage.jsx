@@ -203,7 +203,11 @@ export default function InicioPage() {
         <KpiTile label="Prestados" value={dashboard.prestados} accentColor="#FB670B" />
         <KpiTile label="Atrasados" value={dashboard.atrasados} accentColor="#E53E3E" />
         <KpiTile label="Pend. confirmación" value={dashboard.pendientes_confirmacion} accentColor="#F59E0B" />
-        <KpiTile label="Disponibles" value={dashboard.disponibles} accentColor="#00A36E" />
+        {/* Único KPI con cristal en esta pantalla — Header + ambos Sidebars ya
+            son cristal (B5) y DESIGN_SYSTEM.md limita a 3-4 superficies
+            simultáneas; "Disponibles" es la métrica más accionable de un
+            vistazo ("¿puedo prestar algo ahora mismo?"). */}
+        <KpiTile label="Disponibles" value={dashboard.disponibles} accentColor="#00A36E" glass />
         <KpiTile
           label="Tiempo promedio"
           value={tiempoPromedioActivo != null ? Math.round(tiempoPromedioActivo) : "—"}
