@@ -3,9 +3,8 @@ import { useMobile } from "./useMobile";
 
 /**
  * Acciones de una fila de tabla (auditoría de responsividad móvil, C2/C3):
- * en desktop, botones horizontales de siempre; en móvil (<640px), un botón
- * "⋯" que agrupa las mismas acciones en un menú desplegable — evita que 2-4
- * botones de texto se encimen o desborden en celdas angostas.
+ * en desktop, iconos compactos con tooltip nativo (title); en móvil (<640px),
+ * un botón "⋯" que agrupa las mismas acciones en un menú desplegable.
  *
  * `actions`: Array<{ key, label, mobileLabel?, onClick, variant?: "danger", icon? } | falsy>
  * Los valores falsy (ej. `canDelete && {...}`) se filtran — así cada
@@ -42,25 +41,28 @@ export default function RowActions({ actions }) {
 
   if (visibleActions.length === 0) return null;
 
+  // Desktop: solo iconos con tooltip nativo — más compacto, sin texto
   if (!isMobile) {
     return (
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-1">
         {visibleActions.map((a) => (
           <button
             key={a.key}
             type="button"
             onClick={a.onClick}
-            className="btn-go-ghost flex items-center gap-1.5 text-xs px-3 py-1.5"
-            style={a.variant === "danger" ? { color: "var(--go-error)" } : undefined}
+            title={a.label}
+            aria-label={a.label}
+            className="flex h-8 w-8 items-center justify-center rounded-go transition-colors hover:bg-white/5"
+            style={{ color: a.variant === "danger" ? "var(--go-error)" : "var(--go-text-secondary)" }}
           >
-            <ActionIcon d={a.icon} className="h-3.5 w-3.5 flex-shrink-0" />
-            {a.label}
+            <ActionIcon d={a.icon} className="h-4 w-4 flex-shrink-0" />
           </button>
         ))}
       </div>
     );
   }
 
+  // Móvil: menú "⋯" colapsado (sin cambios)
   return (
     <div className="relative flex justify-end" ref={containerRef}>
       <button

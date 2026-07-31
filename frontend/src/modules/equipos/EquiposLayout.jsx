@@ -12,14 +12,14 @@ import EquiposSidebar from "./components/EquiposSidebar";
  */
 export default function EquiposLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
-    () => localStorage.getItem("sidebar-collapsed-equipos") === "true"
+    () => localStorage.getItem("sidebar-collapsed") === "true"
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleToggleSidebar = () => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
-      localStorage.setItem("sidebar-collapsed-equipos", next ? "true" : "false");
+      localStorage.setItem("sidebar-collapsed", next ? "true" : "false");
       return next;
     });
   };

@@ -215,14 +215,24 @@ export default function UserManagement({ creators }) {
       ) : (
         <div className="go-table-scroll-wrapper">
         <div className="overflow-x-auto go-table-scroll rounded-go-lg border" style={{ borderColor: "var(--go-border)" }}>
-          <table className="go-table">
+          <table className="go-table w-full table-fixed">
+            <colgroup>
+              <col className="w-[100px]" />
+              <col className="w-[130px]" />
+              <col className="w-[170px]" />
+              <col className="w-[85px]" />
+              <col className="w-[120px]" />
+              <col className="w-[75px]" />
+              <col className="w-[95px]" />
+              <col className="w-[105px]" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Usuario</th>
                 <SortableHeaderCell label="Nombre" columnKey="full_name" activeKey={sortKey} dir={sortDir} onSort={cycleSort} />
                 <th>Correo</th>
                 <SortableHeaderCell label="Rol" columnKey="role" activeKey={sortKey} dir={sortDir} onSort={cycleSort} />
-                <th>Paquetes aditivos</th>
+                <th>Paquetes</th>
                 <SortableHeaderCell
                   label="Estado"
                   columnKey="is_active"
@@ -232,13 +242,13 @@ export default function UserManagement({ creators }) {
                   align="center"
                 />
                 <SortableHeaderCell
-                  label="Último acceso"
+                  label="Acceso"
                   columnKey="last_login"
                   activeKey={sortKey}
                   dir={sortDir}
                   onSort={cycleSort}
                 />
-                <th className="text-right">Acciones</th>
+                <th className="text-right" />
               </tr>
             </thead>
             <tbody>
@@ -247,19 +257,19 @@ export default function UserManagement({ creators }) {
                 const isTargetSuperadmin = u.role === "superadmin";
                 return (
                   <tr key={u.id}>
-                    <td className="font-mono text-xs">{u.username}</td>
+                    <td className="font-mono text-xs truncate" title={u.username}>{u.username}</td>
                     <td>
-                      <span className="font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
+                      <span className="truncate block font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }} title={u.full_name}>
                         {u.full_name}
                       </span>
-                      {isSelf && <span className="go-badge go-badge-warning ml-2">Tú</span>}
+                      {isSelf && <span className="go-badge go-badge-warning ml-1 flex-shrink-0">Tú</span>}
                     </td>
-                    <td className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                    <td className="font-body text-xs truncate" style={{ color: "var(--go-text-secondary)" }} title={u.email}>
                       {u.email}
                     </td>
                     <td>
                       <span
-                        className="go-badge"
+                        className="go-badge whitespace-nowrap"
                         style={{ background: "var(--go-surface-sunken)", color: "var(--go-text-secondary)" }}
                       >
                         {ROLE_LABELS[u.role] || u.role}
@@ -267,25 +277,19 @@ export default function UserManagement({ creators }) {
                     </td>
                     <td>
                       {(rolesPorUsuario[u.id] || []).length === 0 ? (
-                        <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
-                          —
-                        </span>
+                        <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>—</span>
                       ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {rolesPorUsuario[u.id].map((a) => (
-                            <span key={a.role_name} className="go-badge go-badge-warning">
-                              {a.role_name}
-                            </span>
-                          ))}
-                        </div>
+                        <span className="go-badge go-badge-warning whitespace-nowrap" title={rolesPorUsuario[u.id].map(a => a.role_name).join(", ")}>
+                          {rolesPorUsuario[u.id].map(a => a.role_name).join(", ")}
+                        </span>
                       )}
                     </td>
                     <td className="text-center">
-                      <span className={`go-badge ${u.is_active ? "go-badge-success" : "go-badge-error"}`}>
+                      <span className={`go-badge whitespace-nowrap ${u.is_active ? "go-badge-success" : "go-badge-error"}`}>
                         {u.is_active ? "Activo" : "Inactivo"}
                       </span>
                     </td>
-                    <td className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                    <td className="font-body text-xs whitespace-nowrap" style={{ color: "var(--go-text-secondary)" }}>
                       {formatLastLogin(u.last_login)}
                     </td>
                     <td>

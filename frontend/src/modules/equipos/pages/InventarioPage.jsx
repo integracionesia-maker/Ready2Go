@@ -157,20 +157,44 @@ export default function InventarioPage() {
           Inventario <span style={{ color: "var(--go-orange)" }}>({resultado.total})</span>
         </h1>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-go border p-0.5" style={{ borderColor: "var(--go-border)" }}>
+          {/* Switch rejilla / tabla — solo iconos, estilo toggle */}
+          <div className="flex items-center rounded-go p-0.5" style={{ background: "var(--go-surface)" }}>
             <button
               type="button"
               onClick={() => setVista("grid")}
-              className={`rounded-go px-3 py-1 font-body text-xs ${vista === "grid" ? "btn-go" : "btn-go-ghost"}`}
+              title="Vista en rejilla"
+              aria-label="Vista en rejilla"
+              aria-pressed={vista === "grid"}
+              className={`flex h-8 w-8 items-center justify-center rounded-go transition-all duration-200 ${
+                vista === "grid"
+                  ? "text-white"
+                  : "hover:text-white/70"
+              }`}
+              style={{ background: vista === "grid" ? "var(--go-orange)" : "transparent", color: vista === "grid" ? "#fff" : "var(--go-text-secondary)" }}
             >
-              Rejilla
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+              </svg>
             </button>
             <button
               type="button"
               onClick={() => setVista("tabla")}
-              className={`rounded-go px-3 py-1 font-body text-xs ${vista === "tabla" ? "btn-go" : "btn-go-ghost"}`}
+              title="Vista en tabla"
+              aria-label="Vista en tabla"
+              aria-pressed={vista === "tabla"}
+              className={`flex h-8 w-8 items-center justify-center rounded-go transition-all duration-200 ${
+                vista === "tabla"
+                  ? "text-white"
+                  : "hover:text-white/70"
+              }`}
+              style={{ background: vista === "tabla" ? "var(--go-orange)" : "transparent", color: vista === "tabla" ? "#fff" : "var(--go-text-secondary)" }}
             >
-              Tabla
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24">
+                {/* Borde exterior — marco de la tabla */}
+                <rect x="3" y="4" width="18" height="16" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+                {/* Header */}
+                <path d="M3 9h18M8 4v16M14 4v16" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           </div>
           <RequierePermiso modulo="equipos_inventario" accion="crear">
@@ -234,63 +258,68 @@ export default function InventarioPage() {
           ))}
         </div>
       ) : (
-        <div className="go-table-scroll-wrapper">
-          <div className="overflow-x-auto rounded-go-lg border go-table-scroll" style={{ borderColor: "var(--go-border)" }}>
-            <table className="go-table w-full">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Categoría</th>
-                  <th>Condición</th>
-                  <th>Disponibilidad</th>
-                  <th>Con</th>
-                  <th aria-label="Acciones" />
-                </tr>
-              </thead>
-              <tbody>
-                {resultado.items.map((eq) => (
-                  <tr key={eq.id} className="cursor-pointer" onClick={() => setFichaId(eq.id)}>
-                    <td>{eq.nombre}</td>
-                    <td>{eq.categoria}</td>
-                    <td>
-                      <span className={`go-badge ${CONDICION_BADGE[eq.condicion] || "go-badge-neutral"}`}>
-                        {eq.condicion || "sin auditar"}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`go-badge ${eq.disponible ? "go-badge-success" : "go-badge-neutral"}`}>
-                        {eq.disponible ? "Disponible" : "No disponible"}
-                      </span>
-                    </td>
-                    <td>
-                      {eq.tenedor_actual?.nombre || "—"}
-                      {eq.atrasado && <span className="go-badge go-badge-error ml-2">Atrasado {eq.dias_atraso}d</span>}
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <RowActions
-                        actions={[
-                          { key: "ficha", label: "Ver ficha", icon: ICONS.ver, onClick: () => setFichaId(eq.id) },
-                          puede("equipos_inventario", "editar") && {
-                            key: "editar",
-                            label: "Editar",
-                            icon: ICONS.editar,
-                            onClick: () => setModalEditar(eq),
-                          },
-                          puede("equipos_inventario", "auditar_condicion") && {
-                            key: "auditar",
-                            label: "Auditar",
-                            icon: ICONS.auditar,
-                            onClick: () => setModalAuditar(eq),
-                          },
-                        ]}
-                      />
-                    </td>
+        <GlassPanel className="p-4 sm:p-6">
+          <div className="go-table-scroll-wrapper">
+            <div
+              className="overflow-x-auto rounded-go-lg border go-table-scroll"
+              style={{ borderColor: "var(--go-border)" }}
+            >
+              <table className="go-table w-full">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th>Condición</th>
+                    <th>Disponibilidad</th>
+                    <th>Con</th>
+                    <th aria-label="Acciones" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {resultado.items.map((eq) => (
+                    <tr key={eq.id} className="cursor-pointer" onClick={() => setFichaId(eq.id)}>
+                      <td>{eq.nombre}</td>
+                      <td>{eq.categoria}</td>
+                      <td>
+                        <span className={`go-badge ${CONDICION_BADGE[eq.condicion] || "go-badge-neutral"}`}>
+                          {eq.condicion || "sin auditar"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`go-badge ${eq.disponible ? "go-badge-success" : "go-badge-neutral"}`}>
+                          {eq.disponible ? "Disponible" : "No disponible"}
+                        </span>
+                      </td>
+                      <td>
+                        {eq.tenedor_actual?.nombre || "—"}
+                        {eq.atrasado && <span className="go-badge go-badge-error ml-2">Atrasado {eq.dias_atraso}d</span>}
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <RowActions
+                          actions={[
+                            { key: "ficha", label: "Ver ficha", icon: ICONS.ver, onClick: () => setFichaId(eq.id) },
+                            puede("equipos_inventario", "editar") && {
+                              key: "editar",
+                              label: "Editar",
+                              icon: ICONS.editar,
+                              onClick: () => setModalEditar(eq),
+                            },
+                            puede("equipos_inventario", "auditar_condicion") && {
+                              key: "auditar",
+                              label: "Auditar",
+                              icon: ICONS.auditar,
+                              onClick: () => setModalAuditar(eq),
+                            },
+                          ]}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </GlassPanel>
       )}
 
       {resultado.items.length > 0 && (

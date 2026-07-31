@@ -85,6 +85,21 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
         } md:translate-x-0 ${collapsed ? "md:w-16" : "md:w-60"}`}
         style={{ borderColor: "var(--go-border)", borderRadius: 0 }}
       >
+        {/* Brillo liquid crystal estático */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          style={{ borderRadius: 0 }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(0deg, rgba(251,103,11,0.10) 0%, rgba(251,103,11,0.05) 30%, transparent 60%, rgba(251,103,11,0.03) 100%)",
+            }}
+          />
+        </div>
+
         {/* ── Navigation ────────────────────────────────────────────────── */}
         <nav aria-label="Navegacion de Presupuestos" className="flex-1 space-y-1 overflow-y-auto px-2.5 py-4">
           {visibleItems.map((item) => (

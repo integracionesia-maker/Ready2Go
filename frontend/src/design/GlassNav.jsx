@@ -17,13 +17,24 @@ import { motion, useReducedMotion } from "motion/react";
  * prefers-reduced-motion no se mueve, solo cambia de opacidad (requisito no
  * opcional de 01-I1-shell.md).
  */
-export default function GlassNav({ items, ariaLabel, refract = true }) {
+export default function GlassNav({ items, ariaLabel, refract = true, transparent = false }) {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
 
   return (
-    <nav aria-label={ariaLabel} className={`glass ${refract ? "glass--refract" : ""} relative inline-flex items-center gap-1 p-1.5`}>
-      <div className="veil absolute inset-0 -z-10" aria-hidden="true" />
+    <nav
+      aria-label={ariaLabel}
+      className={`glass ${refract && !transparent ? "glass--refract" : ""} relative inline-flex items-center gap-1 p-1.5`}
+      style={transparent ? { background: "color-mix(in srgb, var(--veil-bg) 55%, transparent)", backdropFilter: "blur(14px) saturate(140%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 3px rgba(0,0,0,0.18)" } : undefined}
+    >
+      <div className={`${transparent ? "" : "veil"} absolute inset-0 -z-10`} aria-hidden="true" />
+      {transparent && (
+        <div
+          className="absolute inset-0 -z-10"
+          aria-hidden="true"
+          style={{ background: "color-mix(in srgb, var(--veil-bg) 55%, transparent)", borderRadius: "inherit" }}
+        />
+      )}
       {items.map((item) => {
         const isActive = item.isActive
           ? item.isActive(location.pathname)
