@@ -8,6 +8,7 @@ import { SkeletonShimmer } from "@/design";
 
 const LoginPage = lazy(() => import("./modules/presupuestos/pages/LoginPage"));
 const InicioPage = lazy(() => import("./modules/equipos/pages/InicioPage"));
+const DashboardEquiposPage = lazy(() => import("./modules/equipos/pages/DashboardEquiposPage"));
 const InventarioPage = lazy(() => import("./modules/equipos/pages/InventarioPage"));
 const NuevoPrestamoPage = lazy(() => import("./modules/equipos/pages/NuevoPrestamoPage"));
 const ActivosPage = lazy(() => import("./modules/equipos/pages/ActivosPage"));
@@ -69,6 +70,7 @@ export default function App() {
             }
           >
             <Route index element={<InicioPage />} />
+            <Route path="dashboard" element={<DashboardEquiposPage />} />
             <Route path="inventario" element={<InventarioPage />} />
             <Route path="nuevo" element={<NuevoPrestamoPage />} />
             <Route path="activos" element={<ActivosPage />} />

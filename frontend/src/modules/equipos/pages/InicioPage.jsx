@@ -1,57 +1,68 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchEquipmentDashboard, fetchLoans } from "../api";
+import { fetchEquipmentDashboard } from "../api";
 import { esCodigo } from "@/api";
-import { GlassPanel, KpiTile, StatusDonut, EmptyState, SkeletonShimmer } from "@/design";
-import LoansByMonthChart from "../components/charts/LoansByMonthChart";
-import TopEquipmentChart from "../components/charts/TopEquipmentChart";
+import { GlassPanel, EmptyState, SkeletonShimmer, SectionCard } from "@/design";
 
-const COLOR_POR_ESTADO = {
-  prestado: "#FB670B",
-  pendiente_confirmacion: "#F59E0B",
-  completado: "#00A36E",
-  incompleto: "#E53E3E",
-};
+// Mismos paths SVG que EquiposSidebar.jsx NAV_ITEMS — una sola fuente de
+// verdad visual para "a dónde puedo ir en Equipos", solo que aquí sin
+// filtrar por permiso (igual que AdminHome en HomePage.jsx de Presupuestos):
+// cada página de destino ya se degrada con gracia si falta el permiso.
+const EQUIPOS_SECTIONS = [
+  {
+    to: "/equipos/dashboard",
+    title: "Dashboard",
+    description: "KPIs, gráficas y tendencias de préstamos.",
+    icon: "M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z",
+  },
+  {
+    to: "/equipos/inventario",
+    title: "Inventario",
+    description: "Catálogo de equipos disponible.",
+    icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",
+  },
+  {
+    to: "/equipos/nuevo",
+    title: "Nuevo préstamo",
+    description: "Solicitar equipo con firma y fotos.",
+    icon: "M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+  {
+    to: "/equipos/activos",
+    title: "Préstamos activos",
+    description: "Equipos prestados actualmente.",
+    icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+  {
+    to: "/equipos/aprobaciones",
+    title: "Aprobaciones",
+    description: "Autorizar entregas y confirmar devoluciones.",
+    icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+  {
+    to: "/equipos/historial",
+    title: "Historial",
+    description: "Registro completo de préstamos.",
+    icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+];
 
-const ETIQUETA_POR_ESTADO = {
-  prestado: "Prestado",
-  pendiente_confirmacion: "Pend. confirmación",
-  completado: "Completado",
-  incompleto: "Incompleto",
-};
-
-const TOP_EQUIPOS_LIMITE = 8;
-// Límite máximo que acepta GET /loans/ (crud_loans.LIMITE_MAXIMO). No existe
-// todavía un endpoint de agregados para estos 3 paneles (B3 en
-// docs/asignaciones/beni-bugs-post-unificacion.md) — mientras tanto se
-// procesan del lado del cliente sobre los préstamos más recientes. Si
-// `loansTotal` supera esta muestra, los paneles avisan que es parcial.
-const LOANS_SAMPLE_LIMIT = 200;
-
-function mesDe(fechaISO) {
-  return fechaISO ? fechaISO.slice(0, 7) : null; // "YYYY-MM"
-}
-
-function diasDesde(fechaISO, hoy) {
-  const inicio = new Date(`${fechaISO}T00:00:00`);
-  const ms = hoy.getTime() - inicio.getTime();
-  return Math.max(0, ms / 86400000);
-}
-
+/**
+ * Inicio de Equipos (C2): solo cards de acceso rápido, mismo patrón que
+ * HomePage.jsx de Presupuestos. El contenido analítico (KPIs, gráficas) se
+ * movió a DashboardEquiposPage — "Requiere atención" se queda aquí porque es
+ * operacional (acción pendiente), no analítico.
+ */
 export default function InicioPage() {
   const [dashboard, setDashboard] = useState(null);
-  const [loans, setLoans] = useState(null);
-  const [loansTotal, setLoansTotal] = useState(0);
-  const [loansForbidden, setLoansForbidden] = useState(false);
   const [loading, setLoading] = useState(true);
   const [permisosNoDisponibles, setPermisosNoDisponibles] = useState(false);
   const [error, setError] = useState(null);
 
-  async function cargar() {
+  const cargar = useCallback(async () => {
     setLoading(true);
     setError(null);
     setPermisosNoDisponibles(false);
-    setLoansForbidden(false);
     try {
       const data = await fetchEquipmentDashboard();
       setDashboard(data);
@@ -63,44 +74,22 @@ export default function InicioPage() {
       } else {
         setError(e.message);
       }
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const resp = await fetchLoans({ limit: LOANS_SAMPLE_LIMIT });
-      setLoans(resp.items);
-      setLoansTotal(resp.total);
-    } catch (e) {
-      // equipos_inventario:ver (dashboard) y equipos_prestamos:ver_propios/
-      // ver_global (préstamos) son paquetes de permiso distintos — un rol de
-      // solo-inventario puede tener el primero sin el segundo. En ese caso
-      // los 3 paneles derivados de /loans/ se ocultan, no toda la pantalla.
-      if (e.status === 403) {
-        setLoansForbidden(true);
-      } else {
-        setError(e.message);
-      }
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     cargar();
-  }, []);
+  }, [cargar]);
 
   if (loading) {
     return (
       <div className="space-y-8">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <SkeletonShimmer key={i} className="h-24" />
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <SkeletonShimmer key={i} className="h-32" />
           ))}
-        </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <SkeletonShimmer className="h-80" />
-          <SkeletonShimmer className="h-80" />
         </div>
       </div>
     );
@@ -131,187 +120,48 @@ export default function InicioPage() {
     );
   }
 
-  const porEstadoData = Object.entries(dashboard.por_estado || {}).map(([estado, valor]) => ({
-    label: ETIQUETA_POR_ESTADO[estado] || estado,
-    value: valor,
-    color: COLOR_POR_ESTADO[estado] || "#535353",
-  }));
-  const totalEnCiclo = porEstadoData.reduce((acc, d) => acc + d.value, 0);
-
-  // ── Agregados client-side sobre la muestra de préstamos (ver nota en
-  //    LOANS_SAMPLE_LIMIT) — ninguno de los tres depende de un endpoint que
-  //    todavía no existe.
-  const porMes = (() => {
-    if (!loans) return [];
-    const conteo = new Map();
-    for (const loan of loans) {
-      const mes = mesDe(loan.fecha_entrega);
-      if (!mes) continue; // borrador/cancelado sin entrega: no cuenta como préstamo real
-      conteo.set(mes, (conteo.get(mes) || 0) + 1);
-    }
-    return [...conteo.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, count]) => ({ month, count }));
-  })();
-
-  const topEquipos = (() => {
-    if (!loans) return [];
-    const conteo = new Map();
-    for (const loan of loans) {
-      for (const nombre of loan.equipos || []) {
-        conteo.set(nombre, (conteo.get(nombre) || 0) + 1);
-      }
-    }
-    return [...conteo.entries()]
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, TOP_EQUIPOS_LIMITE)
-      .map(([name, count]) => ({ name, count }))
-      .reverse(); // barra horizontal: ApexCharts pinta la primera categoría abajo
-  })();
-
-  const tiempoPromedioActivo = (() => {
-    if (!loans) return null;
-    const hoy = new Date();
-    const activos = loans.filter((l) => l.estado === "prestado" && l.fecha_entrega);
-    if (activos.length === 0) return null;
-    const total = activos.reduce((acc, l) => acc + diasDesde(l.fecha_entrega, hoy), 0);
-    return total / activos.length;
-  })();
-
-  const tasaDevolucionData = (() => {
-    if (!loans) return [];
-    const finalizados = loans.filter((l) => l.fecha_regreso_real && l.fecha_regreso_esperada);
-    if (finalizados.length === 0) return [];
-    const aTiempo = finalizados.filter((l) => l.fecha_regreso_real <= l.fecha_regreso_esperada).length;
-    const atrasados = finalizados.length - aTiempo;
-    return [
-      { label: "A tiempo", value: aTiempo, color: "#00A36E" },
-      { label: "Atrasados", value: atrasados, color: "#E53E3E" },
-    ];
-  })();
-  const totalFinalizados = tasaDevolucionData.reduce((acc, d) => acc + d.value, 0);
-
-  const muestraParcial = loans && loansTotal > loans.length;
-
   return (
     <div className="space-y-8">
       <h1 className="font-display text-lg font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
         Inicio
       </h1>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <KpiTile label="Prestados" value={dashboard.prestados} accentColor="#FB670B" glass />
-        <KpiTile label="Atrasados" value={dashboard.atrasados} accentColor="#E53E3E" glass />
-        <KpiTile label="Pend. confirmación" value={dashboard.pendientes_confirmacion} accentColor="#F59E0B" glass />
-        <KpiTile label="Disponibles" value={dashboard.disponibles} accentColor="#00A36E" glass />
-        <KpiTile
-          label="Tiempo promedio"
-          value={tiempoPromedioActivo != null ? Math.round(tiempoPromedioActivo) : "—"}
-          hint="días, préstamos activos"
-          accentColor="#A78BFA"
-          glass
-        />
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {EQUIPOS_SECTIONS.map((s) => (
+          <SectionCard key={s.to} {...s} />
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <GlassPanel as="section" className="p-4 sm:p-6">
-          <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
-            Distribución de estados
-          </h2>
-          {totalEnCiclo === 0 ? (
-            <EmptyState title="Sin préstamos en curso" />
-          ) : (
-            <div className="flex flex-wrap items-center gap-6">
-              <StatusDonut data={porEstadoData} centerValue={totalEnCiclo} centerLabel="préstamos" />
-              <ul className="flex flex-col gap-2">
-                {porEstadoData.map((d) => (
-                  <li key={d.label} className="flex items-center gap-2 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color }} aria-hidden="true" />
-                    {d.label}: <span className="font-mono" style={{ color: "var(--go-text-primary)" }}>{d.value}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </GlassPanel>
-
-        <GlassPanel as="section" className="p-4 sm:p-6">
-          <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
-            Requiere atención
-          </h2>
-          {(dashboard.requiere_atencion || []).length === 0 ? (
-            <EmptyState title="Nada pendiente de atención" />
-          ) : (
-            <ul className="flex flex-col divide-y" style={{ borderColor: "var(--go-border)" }}>
-              {dashboard.requiere_atencion.map((r) => (
-                <li key={r.loan_id} className="py-3">
-                  <Link
-                    to={`/equipos/prestamo/${r.folio}`}
-                    className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 font-body text-sm transition-colors hover:text-[var(--go-orange)]"
-                    style={{ color: "var(--go-text-primary)" }}
-                  >
-                    <span className="min-w-0">
-                      <span className="font-mono font-semibold" style={{ color: "var(--go-orange)" }}>
-                        {r.folio}
-                      </span>{" "}
-                      — {r.motivo} ({r.responsable})
-                    </span>
-                    <span className="font-body text-xs sm:shrink-0" style={{ color: "var(--go-text-secondary)" }}>
-                      {(r.equipos || []).join(", ")}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </GlassPanel>
-      </div>
-
-      {loansForbidden ? (
-        <EmptyState title="Sin permiso para ver préstamos" message="Estas métricas requieren acceso a préstamos de equipo." />
-      ) : (
-        <>
-          <GlassPanel as="section" className="p-4 sm:p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
-                Préstamos por mes
-              </h2>
-              {muestraParcial && <span className="go-eyebrow">Últimos {loans.length} de {loansTotal}</span>}
-            </div>
-            <LoansByMonthChart data={porMes} />
-          </GlassPanel>
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <GlassPanel as="section" className="p-4 sm:p-6">
-              <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
-                Top equipos prestados
-              </h2>
-              <TopEquipmentChart data={topEquipos} />
-            </GlassPanel>
-
-            <GlassPanel as="section" className="p-4 sm:p-6">
-              <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
-                Tasa de devolución a tiempo
-              </h2>
-              {totalFinalizados === 0 ? (
-                <EmptyState title="Sin préstamos finalizados" />
-              ) : (
-                <div className="flex flex-wrap items-center gap-6">
-                  <StatusDonut data={tasaDevolucionData} centerValue={totalFinalizados} centerLabel="finalizados" />
-                  <ul className="flex flex-col gap-2">
-                    {tasaDevolucionData.map((d) => (
-                      <li key={d.label} className="flex items-center gap-2 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color }} aria-hidden="true" />
-                        {d.label}: <span className="font-mono" style={{ color: "var(--go-text-primary)" }}>{d.value}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </GlassPanel>
-          </div>
-        </>
-      )}
+      <GlassPanel as="section" className="p-4 sm:p-6">
+        <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
+          Requiere atención
+        </h2>
+        {(dashboard.requiere_atencion || []).length === 0 ? (
+          <EmptyState title="Nada pendiente de atención" />
+        ) : (
+          <ul className="flex flex-col divide-y" style={{ borderColor: "var(--go-border)" }}>
+            {dashboard.requiere_atencion.map((r) => (
+              <li key={r.loan_id} className="py-3">
+                <Link
+                  to={`/equipos/prestamo/${r.folio}`}
+                  className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 font-body text-sm transition-colors hover:text-[var(--go-orange)]"
+                  style={{ color: "var(--go-text-primary)" }}
+                >
+                  <span className="min-w-0">
+                    <span className="font-mono font-semibold" style={{ color: "var(--go-orange)" }}>
+                      {r.folio}
+                    </span>{" "}
+                    — {r.motivo} ({r.responsable})
+                  </span>
+                  <span className="font-body text-xs sm:shrink-0" style={{ color: "var(--go-text-secondary)" }}>
+                    {(r.equipos || []).join(", ")}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </GlassPanel>
     </div>
   );
 }

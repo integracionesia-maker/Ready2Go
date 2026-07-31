@@ -7,8 +7,9 @@ import { useTheme } from "@/context/ThemeContext";
  * `data`: Array<{ name: string, count: number }>, ya recortado a los
  * top N equipos (mayor `count` primero) por quien llama.
  */
-export default function TopEquipmentChart({ data }) {
-  const { theme } = useTheme();
+export default function TopEquipmentChart({ data, forceTheme }) {
+  const { theme: ctxTheme } = useTheme();
+  const theme = forceTheme || ctxTheme;
   const isMobile = useMobile();
 
   // Mismo ajuste que LoansByMonthChart: sin esto, un máximo chico (ej. 1)

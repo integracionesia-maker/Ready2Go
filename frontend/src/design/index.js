@@ -1,4 +1,5 @@
 export { default as GlassPanel } from "./GlassPanel";
+export { default as SectionCard } from "./SectionCard";
 export { default as GlassNav } from "./GlassNav";
 export { default as GlassModal } from "./GlassModal";
 export { default as GlassFilterDefs } from "./GlassFilterDefs";
