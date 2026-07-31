@@ -46,6 +46,7 @@ MODULOS: dict[str, tuple[str, ...]] = {
     ),
     "equipos_aprobacion": ("autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"),
     "usuarios": ("gestionar", "gestionar_roles"),
+    "auditoria": ("ver",),
 }
 
 # ── Paquetes ────────────────────────────────────────────────────────────────

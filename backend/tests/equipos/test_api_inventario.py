@@ -218,6 +218,7 @@ def test_la_auditoria_agrega_al_historial_sin_pisar_la_anterior(inventario, db):
     """La maqueta guardaba solo la ultima revision: no habia forma de saber si un
     rayon venia de antes del prestamo."""
     usuario_con(db, username="betza", aditivos=("CUSTODIO_EQUIPO",))
+    usuario_con(db, username="emily")  # colaborador_mkt con permiso `ver`
     cliente = logueado("betza")
 
     resp = cliente.post(
@@ -230,9 +231,14 @@ def test_la_auditoria_agrega_al_historial_sin_pisar_la_anterior(inventario, db):
         },
     )
     assert resp.status_code == 201, resp.text
-    ficha = resp.json()
+    item = resp.json()
 
-    assert ficha["condicion"] == "bueno"
+    # El POST solo devuelve EquipmentItem (sin auditorias completas — hallazgo #3).
+    assert item["condicion"] == "bueno"
+
+    # La ficha completa (con auditorias) se obtiene via GET, que si requiere
+    # el permiso `equipos_inventario:ver` (emily = colaborador_mkt, que lo tiene).
+    ficha = logueado("emily").get("/api/equipment/2").json()
     assert len(ficha["auditorias"]) == 2
     # La vieja sigue ahi, con su comentario original.
     assert any("cable tipo C presenta falla" in a["comentario"] for a in ficha["auditorias"])
@@ -240,11 +246,16 @@ def test_la_auditoria_agrega_al_historial_sin_pisar_la_anterior(inventario, db):
 
 def test_la_auditoria_registra_quien_la_hizo(inventario, db):
     betza = usuario_con(db, username="betza", aditivos=("CUSTODIO_EQUIPO",))
-    ficha = (
+    usuario_con(db, username="emily")  # colaborador_mkt con permiso `ver`
+    resp = (
         logueado("betza")
         .post("/api/equipment/4/auditoria", json={"condicion": "atencion"})
-        .json()
     )
+    assert resp.status_code == 201, resp.text
+
+    # El POST solo devuelve EquipmentItem (sin auditorias completas — hallazgo #3).
+    # La ficha completa se obtiene via GET con permiso `ver` (emily = colaborador_mkt).
+    ficha = logueado("emily").get("/api/equipment/4").json()
     assert ficha["auditorias"][0]["actor_user_id"] == betza.id
     assert ficha["auditorias"][0]["actor_nombre"] == betza.full_name
 

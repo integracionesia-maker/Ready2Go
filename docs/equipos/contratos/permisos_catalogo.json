@@ -7,7 +7,8 @@
     "equipos_inventario": ["ver","crear","editar","auditar_condicion","dar_de_baja"],
     "equipos_prestamos": ["solicitar","ver_propios","ver_global","registrar_devolucion","cancelar","exportar"],
     "equipos_aprobacion": ["autorizar_entrega","confirmar_devolucion","cerrar_incidencia"],
-    "usuarios": ["gestionar","gestionar_roles"]
+    "usuarios": ["gestionar","gestionar_roles"],
+    "auditoria": ["ver"]
   },
   "paquetes": {
     "_PISO":            {"kind":"piso",   "permisos":{"inicio":["ver"],"perfil":["ver","editar_propio"]}},

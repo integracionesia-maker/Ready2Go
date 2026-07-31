@@ -23,6 +23,7 @@ const GeneralExpensesPage = lazy(() => import("./pages/GeneralExpensesPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ForbiddenPage = lazy(() => import("./pages/ForbiddenPage"));
 const SystemAdminPage = lazy(() => import("./pages/SystemAdminPage"));
+const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
 
 const ADMIN_ROLES = ["admin", "superadmin"];
 const SUPERADMIN_ONLY = ["superadmin"];
@@ -243,6 +244,14 @@ export default function PresupuestosLayout() {
                   ) : (
                     <SystemAdminPage creators={creators} />
                   )}
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/auditoria"
+              element={
+                <ProtectedRoute roles={SUPERADMIN_ONLY}>
+                  <AuditLogPage />
                 </ProtectedRoute>
               }
             />

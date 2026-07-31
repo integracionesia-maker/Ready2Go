@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { ICONS } from "@/design";
 
 const ROLE_LABELS = {
   superadmin: "Superadministrador",
@@ -129,6 +130,19 @@ export default function ProfilePopover() {
                   />
                 </svg>
                 Administración
+              </button>
+            )}
+            {user.role === "superadmin" && (
+              <button
+                role="menuitem"
+                onClick={() => navigate("/auditoria")}
+                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
+                style={{ color: "var(--go-text-primary)" }}
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d={ICONS.auditar} />
+                </svg>
+                Auditoría
               </button>
             )}
             <button

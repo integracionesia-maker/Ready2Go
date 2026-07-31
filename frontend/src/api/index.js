@@ -92,6 +92,25 @@ export function revokeUserRole(userId, roleName) {
   return request(`/users/${userId}/roles/${roleName}`, { method: "DELETE" });
 }
 
+/* ── Auditoría (solo superadmin) ─────────────────────────────────────────── */
+
+export function fetchAuditLogs(params = {}) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") qs.set(k, v);
+  });
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return request(`/audit-logs/${suffix}`);
+}
+
+export function fetchAuditLogDetail(id) {
+  return request(`/audit-logs/${id}`);
+}
+
+export function fetchAuditStats() {
+  return request("/audit-logs/stats");
+}
+
 /* ── Creators ────────────────────────────────────────────────────────────── */
 
 export function fetchCreators(activeOnly = false) {

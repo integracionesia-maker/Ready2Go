@@ -236,6 +236,19 @@ class AuditLog(Base):
     ip_address = Column(String(45), nullable=True)
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
+    # Campos del middleware de auditoria automatica (backend/app/middleware_audit.py).
+    # Nullable a proposito: las llamadas manuales a log_audit() de mas arriba
+    # (login, cambios de usuario, concesion de roles, etc.) siguen escribiendo
+    # solo los campos de siempre y coexisten con estas filas nuevas, mas
+    # genericas, del middleware -- ninguna reemplaza a la otra.
+    http_method = Column(String(10), nullable=True)
+    endpoint_path = Column(String(255), nullable=True)
+    request_params = Column(Text, nullable=True)
+    request_body_summary = Column(Text, nullable=True)
+    response_status = Column(Integer, nullable=True)
+    user_agent = Column(String(255), nullable=True)
+    duration_ms = Column(Integer, nullable=True)
+
 
 # Re-export al final, no arriba: los modulos de abajo referencian tablas de este
 # archivo por nombre de cadena, nunca por import, para no cerrar un ciclo.

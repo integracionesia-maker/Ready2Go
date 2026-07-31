@@ -99,6 +99,18 @@ def _construir_ficha(db: Session, equipo, abierto, libre) -> schemas_equipment.E
     )
 
 
+def _item_response(db: Session, equipo) -> schemas_equipment.EquipmentItem:
+    """Vista de lista para respuestas de escritura — sin `auditorias` ni
+    `historial` completos. Los endpoints de creacion/edicion/auditoria/baja
+    NO deben devolver la ficha completa porque no pasan por el guardia
+    `require_perm("equipos_inventario", "ver")` (hallazgo #3 auditoria)."""
+    auditorias = crud_equipment.auditorias_de(db, equipo.id)
+    ultima = auditorias[0][0] if auditorias else None
+    abierto = disponibilidad.mapa_prestamos_abiertos(db, [equipo.id]).get(equipo.id)
+    libre = disponibilidad.esta_disponible(equipo, ocupado=abierto is not None)
+    return _a_item(equipo, ultima, abierto, libre)
+
+
 def _obtener_o_404(db: Session, equipment_id: int):
     equipo = crud_equipment.obtener(db, equipment_id)
     if equipo is None:
@@ -163,7 +175,7 @@ def ficha_de_equipo(
     return _construir_ficha(db, equipo, abierto, libre)
 
 
-@router.post("/", response_model=schemas_equipment.EquipmentDetail, status_code=201)
+@router.post("/", response_model=schemas_equipment.EquipmentItem, status_code=201)
 def crear_equipo(
     data: schemas_equipment.EquipmentCreate,
     db: Session = Depends(get_db),
@@ -183,10 +195,10 @@ def crear_equipo(
         target_id=equipo.id,
         details=equipo.nombre,
     )
-    return ficha_de_equipo(equipo.id, db=db, current_user=current_user)
+    return _item_response(db, equipo)
 
 
-@router.put("/{equipment_id:int}", response_model=schemas_equipment.EquipmentDetail)
+@router.put("/{equipment_id:int}", response_model=schemas_equipment.EquipmentItem)
 def editar_equipo(
     equipment_id: int,
     data: schemas_equipment.EquipmentUpdate,
@@ -209,12 +221,12 @@ def editar_equipo(
             target_type="equipment",
             target_id=equipo.id,
         )
-    return ficha_de_equipo(equipment_id, db=db, current_user=current_user)
+    return _item_response(db, equipo)
 
 
 @router.post(
     "/{equipment_id:int}/auditoria",
-    response_model=schemas_equipment.EquipmentDetail,
+    response_model=schemas_equipment.EquipmentItem,
     status_code=201,
 )
 def registrar_auditoria(
@@ -237,10 +249,10 @@ def registrar_auditoria(
         target_id=equipo.id,
         details=f"condicion={auditoria.condicion}",
     )
-    return ficha_de_equipo(equipment_id, db=db, current_user=current_user)
+    return _item_response(db, equipo)
 
 
-@router.post("/{equipment_id:int}/baja", response_model=schemas_equipment.EquipmentDetail)
+@router.post("/{equipment_id:int}/baja", response_model=schemas_equipment.EquipmentItem)
 def dar_de_baja(
     equipment_id: int,
     data: schemas_equipment.BajaRequest,
@@ -267,7 +279,9 @@ def dar_de_baja(
         details=data.motivo,
     )
 
-    # Se arma la ficha con el objeto ya en memoria: quien acaba de dar la baja
-    # tiene derecho a ver el resultado de su accion. A partir del siguiente
-    # request el equipo responde 404, como cualquier recurso con borrado logico.
-    return _construir_ficha(db, equipo, None, False)
+    # Se devuelve solo la vista de lista (sin auditorias ni historial completos):
+    # quien acaba de dar la baja tiene derecho a ver el resultado de su accion,
+    # pero no el historial sensible que requeriria `equipos_inventario:ver`
+    # (hallazgo #3 auditoria). A partir del siguiente request el equipo
+    # responde 404, como cualquier recurso con borrado logico.
+    return _item_response(db, equipo)

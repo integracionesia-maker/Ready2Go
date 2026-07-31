@@ -289,7 +289,7 @@ export default function FichaPrestamoPage() {
             </div>
           </GlassPanel>
         ))}
-      </GlassPanel>
+      </section>
 
       <GlassPanel as="section" className="p-4 sm:p-6">
         <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>

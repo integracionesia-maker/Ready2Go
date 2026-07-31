@@ -114,6 +114,12 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
 
     if token_row.revoked_at is not None:
         crud.revoke_all_refresh_tokens_for_user(db, token_row.user_id)
+        # Invalida los access tokens ya emitidos para que un JWT robado
+        # no sobreviva a la detección de reuso (hallazgo #1 auditoría).
+        user_who_reused = crud.get_user(db, token_row.user_id)
+        if user_who_reused:
+            user_who_reused.token_version += 1
+            db.commit()
         crud.log_audit(
             db, actor_user_id=token_row.user_id, action="refresh.reuse_detected",
         )
@@ -151,6 +157,11 @@ def logout(
         token_row = crud.get_refresh_token_by_hash(db, security.hash_refresh_token(raw_refresh))
         if token_row and token_row.revoked_at is None:
             crud.revoke_refresh_token(db, token_row)
+
+    # Invalida los access tokens ya emitidos para que un JWT robado
+    # no sobreviva al cierre de sesión (hallazgo #1 auditoría).
+    current_user.token_version += 1
+    db.commit()
 
     crud.log_audit(db, actor_user_id=current_user.id, action="logout")
     _clear_auth_cookies(response)

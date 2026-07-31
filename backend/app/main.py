@@ -10,9 +10,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base
 from .errores import registrar_manejadores
+from .middleware_audit import AuditMiddleware
 from .routers import auth, creators, brands, tickets, dashboard, users, general_expenses
 from .routers import roles, user_roles, empresas, equipos_dashboard, equipment
 from .routers import loans, approvals, media, responsivas, notifications
+from .routers import audit_logs
 
 Base.metadata.create_all(bind=engine)
 
@@ -38,6 +40,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Registrado DESPUES de CORS a proposito: Starlette envuelve los middleware en
+# orden inverso al que se agregan, asi que CORS queda mas externo (procesa el
+# preflight OPTIONS antes) y este corre ya sobre requests reales.
+app.add_middleware(AuditMiddleware)
 
 # El mount estático de /uploads se eliminó: todo comprobante se sirve ahora vía
 # GET /api/tickets/file/{id}, que valida sesión y pertenencia del ticket.
@@ -69,6 +75,17 @@ app.include_router(media.router)
 # Diagnostico de correo. Fuera del contrato v1: lo pide la asignacion (S6) y va
 # protegido con `usuarios:gestionar`, que hoy solo tiene el superadmin.
 app.include_router(notifications.router)
+app.include_router(audit_logs.router)
+
+# Fuerza la construccion de todos los schemas de OpenAPI (incluidos los
+# TypeAdapter de Pydantic para cada query param, ej. `Optional[date]`) en el
+# arranque en vez de perezosa en el primer request real. Sin esto, la
+# primera resolucion de un tipo compartido (ej. `date | None`, usado en
+# dashboard.py/loans.py/audit_logs.py) puede caer dentro de un
+# `freeze_time(...)` de alguna prueba y reventar con un FastAPIError que no
+# tiene nada que ver con esa prueba -- visto en la practica al agregar el
+# router de auditoria.
+app.openapi()
 
 
 @app.get("/api/health")

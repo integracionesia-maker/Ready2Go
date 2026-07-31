@@ -773,6 +773,13 @@ def log_audit(
     target_id: Optional[int] = None,
     details: Optional[str] = None,
     ip_address: Optional[str] = None,
+    http_method: Optional[str] = None,
+    endpoint_path: Optional[str] = None,
+    request_params: Optional[str] = None,
+    request_body_summary: Optional[str] = None,
+    response_status: Optional[int] = None,
+    user_agent: Optional[str] = None,
+    duration_ms: Optional[int] = None,
 ) -> None:
     entry = models.AuditLog(
         actor_user_id=actor_user_id,
@@ -781,6 +788,13 @@ def log_audit(
         target_id=target_id,
         details=details,
         ip_address=ip_address,
+        http_method=http_method,
+        endpoint_path=endpoint_path,
+        request_params=request_params,
+        request_body_summary=request_body_summary,
+        response_status=response_status,
+        user_agent=user_agent,
+        duration_ms=duration_ms,
     )
     db.add(entry)
     db.commit()
