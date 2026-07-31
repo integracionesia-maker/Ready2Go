@@ -56,10 +56,14 @@ El overlay:
 ```
 
 ### Notas
-- Respetar `prefers-reduced-motion`: si está activo, el glow se mantiene estático al centro
+- Respetar `prefers-reduced-motion`: si está activo, el glow se mantiene estático al centro. Usar `useReducedMotion()` de motion/react (ya es dependencia, ver `GlassNav.jsx:22`)
 - El overlay debe ser `pointer-events: none` para no interferir con clics
 - La iluminación es sutil — no un spotlight agresivo. Es un "brillo de cristal", no una linterna
-- Mismo efecto para ambos temas (oscuro/claro). En light mode, usar `rgba(0,0,0,0.04)` en vez de blanco
+- **CRÍTICO: NO agregar `overflow-hidden` al header.** El `ProfilePopover` renderiza su dropdown `absolute top-[calc(100%+0.5rem)] z-50` DENTRO del header — un `overflow-hidden` lo cortaría. El overlay glow no necesita clipping
+- **Token de tema para el glow**: agregar `--go-glow: rgba(255,255,255,0.10)` en `:root` (oscuro) y `rgba(0,0,0,0.05)` en `[data-theme="light"]` en `tokens.css`. Construir el gradiente desde el token para cero re-renders por cambio de tema
+- **Guardia táctil**: mismo patrón que `EquipmentCard.jsx:18-19`: `window.matchMedia("(hover: hover) and (pointer: fine)")`. Si es falso, no montar listeners ni estado — suficiente con CSS
+- **Overlay como primer hijo** del `<header>`, con `absolute inset-0 pointer-events-none`. El contenido del header (texto, botones) pinta encima naturalmente por orden DOM
+- Usar `transition-opacity duration-400` (token `--go-duration-slow: 400ms` en `tokens.css:62`)
 
 ---
 
@@ -150,6 +154,11 @@ Agregar item "Dashboard" a `NAV_ITEMS`, entre "Inicio" y "Inventario":
 - [ ] El nuevo Dashboard usa `GlassPanel` en filtros y secciones de gráficas
 - [ ] La nueva Inicio usa `GlassPanel` en las cards de acceso rápido
 - [ ] Ambas páginas usan los mismos endpoints sin duplicar lógica de fetch
+- [ ] `SectionCard` debe extraerse de `HomePage.jsx:61-97` a `src/design/SectionCard.jsx` para reusar en ambos módulos (misma firma: `{ to, onClick, title, description, icon }`)
+- [ ] "Requiere atención" (InicioPage.jsx:238-267) es operacional, no analítica — se queda en el nuevo Inicio como lista compacta, NO se mueve al Dashboard
+- [ ] El estado `loansForbidden` (InicioPage.jsx:79-83) debe preservarse en el Dashboard — si el usuario no tiene `equipos_prestamos:ver_*`, las secciones de loans se ocultan sin tirar error
+- [ ] Los iconos para las cards de Inicio se reutilizan de `EquiposSidebar.jsx` `NAV_ITEMS` (líneas 5-49) — mismos paths SVG, mismo viewBox 24x24
+- [ ] No agregar MÁS superficies glass de las que ya hay — la migración es 1:1, no expansión
 
 ---
 
@@ -179,6 +188,30 @@ Asegurar que TODAS las vistas de Equipos funcionen correctamente en viewport 320
 - **No horizontal overflow**: ningún elemento debe causar scroll horizontal en la página
 - **`useMobile(breakpoint)`**: usar para valores JS (altura de charts), NO para layout (usar Tailwind `sm:`/`md:`/`lg:`)
 - **`RowActions`**: verificar que todas las tablas con acciones lo usen
+
+### Hallazgos de auditoría móvil (problemas específicos encontrados)
+
+**Touch targets < 44px** — el gap más sistemático. El patrón `text-xs px-3 py-1.5` (~30px alto) se repite en:
+
+| Archivo | Línea | Botón | Fix |
+|---------|-------|-------|-----|
+| `AprobacionesPage.jsx` | 162, 197, 227 | Autorizar, Confirmar devolución, Cerrar incidencia | `min-h-[44px]` |
+| `InventarioPage.jsx` | 164, 170 | Toggle Rejilla/Tabla (~28px) | `min-h-[44px]` |
+| `InventarioPage.jsx` | 326, 337 | Paginación Anterior/Siguiente | `min-h-[44px]` |
+| `ActivosPage.jsx` | 294, 303 | Paginación | `min-h-[44px]` |
+| `HistorialPage.jsx` | 277, 288 | Paginación | `min-h-[44px]` |
+| `NuevoPrestamoPage.jsx` | 443, 456-463, 490 | +Agregar, Cancelar/Confirmar, Quitar | `min-h-[44px]` |
+| `Header.jsx` | 18 | Hamburguesa `h-9 w-9` (36px) | `h-10 w-10` o `min-h-[44px] min-w-[44px]` |
+| `RowActions.jsx` | 53 | Botones desktop en fila | `min-h-[44px]` en `btn-go-ghost` |
+| `ProfilePopover.jsx` | 64 | Trigger `px-2 py-1.5` (~34px) | `min-h-[44px]` |
+
+**Solución**: Agregar `min-h-[44px]` en un media query `@media (max-width: 767px)` en `index.css` para `.btn-go` y `.btn-go-ghost`, o aplicar individualmente. La primera opción es preferible — arregla Presupuestos y Equipos de una vez.
+
+**GlassPanel sobre lista de 200 items** — `AprobacionesPage.jsx:138`: un solo GlassPanel envuelve hasta 200 préstamos (`fetchLoans({ limit: 200 })`, línea 55). La regla de `glass.css` prohíbe glass en "listas largas o contenedores con scroll". Las filas individuales son planas (correcto), pero si hay muchas, considerar paginar las colas o mover el glass a un header-only strip.
+
+**InicioPage KPI grid**: `grid-cols-2` a 320px deja el 5º tile (Tiempo promedio) solo en su fila (2+2+1). Funcional, solo verificar visualmente.
+
+**Glass surface budget**: 5 KPI tiles `glass` + 5 GlassPanels = 10 superficies simultáneas. El límite documentado es 3-4. Si se nota lag en mobile, quitar `glass` de los KPI tiles y dejarlo solo en las secciones principales.
 
 ---
 
