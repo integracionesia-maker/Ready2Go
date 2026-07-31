@@ -1,16 +1,27 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, Navigate } from "react-router-dom";
 import Header from "@/modules/presupuestos/components/Header";
 import EquiposSidebar from "./components/EquiposSidebar";
+import { useAuth } from "@/context/AuthContext";
 
 /**
  * Chrome del módulo Equipos — estructuralmente idéntico a
  * `PresupuestosLayout` (Header + Sidebar colapsable + main con offset).
  * Reusa el `Header` de Presupuestos con su propio subtítulo; el Sidebar es
  * propio (items y permisos de Equipos) pero mismas dimensiones/comportamiento.
- * Clave de colapso en localStorage separada para no pisar la de Presupuestos.
+ *
+ * Si el usuario no tiene ningún permiso de Equipos, se redirige a la raíz.
  */
 export default function EquiposLayout() {
+  const { user } = useAuth();
+  const permisos = user?.permisos || {};
+
+  const tieneEquipos = Object.keys(permisos).some(
+    (m) => m.startsWith("equipos_") && permisos[m].length > 0
+  );
+
+  if (!tieneEquipos) return <Navigate to="/" replace />;
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem("sidebar-collapsed") === "true"
   );
