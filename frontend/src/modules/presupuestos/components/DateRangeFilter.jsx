@@ -110,7 +110,7 @@ export default function DateRangeFilter({ startDate, endDate, onChange }) {
           <button
             key={p.label}
             onClick={() => handlePreset(p)}
-            className="rounded-full px-3 py-1 font-display text-[11px] font-semibold uppercase tracking-wider transition-all duration-200"
+            className="min-h-[44px] rounded-full px-3 py-1 font-display text-[11px] font-semibold uppercase tracking-wider transition-all duration-200"
             style={{
               background: "var(--go-surface-sunken)",
               color: "var(--go-text-secondary)",

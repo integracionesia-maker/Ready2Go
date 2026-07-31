@@ -19,8 +19,9 @@ function monthLabel(ym) {
  * `fecha_entrega` (cuándo arrancó el préstamo, no cuándo se creó el borrador
  * — mismo campo que usa el filtro desde/hasta de Historial).
  */
-export default function LoansByMonthChart({ data }) {
-  const { theme } = useTheme();
+export default function LoansByMonthChart({ data, forceTheme }) {
+  const { theme: ctxTheme } = useTheme();
+  const theme = forceTheme || ctxTheme;
   const isMobile = useMobile();
 
   // Conteos enteros pequeños con el tickAmount por defecto de ApexCharts

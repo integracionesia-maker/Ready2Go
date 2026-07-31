@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
-import { useMobile } from "@/design/useMobile";
+import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "motion/react";
 import ProfilePopover from "./ProfilePopover";
 import ThemeToggle from "./ThemeToggle";
 import BrandLogo from "./BrandLogo";
 
 const HEADER_HEIGHT = 64; // h-16 = 4rem
+
+// En táctil no hay hover — el glow queda estático (degradado base).
+const SOPORTA_HOVER_FINO =
+  typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
 /** Barra superior fija global (R1): logo + Grupo Ortiz, hamburguesa en móvil
  * (abre el drawer del Sidebar, R3), toggle de tema y popover de perfil.
@@ -12,19 +16,21 @@ const HEADER_HEIGHT = 64; // h-16 = 4rem
  * propio `subtitle`.
  *
  * Efecto liquid crystal:
- * - Desktop: brillo naranja radial que sigue al cursor en toda la banda
- *   superior (0–64px), trackeado a nivel `document` para que el switch
- *   Presupuestos/Equipos —que es un overlay separado en el DOM— no
- *   interrumpa el glow al pasar el mouse por encima.
- * - Móvil:   degradado naranja estático de izquierda a derecha. */
+ * - Capa base: degradado naranja horizontal siempre visible.
+ * - Capa interactiva (solo hover/pointer): brillo radial que sigue al cursor
+ *   en toda la banda superior (0–64px), trackeado a nivel `document` para
+ *   que el switch Presupuestos/Equipos no interrumpa el glow.
+ * - `prefers-reduced-motion`: brillo fijo al centro, sin fade. */
 export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
-  const isMobile = useMobile();
+  const headerRef = useRef(null);
+  const reduceMotion = useReducedMotion();
+  const interactive = SOPORTA_HOVER_FINO && !reduceMotion;
   const [glow, setGlow] = useState({ x: 0.5, visible: false });
 
   // Trackeo global: el glow se activa cuando el mouse está en los
   // primeros 64px del viewport, cubriendo header + ModuleTabs.
   useEffect(() => {
-    if (isMobile) return;
+    if (!interactive) return;
 
     const onMove = (e) => {
       setGlow({
@@ -41,10 +47,24 @@ export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseleave", onLeave);
     };
-  }, [isMobile]);
+  }, [interactive]);
+
+  const glowGradient = `radial-gradient(circle, var(--go-glow, rgba(251,103,11,0.30)) 0%, color-mix(in srgb, var(--go-glow, rgba(251,103,11,0.30)) 40%, transparent) 40%, transparent 70%)`;
+
+  const glowStyle = reduceMotion
+    ? {
+        opacity: 1,
+        background: `radial-gradient(circle at 50% 50%, var(--go-glow, rgba(251,103,11,0.30)) 0%, color-mix(in srgb, var(--go-glow, rgba(251,103,11,0.30)) 40%, transparent) 40%, transparent 70%)`,
+      }
+    : {
+        opacity: glow.visible ? 1 : 0,
+        transitionDuration: "var(--go-duration-slow, 500ms)",
+        background: glowGradient,
+      };
 
   return (
     <header
+      ref={headerRef}
       className="glass fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 sm:px-6"
       style={{ borderColor: "var(--go-border)", borderRadius: 0, boxShadow: "none" }}
     >
@@ -63,28 +83,26 @@ export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
           }}
         />
 
-        {/* Capa interactiva (solo desktop): brillo radial que sigue al mouse */}
-        {!isMobile && (
-          <div
-            className="absolute inset-0 transition-opacity duration-500"
-            style={{ opacity: glow.visible ? 1 : 0 }}
-          >
-            <div
-              className="absolute top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 blur-3xl"
-              style={{
-                left: `${glow.x * 100}%`,
-                background:
-                  "radial-gradient(circle, rgba(251,103,11,0.30) 0%, rgba(251,103,11,0.10) 40%, transparent 70%)",
-              }}
-            />
+        {/* Capa interactiva: brillo radial (sigue al mouse o fijo si reduced-motion) */}
+        {interactive || reduceMotion ? (
+          <div className="absolute inset-0 transition-opacity" style={glowStyle}>
+            {interactive && !reduceMotion && (
+              <div
+                className="absolute top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 blur-3xl"
+                style={{
+                  left: `${glow.x * 100}%`,
+                  background: glowGradient,
+                }}
+              />
+            )}
           </div>
-        )}
+        ) : null}
       </div>
 
       <div className="flex items-center gap-3">
         <button
           onClick={onOpenMobileMenu}
-          className="-ml-1 flex h-9 w-9 items-center justify-center rounded-go transition-colors hover:bg-white/5 md:hidden"
+          className="-ml-1 flex h-10 w-10 items-center justify-center rounded-go transition-colors hover:bg-white/5 md:hidden"
           title="Abrir menú"
           aria-label="Abrir menú"
         >
