@@ -10,6 +10,10 @@ const ROLE_LABELS = {
   superadmin: "Superadministrador",
   admin: "Administrador",
   creador: "Creador",
+  marketing_presupuestos: "Marketing (Presupuestos)",
+  marketing_equipos: "Marketing (Equipos)",
+  marketing_admin: "Marketing (Administrador)",
+  marketing_basico: "Marketing (Básico)",
   colaborador_mkt: "Marketing",
   usuario: "Usuario",
 };
@@ -17,7 +21,11 @@ const ROLE_LABELS = {
 const ROLE_OPTIONS = [
   { value: "admin", label: "Administrador" },
   { value: "creador", label: "Creador" },
-  { value: "colaborador_mkt", label: "Marketing" },
+  { value: "marketing_presupuestos", label: "Marketing (Presupuestos)" },
+  { value: "marketing_equipos", label: "Marketing (Equipos)" },
+  { value: "marketing_admin", label: "Marketing (Administrador)" },
+  { value: "marketing_basico", label: "Marketing (Básico)" },
+  { value: "colaborador_mkt", label: "Marketing (legacy)" },
   { value: "usuario", label: "Usuario" },
 ];
 

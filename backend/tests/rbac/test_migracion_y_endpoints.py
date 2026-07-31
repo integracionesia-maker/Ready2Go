@@ -111,7 +111,8 @@ def test_usuarios_con_permiso_resuelve_aprobadores_desde_la_base(db, catalogo):
     aprobadores = crud_rbac.usuarios_con_permiso(
         db, "equipos_aprobacion", "autorizar_entrega", incluir_superadmin=False
     )
-    assert [u.username for u in aprobadores] == ["mel"]
+    # admin ahora incluye equipos_aprobacion, asi que admin.x tambien cuenta
+    assert sorted(u.username for u in aprobadores) == ["admin.x", "mel"]
     assert mel.id in {u.id for u in aprobadores}
 
 

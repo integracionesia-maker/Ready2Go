@@ -25,7 +25,7 @@ const ForbiddenPage = lazy(() => import("./pages/ForbiddenPage"));
 const SystemAdminPage = lazy(() => import("./pages/SystemAdminPage"));
 const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
 
-const ADMIN_ROLES = ["admin", "superadmin"];
+const ADMIN_ROLES = ["admin", "superadmin", "marketing_presupuestos", "marketing_admin"];
 const SUPERADMIN_ONLY = ["superadmin"];
 
 function firstOfMonth(y, m) {

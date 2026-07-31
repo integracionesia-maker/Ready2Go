@@ -40,7 +40,7 @@ def list_general_expenses(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     expenses = crud.get_general_expenses(db, start_date=start_date, end_date=end_date)
     return [_expense_to_response(e) for e in expenses]
@@ -50,7 +50,7 @@ def list_general_expenses(
 def export_general_expenses(
     months: str = Query(..., description="Meses separados por coma, ej. '2026-07,2026-08'"),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     month_list = [m.strip() for m in months.split(",") if m.strip()]
     if not month_list:
@@ -69,7 +69,7 @@ def export_general_expenses(
 def download_general_expense_file(
     expense_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     expense = crud.get_general_expense(db, expense_id)
     if not expense or expense.is_deleted:
@@ -83,7 +83,7 @@ def create_general_expense(
     amount: float = Form(..., gt=0),
     description: str = Form(..., min_length=1, max_length=500),
     file: UploadFile = File(...),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     db: Session = SessionLocal()
     file_path_on_disk: Optional[str] = None
@@ -135,7 +135,7 @@ def create_general_expense(
 def soft_delete_general_expense(
     expense_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     expense = crud.get_general_expense(db, expense_id)
     if not expense or expense.is_deleted:
@@ -156,7 +156,7 @@ def soft_delete_general_expense(
 def hard_delete_general_expense(
     expense_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     expense = crud.get_general_expense(db, expense_id)
     if not expense:

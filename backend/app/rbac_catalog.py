@@ -74,7 +74,7 @@ PAQUETES: dict[str, dict] = {
     },
     "admin": {
         "kind": KIND_BASE,
-        "descripcion": "Presupuestos completo. Equipos solo lectura y prestamo propio. Sin gestion de usuarios (R4). Sin aprobacion de equipos.",
+        "descripcion": "Presupuestos completo + Equipos completo (incluye aprobacion). Sin gestion de usuarios (R4).",
         "permisos": {
             "presupuestos": (
                 "ver_global",
@@ -86,26 +86,96 @@ PAQUETES: dict[str, dict] = {
                 "gastos_generales",
                 "exportar",
             ),
-            "equipos_inventario": ("ver",),
+            "equipos_inventario": ("ver", "crear", "editar", "auditar_condicion", "dar_de_baja"),
             "equipos_prestamos": (
                 "solicitar",
                 "ver_propios",
                 "ver_global",
                 "registrar_devolucion",
+                "cancelar",
                 "exportar",
             ),
+            "equipos_aprobacion": ("autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"),
         },
     },
     "creador": {
         "kind": KIND_BASE,
-        "descripcion": "Creador de contenido: sube sus tickets y ve lo suyo.",
+        "descripcion": "Creador de contenido: sube sus tickets y ve lo suyo. Aislado del resto de Presupuestos.",
         "permisos": {
             "presupuestos": ("ver_propio", "subir_ticket"),
         },
     },
+    "marketing_presupuestos": {
+        "kind": KIND_BASE,
+        "descripcion": "Marketing — Presupuestos completo. Cero acceso a Equipos.",
+        "permisos": {
+            "presupuestos": (
+                "ver_global",
+                "ver_propio",
+                "subir_ticket",
+                "validar_ticket",
+                "borrar_ticket",
+                "gestionar_ciclos",
+                "gastos_generales",
+                "exportar",
+            ),
+        },
+    },
+    "marketing_equipos": {
+        "kind": KIND_BASE,
+        "descripcion": "Marketing — Equipos completo (inventario, prestamos, devoluciones). "
+        "Sin aprobacion: para autorizar entregas se necesita el paquete aditivo APROBADOR_EQUIPO.",
+        "permisos": {
+            "equipos_inventario": ("ver", "crear", "editar", "auditar_condicion", "dar_de_baja"),
+            "equipos_prestamos": (
+                "solicitar",
+                "ver_propios",
+                "ver_global",
+                "registrar_devolucion",
+                "cancelar",
+                "exportar",
+            ),
+        },
+    },
+    "marketing_admin": {
+        "kind": KIND_BASE,
+        "descripcion": "Marketing — Administrador (organigrama de accesos, jul-2026). Presupuestos "
+        "completo + Equipos completo, SIN aprobacion: esa sigue siendo exclusiva de 'admin'.",
+        "permisos": {
+            "presupuestos": (
+                "ver_global",
+                "ver_propio",
+                "subir_ticket",
+                "validar_ticket",
+                "borrar_ticket",
+                "gestionar_ciclos",
+                "gastos_generales",
+                "exportar",
+            ),
+            "equipos_inventario": ("ver", "crear", "editar", "auditar_condicion", "dar_de_baja"),
+            "equipos_prestamos": (
+                "solicitar",
+                "ver_propios",
+                "ver_global",
+                "registrar_devolucion",
+                "cancelar",
+                "exportar",
+            ),
+        },
+    },
+    "marketing_basico": {
+        "kind": KIND_BASE,
+        "descripcion": "Marketing — acceso basico (organigrama de accesos, jul-2026). Solo subir "
+        "tickets propios y solicitar prestamos de equipo; sin dashboards ni gestion.",
+        "permisos": {
+            "presupuestos": ("ver_propio", "subir_ticket"),
+            "equipos_prestamos": ("solicitar", "ver_propios"),
+        },
+    },
     "colaborador_mkt": {
         "kind": KIND_BASE,
-        "descripcion": "Area de marketing: pide equipo y registra su devolucion. Nada de presupuestos.",
+        "descripcion": "[Legacy] Migrado a marketing_equipos/marketing_basico. Se conserva para no "
+        "romper usuarios existentes.",
         "permisos": {
             "equipos_inventario": ("ver",),
             "equipos_prestamos": ("solicitar", "ver_propios", "registrar_devolucion"),
@@ -122,7 +192,8 @@ PAQUETES: dict[str, dict] = {
     },
     "APROBADOR_EQUIPO": {
         "kind": KIND_ADITIVO,
-        "descripcion": "Autoriza entregas y confirma devoluciones de equipo. Cero permisos de presupuestos.",
+        "descripcion": "Autoriza entregas y confirma devoluciones de equipo. "
+        "Diseñado para agregarse a marketing_equipos. Cero permisos de presupuestos.",
         "permisos": {
             "equipos_aprobacion": ("autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"),
             "equipos_prestamos": ("ver_global",),
@@ -130,7 +201,8 @@ PAQUETES: dict[str, dict] = {
     },
     "CUSTODIO_EQUIPO": {
         "kind": KIND_ADITIVO,
-        "descripcion": "Administra el inventario de equipo. No aprueba prestamos.",
+        "descripcion": "Administra el inventario de equipo. No aprueba prestamos. "
+        "Útil para el rol usuario que solo necesita gestionar inventario.",
         "permisos": {
             "equipos_inventario": ("crear", "editar", "auditar_condicion", "dar_de_baja"),
             "equipos_prestamos": ("ver_global",),

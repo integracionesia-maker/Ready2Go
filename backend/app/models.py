@@ -18,12 +18,27 @@ class UserRole(str, enum.Enum):
     SUPERADMIN = "superadmin"
     ADMIN = "admin"
     CREADOR = "creador"
-    # Rol base del area de marketing (Control de Equipos). No abre nada de
-    # presupuestos: su paquete vive en rbac_catalog.py, no aqui.
+    # Marketing — Presupuestos (acceso completo al módulo de Presupuestos,
+    # cero acceso a Equipos). Para el equipo de marketing que maneja
+    # creadores, marcas, tickets y validación.
+    MARKETING_PRESUPUESTOS = "marketing_presupuestos"
+    # Marketing — Equipos (acceso completo al módulo de Equipos: inventario,
+    # préstamos, devoluciones). Sin aprobación — ese es un permiso extra
+    # (APROBADOR_EQUIPO). Cero acceso a Presupuestos.
+    MARKETING_EQUIPOS = "marketing_equipos"
+    # Marketing — Administrador (organigrama de accesos, jul-2026). Presupuestos
+    # completo + Equipos completo, SIN aprobación (esa sigue siendo exclusiva
+    # de "admin" — la jefa de departamento). Un nivel debajo de "admin".
+    MARKETING_ADMIN = "marketing_admin"
+    # Marketing — acceso básico (organigrama de accesos, jul-2026). Solo subir
+    # tickets propios y solicitar préstamos de equipo; ve unicamente lo que
+    # ellos mismos subieron/solicitaron. Sin dashboards ni gestión.
+    MARKETING_BASICO = "marketing_basico"
+    # Legacy — migrado a marketing_equipos/marketing_basico. Se conserva para
+    # no romper usuarios existentes; el seeder ya no lo asigna.
     COLABORADOR_MKT = "colaborador_mkt"
     # Empleado general sin acceso por defecto a ningun modulo (solo el piso:
     # inicio + perfil propio). Todo acceso se concede via paquetes aditivos.
-    # Su paquete base (vacio) vive en rbac_catalog.py, no aqui.
     USUARIO = "usuario"
 
 
@@ -119,6 +134,11 @@ class Ticket(Base):
     rejection_reason = Column(Text, nullable=True)
     reviewed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
+    # Quien subio el ticket (distinto de creator_id: ese es el creador de
+    # contenido AL QUE pertenece el gasto, no quien lo cargo). Nullable porque
+    # tickets viejos no lo tienen. Permite acotar "ver_propio" a roles que no
+    # son "creador" y no tienen creator_id propio (ej. marketing_basico).
+    uploaded_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(512), nullable=False)
     mime_type = Column(String(100), nullable=False)

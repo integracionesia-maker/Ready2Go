@@ -6,6 +6,10 @@ const ROLE_LABELS = {
   superadmin: "Superadministrador",
   admin: "Administrador",
   creador: "Creador",
+  marketing_presupuestos: "Marketing (Presupuestos)",
+  marketing_equipos: "Marketing (Equipos)",
+  marketing_admin: "Marketing (Administrador)",
+  marketing_basico: "Marketing (Básico)",
   colaborador_mkt: "Marketing",
   usuario: "Usuario",
 };

@@ -34,17 +34,67 @@ BASE = {
             "gastos_generales",
             "exportar",
         },
-        "equipos_inventario": {"ver"},
+        "equipos_inventario": {"ver", "crear", "editar", "auditar_condicion", "dar_de_baja"},
         "equipos_prestamos": {
             "solicitar",
             "ver_propios",
             "ver_global",
             "registrar_devolucion",
+            "cancelar",
             "exportar",
         },
+        "equipos_aprobacion": {"autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"},
     },
     "creador": {
         "presupuestos": {"ver_propio", "subir_ticket"},
+    },
+    "marketing_presupuestos": {
+        "presupuestos": {
+            "ver_global",
+            "ver_propio",
+            "subir_ticket",
+            "validar_ticket",
+            "borrar_ticket",
+            "gestionar_ciclos",
+            "gastos_generales",
+            "exportar",
+        },
+    },
+    "marketing_equipos": {
+        "equipos_inventario": {"ver", "crear", "editar", "auditar_condicion", "dar_de_baja"},
+        "equipos_prestamos": {
+            "solicitar",
+            "ver_propios",
+            "ver_global",
+            "registrar_devolucion",
+            "cancelar",
+            "exportar",
+        },
+    },
+    "marketing_admin": {
+        "presupuestos": {
+            "ver_global",
+            "ver_propio",
+            "subir_ticket",
+            "validar_ticket",
+            "borrar_ticket",
+            "gestionar_ciclos",
+            "gastos_generales",
+            "exportar",
+        },
+        "equipos_inventario": {"ver", "crear", "editar", "auditar_condicion", "dar_de_baja"},
+        "equipos_prestamos": {
+            "solicitar",
+            "ver_propios",
+            "ver_global",
+            "registrar_devolucion",
+            "cancelar",
+            "exportar",
+        },
+    },
+    "marketing_basico": {
+        "presupuestos": {"ver_propio", "subir_ticket"},
+        "equipos_prestamos": {"solicitar", "ver_propios"},
     },
     "colaborador_mkt": {
         "equipos_inventario": {"ver"},
@@ -115,14 +165,23 @@ def subconjuntos_de_aditivos():
 
 COMBINACIONES = [
     (base, aditivos)
-    for base in ("superadmin", "admin", "creador", "colaborador_mkt")
+    for base in (
+        "superadmin",
+        "admin",
+        "creador",
+        "marketing_presupuestos",
+        "marketing_equipos",
+        "marketing_admin",
+        "marketing_basico",
+        "colaborador_mkt",
+    )
     for aditivos in subconjuntos_de_aditivos()
 ]
 
 
 @pytest.mark.parametrize("role_base,aditivos", COMBINACIONES)
 def test_set_efectivo_de_cada_combinacion(db, catalogo, role_base, aditivos):
-    """4 roles base x 8 subconjuntos de aditivos = 32 combinaciones, una por una."""
+    """8 roles base x 8 subconjuntos de aditivos = 64 combinaciones, una por una."""
     nombre = f"u.{role_base}." + ("-".join(a.lower() for a in aditivos) or "solo")
     user = usuario_con(db, username=nombre, role=role_base, aditivos=aditivos)
 

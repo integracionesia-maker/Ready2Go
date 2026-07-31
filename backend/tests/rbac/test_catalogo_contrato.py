@@ -55,6 +55,7 @@ def test_a_json_devuelve_listas_en_orden_del_catalogo():
         "ver_propios",
         "ver_global",
         "registrar_devolucion",
+        "cancelar",
         "exportar",
     ]
 

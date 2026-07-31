@@ -76,12 +76,25 @@ def test_un_colaborador_no_autoriza_entregas(inventario, ana):
     assert resp.json()["codigo"] == "SIN_PERMISO"
 
 
-def test_un_admin_tampoco_autoriza(inventario, ana, db):
-    """`admin` no tiene `equipos_aprobacion:*`: aprobar equipo es del paquete
-    aditivo, no del rol base."""
+def test_un_admin_si_autoriza(inventario, ana, db):
+    """Redefinicion de roles (docs/asignaciones/prompt-rbac-redefinicion.md):
+    `admin` = Presupuestos completo + Equipos completo, aprobacion INCLUIDA
+    en el rol base (ver rbac_catalog.PAQUETES["admin"]). Ya no depende del
+    paquete aditivo APROBADOR_EQUIPO."""
     loan_id = _prestado(logueado("ana.ruiz"))
     usuario_con(db, username="adm", role="admin")
-    assert logueado("adm").post(f"/api/loans/{loan_id}/autorizar-entrega").status_code == 403
+    assert logueado("adm").post(f"/api/loans/{loan_id}/autorizar-entrega").status_code == 200
+
+
+def test_marketing_equipos_no_autoriza_sin_paquete_aditivo(inventario, ana, db):
+    """`marketing_equipos` tiene Equipos completo pero SIN aprobacion: para
+    autorizar entregas necesita el paquete aditivo APROBADOR_EQUIPO (ver
+    rbac_catalog.PAQUETES["marketing_equipos"])."""
+    loan_id = _prestado(logueado("ana.ruiz"))
+    usuario_con(db, username="mkt.eq", role="marketing_equipos")
+    resp = logueado("mkt.eq").post(f"/api/loans/{loan_id}/autorizar-entrega")
+    assert resp.status_code == 403
+    assert resp.json()["codigo"] == "SIN_PERMISO"
 
 
 def test_la_aprobadora_autoriza(inventario, ana, melisa):

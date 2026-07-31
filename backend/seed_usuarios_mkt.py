@@ -1,15 +1,14 @@
-"""Seeder de usuarios del equipo de marketing.
+"""Seeder de usuarios del equipo de marketing + superadmins.
 Idempotente: si un usuario ya existe (mismo username), lo salta.
 
 Uso (ejecutar SIEMPRE desde backend/):
     python seed_usuarios_mkt.py
 
-Los usuarios se crean con rol `colaborador_mkt` y la contraseña definida en
-la variable de entorno DEFAULT_USER_PASSWORD. Si no está definida, se usa una
-contraseña temporal aleatoria (se imprime una sola vez).
+Los usuarios se crean con la contraseña definida en DEFAULT_USER_PASSWORD
+del .env. Si no está definida, se genera una temporal aleatoria.
 
-Antes de sembrar, ELIMINA todos los usuarios que NO sean superadmin para
-dejar la base limpia. Los 3 superadmins no se tocan.
+NO crea datos falsos (tickets, marcas, etc.) — solo usuarios reales.
+Para datos demo de prueba usa seed_demo_completo.py.
 """
 
 import os
@@ -19,14 +18,21 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 from app.database import SessionLocal, engine, Base
-from app import models, security, crud_rbac
+from app import models, security
 
 Base.metadata.create_all(bind=engine)
 
+# ── Superadministradores ────────────────────────────────────────────────
+
+SUPERADMINS = [
+    ("integraciones.ia", "integraciones.ia@grupo-ortiz.com", "Integraciones IA"),
+    ("josue.benitez",     "josue.benitez@grupo-ortiz.com",     "Josue Benitez"),
+    ("jose.aguilar",      "jose.aguilar@grupo-ortiz.com",      "Jose Aguilar"),
+]
+
 # ── Usuarios del equipo de marketing ────────────────────────────────────
-# (nombre completo, email, username)
-# Si el email es compartido, se deriva uno único a partir del nombre.
-# Rol base: colaborador_mkt (ver inventario, solicitar préstamo, devolver).
+# (nombre completo, email)
+# El username se deriva del nombre (slug). Rol base: colaborador_mkt.
 
 USUARIOS_MKT = [
     ("Melisa Avendaño Zúñiga",          "melisa.avendano@grupo-ortiz.com"),
@@ -44,15 +50,33 @@ USUARIOS_MKT = [
     ("Naydelin Sepúlveda Mendoza",       "naydelin.sepulveda@grupo-ortiz.com"),
 ]
 
-# Paquetes aditivos por username (llave = nombre completo exacto).
-# Melisa es la aprobadora de equipo; el resto solo colaborador_mkt base.
-ADITIVOS: dict[str, tuple[str, ...]] = {
-    "Melisa Avendaño Zúñiga": ("APROBADOR_EQUIPO",),
+# Rol de cada persona (organigrama de accesos, jul-2026 —
+# docs/asignaciones + diagrama de Grupo Ortiz). Fuente de verdad unica: quien
+# no aparezca aqui cae al default de DEFAULT_ROLE_MKT.
+#
+#   admin             Jefa de departamento. Acceso completo (incluye aprobar
+#                      prestamos de Equipos) — ver rbac_catalog.PAQUETES["admin"].
+#   marketing_admin    Tier "Administrador" del organigrama: Presupuestos +
+#                      Equipos completos, SIN aprobacion (esa sigue siendo
+#                      exclusiva de la jefa).
+#   marketing_basico   Resto del equipo: solo subir tickets propios y
+#                      solicitar prestamos de equipo (ver lo propio).
+ROLES_ESPECIALES: dict[str, str] = {
+    "Melisa Avendaño Zúñiga":            "admin",
+    "Alejandra Paola Aparicio Romero":   "marketing_admin",
+    "Emily Vianney Pérez Morales":       "marketing_admin",
+    "Gerson Fabricio Martínez Guerrero": "marketing_admin",
+    "Sara Jion mi Benito Reyes":         "marketing_admin",
 }
+
+# Rol por defecto para cualquiera en USUARIOS_MKT que no este en
+# ROLES_ESPECIALES (hoy: los 8 del tier "tickets y solicitud de prestamos
+# unicamente"). `colaborador_mkt` es legacy — ver models.UserRole — y este
+# seeder ya no lo asigna a nadie nuevo.
+DEFAULT_ROLE_MKT = models.UserRole.MARKETING_BASICO.value
 
 
 def _slugify(name: str) -> str:
-    """Normaliza un nombre completo a username: 'emily.perez'."""
     normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
     return normalized.lower().replace(" ", ".")
 
@@ -76,42 +100,84 @@ def _unique_email(db, base: str) -> str:
     return email
 
 
-def limpiar_usuarios(db) -> int:
-    """Elimina todos los usuarios que NO sean superadmin. Retorna cuántos borró."""
-    eliminados = (
-        db.query(models.User)
-        .filter(models.User.role != models.UserRole.SUPERADMIN.value)
-        .delete(synchronize_session="fetch")
-    )
-    db.commit()
-    return eliminados
-
-
-def sembrar(db, default_password: str) -> list[models.User]:
-    creados: list[models.User] = []
-    for full_name, email in USUARIOS_MKT:
-        username = _unique_username(db, _slugify(full_name))
-        unique_email = _unique_email(db, email)
-
-        existente = (
-            db.query(models.User)
-            .filter(
-                (models.User.username == username)
-                | (models.User.email == unique_email)
-            )
-            .first()
-        )
+def sembrar_superadmins(db, default_password: str) -> list[models.User]:
+    creados = []
+    for username, email, full_name in SUPERADMINS:
+        existente = db.query(models.User).filter(
+            (models.User.username == username) | (models.User.email == email)
+        ).first()
         if existente:
-            print(f"  [existe] {full_name} -> {existente.username} / {existente.email}")
+            # Si ya existe pero no es superadmin, no se toca (el usuario puede
+            # haber cambiado de rol manualmente).
+            print(f"  [existe] superadmin {username} ({email})")
             creados.append(existente)
             continue
 
         user = models.User(
             username=username,
+            email=email,
+            password_hash=security.hash_password(default_password),
+            full_name=full_name,
+            role=models.UserRole.SUPERADMIN.value,
+            is_active=True,
+            must_change_password=False,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        print(f"  [creado] superadmin {username} ({email})")
+        creados.append(user)
+    return creados
+
+
+def sembrar_mkt(db, default_password: str) -> list[models.User]:
+    """Idempotente Y reconciliadora: a este roster nominal (13 personas fijas
+    del equipo de marketing) el organigrama de accesos es la fuente de verdad
+    de su rol, asi que si alguien ya existe con un rol distinto al que le toca
+    hoy (ej. quedo en el default viejo antes de que existiera su tier), se
+    actualiza — no se pisa una cuenta creada por fuera de este roster."""
+    creados = []
+    for full_name, email in USUARIOS_MKT:
+        base_username = _slugify(full_name)
+        role_objetivo = ROLES_ESPECIALES.get(full_name, DEFAULT_ROLE_MKT)
+
+        # Buscar por el username/email BASE (sin desambiguar) antes de generar
+        # una variante unica: `_unique_username`/`_unique_email` desambiguan
+        # incrementando un sufijo apenas detectan CUALQUIER fila con ese valor
+        # -- incluida la propia cuenta de esta misma persona en una corrida
+        # posterior. Buscar con la variante ya desambiguada nunca encuentra a
+        # quien ya existe, y esta funcion terminaria creando un duplicado en
+        # cada corrida en vez de reconciliar (bug real, encontrado al probar
+        # la reconciliacion antes de tocar la base real).
+        existente = db.query(models.User).filter(
+            (models.User.username == base_username) | (models.User.email == email)
+        ).first()
+        if existente:
+            if existente.role != role_objetivo:
+                anterior = existente.role
+                existente.role = role_objetivo
+                db.commit()
+                db.refresh(existente)
+                print(
+                    f"  [actualizado] {full_name} -> {existente.username}: "
+                    f"{anterior} -> {role_objetivo}"
+                )
+            else:
+                print(f"  [existe] {full_name} -> {existente.username} / {existente.email} [{existente.role}]")
+            creados.append(existente)
+            continue
+
+        # Nadie coincide con el username/email base: ahora si desambiguar,
+        # por si choca con una cuenta DISTINTA (ej. alguien creado a mano con
+        # el mismo slug).
+        username = _unique_username(db, base_username)
+        unique_email = _unique_email(db, email)
+        user = models.User(
+            username=username,
             email=unique_email,
             password_hash=security.hash_password(default_password),
             full_name=full_name,
-            role=models.UserRole.COLABORADOR_MKT.value,
+            role=role_objetivo,
             is_active=True,
             must_change_password=False,
         )
@@ -119,13 +185,7 @@ def sembrar(db, default_password: str) -> list[models.User]:
         db.commit()
         db.refresh(user)
 
-        # Paquetes aditivos
-        extras = ADITIVOS.get(full_name, ())
-        for nombre_paquete in extras:
-            crud_rbac.conceder(db, user.id, nombre_paquete, granted_by=None)
-
-        tag = f" +{','.join(extras)}" if extras else ""
-        print(f"  [creado] {full_name} -> {user.username} / {user.email}{tag}")
+        print(f"  [creado] {full_name} -> {user.username} / {user.email} [{role_objetivo}]")
         creados.append(user)
 
     return creados
@@ -135,17 +195,18 @@ def main() -> None:
     default_password = os.getenv("DEFAULT_USER_PASSWORD", "")
     if not default_password:
         default_password = security.generate_temp_password()
-        print(f"DEFAULT_USER_PASSWORD no definida en .env — contraseña temporal: {default_password}")
-        print("Guárdala y agrégala a .env como DEFAULT_USER_PASSWORD=<valor> para futuros seeds.\n")
+        print(f"DEFAULT_USER_PASSWORD no definida en .env - contraseña temporal: {default_password}")
+        print("Agregala a .env como DEFAULT_USER_PASSWORD=<valor> para futuros seeds.\n")
 
     db = SessionLocal()
     try:
-        n = limpiar_usuarios(db)
-        print(f"Usuarios no-superadmin eliminados: {n}\n")
+        print("=== Superadministradores ===")
+        supers = sembrar_superadmins(db, default_password)
 
-        print("Sembrando usuarios de marketing...")
-        creados = sembrar(db, default_password)
-        print(f"\nUsuarios creados: {len(creados)}")
+        print("\n=== Marketing ===")
+        mkt = sembrar_mkt(db, default_password)
+
+        print(f"\nTotal: {len(supers)} superadmins + {len(mkt)} marketing = {len(supers) + len(mkt)} usuarios")
     finally:
         db.close()
 

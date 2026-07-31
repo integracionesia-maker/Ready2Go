@@ -120,6 +120,9 @@ def login(client, identificador, password):
 PASSWORD_SUPERADMIN = "SuperClaveTest123!"
 PASSWORD_ADMIN = "AdminClaveTest123!"
 PASSWORD_CREADOR = "CreadorClaveTest123!"
+PASSWORD_MARKETING_PRESUPUESTOS = "MktPresuClaveTest123!"
+PASSWORD_MARKETING_ADMIN = "MktAdminClaveTest123!"
+PASSWORD_MARKETING_BASICO = "MktBasicoClaveTest123!"
 
 
 @pytest.fixture
@@ -145,6 +148,23 @@ def superadmin_user(db):
 @pytest.fixture
 def admin_user(db):
     return make_user(db, username="admin1", password=PASSWORD_ADMIN, role="admin")
+
+
+@pytest.fixture
+def marketing_presupuestos_user(db):
+    return make_user(
+        db, username="mkt.presu", password=PASSWORD_MARKETING_PRESUPUESTOS, role="marketing_presupuestos"
+    )
+
+
+@pytest.fixture
+def marketing_admin_user(db):
+    return make_user(db, username="mkt.admin", password=PASSWORD_MARKETING_ADMIN, role="marketing_admin")
+
+
+@pytest.fixture
+def marketing_basico_user(db):
+    return make_user(db, username="mkt.basico", password=PASSWORD_MARKETING_BASICO, role="marketing_basico")
 
 
 @pytest.fixture
@@ -174,6 +194,21 @@ def logged_in_superadmin(superadmin_user):
 @pytest.fixture
 def logged_in_admin(admin_user):
     return _independent_client("admin1", PASSWORD_ADMIN)
+
+
+@pytest.fixture
+def logged_in_marketing_presupuestos(marketing_presupuestos_user):
+    return _independent_client("mkt.presu", PASSWORD_MARKETING_PRESUPUESTOS)
+
+
+@pytest.fixture
+def logged_in_marketing_admin(marketing_admin_user):
+    return _independent_client("mkt.admin", PASSWORD_MARKETING_ADMIN)
+
+
+@pytest.fixture
+def logged_in_marketing_basico(marketing_basico_user):
+    return _independent_client("mkt.basico", PASSWORD_MARKETING_BASICO)
 
 
 @pytest.fixture

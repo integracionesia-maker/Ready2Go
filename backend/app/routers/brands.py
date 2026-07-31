@@ -47,7 +47,7 @@ def get_brand(
 def create_brand(
     data: schemas.BrandCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     _validate_priority(data.priority)
     try:
@@ -62,7 +62,7 @@ def update_brand(
     brand_id: int,
     data: schemas.BrandUpdate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     brand = crud.get_brand(db, brand_id)
     if not brand:

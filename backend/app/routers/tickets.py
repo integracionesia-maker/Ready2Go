@@ -59,6 +59,11 @@ def list_tickets(
         # Se ignora cualquier filtro por nombre de creador: un creador solo ve lo suyo.
         tickets = crud.get_tickets(db, creator_name=None, brand_name=brand_name, status=status)
         tickets = [t for t in tickets if t.creator_id == current_user.creator_id]
+    elif current_user.role == "marketing_basico":
+        # "ver_propio" para este rol es lo que EL subio, no un creator_id propio
+        # (no son creadores de contenido). Ver organigrama de accesos jul-2026.
+        tickets = crud.get_tickets(db, creator_name=creator_name, brand_name=brand_name, status=status)
+        tickets = [t for t in tickets if t.uploaded_by_user_id == current_user.id]
     else:
         tickets = crud.get_tickets(db, creator_name=creator_name, brand_name=brand_name, status=status)
     return [_ticket_to_response(t) for t in tickets]
@@ -69,7 +74,7 @@ def brand_spend_breakdown(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     return crud.get_brand_spend_breakdown(db, start_date=start_date, end_date=end_date)
 
@@ -84,12 +89,18 @@ def download_file(
     if not ticket or ticket.is_deleted:
         raise HTTPException(status_code=404, detail="Ticket no encontrado.")
 
-    # Solo superadmin, admin y creador (dueño del ticket) pueden descargar
-    # comprobantes. Roles sin acceso a Presupuestos (colaborador_mkt, usuario)
-    # reciben 403 (hallazgo #2 auditoría).
-    if current_user.role not in ("superadmin", "admin", "creador"):
+    # Solo superadmin, admin, marketing_presupuestos/marketing_admin (Presupuestos
+    # completo), creador (dueño del ticket) y marketing_basico (solo lo que el
+    # mismo subio) pueden descargar comprobantes. Roles sin acceso a Presupuestos
+    # (colaborador_mkt, usuario) reciben 403 (hallazgo #2 auditoría).
+    roles_con_acceso = (
+        "superadmin", "admin", "marketing_presupuestos", "marketing_admin", "creador", "marketing_basico",
+    )
+    if current_user.role not in roles_con_acceso:
         raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
     if current_user.role == "creador" and ticket.creator_id != current_user.creator_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
+    if current_user.role == "marketing_basico" and ticket.uploaded_by_user_id != current_user.id:
         raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
     return FileResponse(path=ticket.file_path, media_type=ticket.mime_type, filename=ticket.file_name)
 
@@ -174,7 +185,7 @@ def create_ticket(
 def aprobar_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket or ticket.is_deleted:
@@ -198,7 +209,7 @@ def rechazar_ticket(
     ticket_id: int,
     data: schemas.TicketRejectRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket or ticket.is_deleted:
@@ -222,7 +233,7 @@ def rechazar_ticket(
 def soft_delete_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket or ticket.is_deleted:
@@ -243,7 +254,7 @@ def soft_delete_ticket(
 def hard_delete_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket:

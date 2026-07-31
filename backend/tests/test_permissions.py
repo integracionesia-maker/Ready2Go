@@ -221,6 +221,152 @@ class TestDashboardPermissions:
     def test_admin_allowed(self, logged_in_admin, path):
         assert logged_in_admin.get(path).status_code == 200
 
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/api/dashboard/summary",
+            "/api/dashboard/monthly-spend",
+            "/api/dashboard/creator-usage",
+            "/api/dashboard/general-expenses-monthly",
+        ],
+    )
+    def test_marketing_presupuestos_allowed(self, logged_in_marketing_presupuestos, path):
+        assert logged_in_marketing_presupuestos.get(path).status_code == 200
+
+
+class TestMarketingPresupuestosPermissions:
+    """`marketing_presupuestos` debe tener acceso completo a Presupuestos y
+    cero acceso a Equipos/usuarios/auditoría (docs/asignaciones/prompt-rbac-redefinicion.md)."""
+
+    def test_accede_a_todo_presupuestos(self, logged_in_marketing_presupuestos, creator_a, brand_a):
+        client = logged_in_marketing_presupuestos
+        assert client.get("/api/dashboard/summary").status_code == 200
+        assert client.get("/api/dashboard/monthly-spend").status_code == 200
+        assert client.get("/api/dashboard/creator-usage").status_code == 200
+        assert client.get("/api/dashboard/general-expenses-monthly").status_code == 200
+        assert client.get("/api/creators/kpi").status_code == 200
+        assert client.get("/api/creators/").status_code == 200
+        assert client.get("/api/brands/").status_code == 200
+        assert client.get("/api/tickets/").status_code == 200
+        assert client.get("/api/tickets/brand-spend").status_code == 200
+        assert client.get("/api/general-expenses/").status_code == 200
+
+    def test_puede_crear_ticket(self, logged_in_marketing_presupuestos, creator_a, brand_a):
+        resp = logged_in_marketing_presupuestos.post(
+            "/api/tickets/",
+            data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
+            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+        )
+        assert resp.status_code == 201
+
+    def test_puede_descargar_comprobante_de_cualquier_creador(
+        self, logged_in_marketing_presupuestos, db, creator_a, brand_a
+    ):
+        ticket = make_ticket(db, creator=creator_a, brand=brand_a, amount=75)
+        resp = logged_in_marketing_presupuestos.get(f"/api/tickets/file/{ticket.id}")
+        assert resp.status_code == 200
+
+    def test_cero_acceso_a_equipos(self, logged_in_marketing_presupuestos):
+        client = logged_in_marketing_presupuestos
+        assert client.get("/api/equipment/").status_code == 403
+        assert client.get("/api/loans/").status_code == 403
+
+    def test_cero_acceso_a_usuarios_y_auditoria(self, logged_in_marketing_presupuestos):
+        client = logged_in_marketing_presupuestos
+        assert client.get("/api/users/").status_code == 403
+        assert client.get("/api/audit-logs/").status_code == 403
+
+
+class TestMarketingAdminPermissions:
+    """`marketing_admin` (organigrama de accesos jul-2026): Presupuestos completo
+    + Equipos completo, SIN aprobacion (esa sigue siendo exclusiva de admin)."""
+
+    def test_accede_a_todo_presupuestos(self, logged_in_marketing_admin):
+        client = logged_in_marketing_admin
+        assert client.get("/api/dashboard/summary").status_code == 200
+        assert client.get("/api/creators/kpi").status_code == 200
+        assert client.get("/api/tickets/brand-spend").status_code == 200
+        assert client.get("/api/general-expenses/").status_code == 200
+
+    def test_accede_a_inventario_y_prestamos_de_equipos(self, logged_in_marketing_admin):
+        client = logged_in_marketing_admin
+        assert client.get("/api/equipment/").status_code == 200
+        resp = client.post(
+            "/api/loans/", json={"motivo": "Prueba", "fecha_regreso_esperada": "2026-12-31"}
+        )
+        assert resp.status_code == 201
+
+    def test_no_puede_autorizar_entregas(self, logged_in_marketing_admin):
+        # Sin paquete APROBADOR_EQUIPO: no tiene equipos_aprobacion:*, aunque
+        # el prestamo no exista el 403 de permiso debe ganarle al 404.
+        resp = logged_in_marketing_admin.post("/api/loans/999999/autorizar-entrega")
+        assert resp.status_code == 403
+
+    def test_cero_acceso_a_usuarios_y_auditoria(self, logged_in_marketing_admin):
+        client = logged_in_marketing_admin
+        assert client.get("/api/users/").status_code == 403
+        assert client.get("/api/audit-logs/").status_code == 403
+
+
+class TestMarketingBasicoPermissions:
+    """`marketing_basico` (organigrama de accesos jul-2026): solo subir tickets
+    propios y solicitar prestamos de equipo; ve unicamente lo suyo."""
+
+    def test_puede_crear_ticket_y_solicitar_prestamo(self, logged_in_marketing_basico, creator_a, brand_a):
+        client = logged_in_marketing_basico
+        resp = client.post(
+            "/api/tickets/",
+            data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
+            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+        )
+        assert resp.status_code == 201
+
+        resp = client.post(
+            "/api/loans/", json={"motivo": "Prueba", "fecha_regreso_esperada": "2026-12-31"}
+        )
+        assert resp.status_code == 201
+
+    def test_ve_solo_los_tickets_que_el_mismo_subio(
+        self, logged_in_marketing_basico, logged_in_admin, creator_a, brand_a
+    ):
+        # El admin sube un ticket ajeno; marketing_basico sube el suyo.
+        logged_in_admin.post(
+            "/api/tickets/",
+            data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "999"},
+            files={"file": ("ajeno.pdf", b"%PDF-1.4", "application/pdf")},
+        )
+        propio = logged_in_marketing_basico.post(
+            "/api/tickets/",
+            data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
+            files={"file": ("propio.pdf", b"%PDF-1.4", "application/pdf")},
+        ).json()
+
+        vistos = logged_in_marketing_basico.get("/api/tickets/").json()
+        assert [t["id"] for t in vistos] == [propio["id"]]
+
+    def test_no_puede_descargar_comprobante_ajeno(
+        self, logged_in_marketing_basico, admin_user, db, creator_a, brand_a
+    ):
+        # actor_user_id explicito y distinto del propio: el default de
+        # make_ticket (id=1) puede coincidir por accidente con el propio
+        # usuario en una DB de prueba aislada, y el ticket dejaria de ser
+        # "ajeno" de verdad.
+        ticket_ajeno = make_ticket(db, creator=creator_a, brand=brand_a, amount=75, actor_user_id=admin_user.id)
+        resp = logged_in_marketing_basico.get(f"/api/tickets/file/{ticket_ajeno.id}")
+        assert resp.status_code == 403
+
+    def test_sin_acceso_a_dashboards_ni_gestion(self, logged_in_marketing_basico):
+        client = logged_in_marketing_basico
+        assert client.get("/api/dashboard/summary").status_code == 403
+        assert client.get("/api/creators/kpi").status_code == 403
+        assert client.get("/api/tickets/brand-spend").status_code == 403
+        assert client.get("/api/general-expenses/").status_code == 403
+        assert client.post("/api/brands/", json={"name": "Nueva"}).status_code == 403
+
+    def test_sin_acceso_a_inventario_de_equipos(self, logged_in_marketing_basico):
+        # Tiene equipos_prestamos:solicitar,ver_propios pero NO equipos_inventario.
+        assert logged_in_marketing_basico.get("/api/equipment/").status_code == 403
+
 
 class TestTicketDeletePermissions:
     def test_creador_cannot_soft_delete(self, logged_in_admin, logged_in_creador, creator_a, brand_a):

@@ -18,7 +18,7 @@ def dashboard_summary(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     return crud.get_dashboard_summary(db, start_date=start_date, end_date=end_date)
 
@@ -28,7 +28,7 @@ def monthly_spend(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     return crud.get_monthly_spend(db, start_date=start_date, end_date=end_date)
 
@@ -38,7 +38,7 @@ def creator_usage(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     return crud.get_creator_usage(db, start_date=start_date, end_date=end_date)
 
@@ -48,6 +48,6 @@ def general_expenses_monthly(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     return crud.get_general_expenses_monthly(db, start_date=start_date, end_date=end_date)

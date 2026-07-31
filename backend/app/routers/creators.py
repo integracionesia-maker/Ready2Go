@@ -37,7 +37,7 @@ def list_creators(
 @router.get("/kpi", response_model=schemas.CreatorKpiResponse)
 def get_kpi(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     return crud.get_creators_kpi(db)
 
@@ -77,7 +77,7 @@ def get_creator_cycles(
 def create_creator(
     data: schemas.CreatorCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     _validate_period(data.cycle_period)
     creator = crud.create_creator(db, data)
@@ -89,7 +89,7 @@ def update_creator(
     creator_id: int,
     data: schemas.CreatorUpdate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     creator = crud.get_creator(db, creator_id)
     if not creator:

@@ -280,6 +280,7 @@ def create_ticket(
         mime_type=mime_type,
         notes=notes,
         status=status,
+        uploaded_by_user_id=actor_user_id,
     )
 
     if status == models.TicketStatus.APROBADO.value:
