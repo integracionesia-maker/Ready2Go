@@ -230,6 +230,18 @@
   }
 }
 
+/* ── Touch targets (auditoría móvil, C3) ──────────────────────────────────
+   .btn-go/.btn-go-ghost llevan py-2/py-2.5 (~34-38px de alto) pensado para
+   mouse — bajo el breakpoint md, min-height 44px (WCAG 2.5.5) sin tocar el
+   padding de escritorio. Arregla ambos módulos (Presupuestos y Equipos) de
+   una vez, en vez de parchar cada botón individual. */
+@media (max-width: 767px) {
+  .btn-go,
+  .btn-go-ghost {
+    min-height: 44px;
+  }
+}
+
 /* ── Pantalla de carga (LoadingScreen) ────────────────────────────────── */
 @keyframes go-logo-pulse {
   0%,

@@ -10,7 +10,7 @@ const FOCUSABLE_SELECTOR =
  * real, cierre con Esc/backdrop, foco de vuelta al disparador al cerrar, y
  * scroll del body bloqueado mientras está abierto.
  */
-export default function GlassModal({ open, onClose, title, children, footer, className = "", refract = false }) {
+export default function GlassModal({ open, onClose, title, children, footer, className = "", refract = false, mobileFullscreen = false }) {
   const titleId = useId();
   const panelRef = useRef(null);
   const previouslyFocused = useRef(null);
@@ -61,7 +61,7 @@ export default function GlassModal({ open, onClose, title, children, footer, cla
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[90] flex items-center justify-center p-4"
+          className={`fixed inset-0 z-[90] flex items-center justify-center ${mobileFullscreen ? "p-0 sm:p-4" : "p-4"}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -78,9 +78,11 @@ export default function GlassModal({ open, onClose, title, children, footer, cla
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className={`glass ${refract ? "glass--refract" : ""} relative z-10 w-full max-w-lg overflow-hidden outline-none ${className}`.trim()}
+            className={`glass ${refract ? "glass--refract" : ""} relative z-10 w-full max-w-lg overflow-hidden outline-none ${
+              mobileFullscreen ? "h-full rounded-none sm:h-auto sm:rounded-[var(--glass-radius)]" : ""
+            } ${className}`.trim()}
           >
-            <div className="veil flex max-h-[85vh] flex-col">
+            <div className={`veil flex flex-col ${mobileFullscreen ? "h-full sm:max-h-[85vh]" : "max-h-[85vh]"}`}>
               <div className="flex items-center justify-between gap-4 border-b px-5 py-4" style={{ borderColor: "var(--go-border)" }}>
                 <h2 id={titleId} className="font-display text-base font-bold" style={{ color: "var(--go-text-primary)" }}>
                   {title}

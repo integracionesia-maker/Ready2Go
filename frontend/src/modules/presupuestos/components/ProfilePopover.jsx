@@ -61,7 +61,7 @@ export default function ProfilePopover() {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="true"
-        className="flex items-center gap-2.5 rounded-go px-2 py-1.5 transition-colors hover:bg-white/5"
+        className="flex min-h-[44px] items-center gap-2.5 rounded-go px-2 py-1.5 transition-colors hover:bg-white/5"
       >
         <div
           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-display text-xs font-bold"

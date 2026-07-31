@@ -217,7 +217,7 @@ export default function FichaPrestamoPage() {
         <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
           Firmas
         </h2>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <div>
             <p className="mb-1.5 font-body text-xs uppercase tracking-wider" style={{ color: "var(--go-text-muted)" }}>
               Quien entrega
@@ -299,7 +299,7 @@ export default function FichaPrestamoPage() {
       </GlassPanel>
 
       {ampliada && (
-        <GlassModal open onClose={() => setAmpliada(null)} title={ampliada.label}>
+        <GlassModal open onClose={() => setAmpliada(null)} title={ampliada.label} mobileFullscreen>
           <FotoCompleta mediaId={ampliada.mediaId} label={ampliada.label} />
         </GlassModal>
       )}
