@@ -61,6 +61,9 @@
   --go-duration-fast: 150ms;
   --go-duration-base: 250ms;
   --go-duration-slow: 400ms;
+
+  /* ── Glow de cristal (C1, Header) — brillo sutil que sigue al cursor ── */
+  --go-glow: rgba(255, 255, 255, 0.1);
 }
 
 /* Sin ":root" a propósito: además del tema global en <html>, R8 (reporte PDF)
@@ -81,4 +84,6 @@
   --go-overlay: rgba(38, 38, 38, 0.5);
 
   --veil-bg: #ffffff;
+
+  --go-glow: rgba(0, 0, 0, 0.05);
 }
