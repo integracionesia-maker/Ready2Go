@@ -87,12 +87,10 @@ export default function EquiposSidebar({ collapsed, onToggle, mobileOpen, onClos
         className={`glass fixed left-0 top-16 z-40 flex h-[calc(100%-4rem)] w-60 flex-col border-r transition-all duration-300 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 ${collapsed ? "md:w-16" : "md:w-60"}`}
-        style={{ borderColor: "var(--go-border)" }}
+        style={{ borderColor: "var(--go-border)", borderRadius: 0 }}
       >
-        <div className="veil absolute inset-0 -z-10" aria-hidden="true" />
-
         {/* ── Navigation ────────────────────────────────────────────────── */}
-        <nav aria-label="Navegación de Equipos" className="relative z-10 flex-1 space-y-1 overflow-y-auto px-2.5 py-4">
+        <nav aria-label="Navegación de Equipos" className="flex-1 space-y-1 overflow-y-auto px-2.5 py-4">
           {visibleItems.map((item) => (
             <NavLink
               key={item.to}

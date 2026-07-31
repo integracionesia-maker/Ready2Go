@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { EmptyState, SkeletonShimmer, useToast } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, useToast } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchLoans, fetchLoanById, authorizeDelivery } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -134,9 +134,10 @@ export default function AprobacionesPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <>
+    <GlassPanel className="space-y-6 p-4 sm:p-6">
       {puede("equipos_aprobacion", "autorizar_entrega") && (
-        <section>
+        <div>
           <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
             Autorizaciones de entrega ({entregasPendientes.length})
           </h2>
@@ -145,7 +146,7 @@ export default function AprobacionesPage() {
           ) : (
             <ul className="space-y-2">
               {entregasPendientes.map((loan) => (
-                <li key={loan.id} className="go-card flex flex-wrap items-center justify-between gap-3">
+                <li key={loan.id} className="flex flex-wrap items-center justify-between gap-3 rounded-go border p-3" style={{ borderColor: "var(--go-border)", background: "var(--go-surface-sunken)" }}>
                   <div>
                     <Link to={`/equipos/prestamo/${loan.folio}`} className="font-mono text-sm font-semibold" style={{ color: "var(--go-orange)" }}>
                       {loan.folio}
@@ -158,22 +159,19 @@ export default function AprobacionesPage() {
                     type="button"
                     onClick={() => handleAutorizar(loan)}
                     disabled={autorizandoId === loan.id}
-                    className="btn-go text-xs px-3 py-1.5 flex items-center gap-1.5"
+                    className="btn-go text-xs px-3 py-1.5"
                   >
-                    <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
                     {autorizandoId === loan.id ? "Autorizando..." : "Autorizar entrega"}
                   </button>
                 </li>
               ))}
             </ul>
           )}
-        </section>
+        </div>
       )}
 
       {puede("equipos_aprobacion", "confirmar_devolucion") && (
-        <section>
+        <div>
           <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
             Devoluciones por confirmar ({devolucionesPendientes.length})
           </h2>
@@ -182,7 +180,7 @@ export default function AprobacionesPage() {
           ) : (
             <ul className="space-y-2">
               {devolucionesPendientes.map((loan) => (
-                <li key={loan.id} className="go-card flex flex-wrap items-center justify-between gap-3">
+                <li key={loan.id} className="flex flex-wrap items-center justify-between gap-3 rounded-go border p-3" style={{ borderColor: "var(--go-border)", background: "var(--go-surface-sunken)" }}>
                   <div>
                     <Link to={`/equipos/prestamo/${loan.folio}`} className="font-mono text-sm font-semibold" style={{ color: "var(--go-orange)" }}>
                       {loan.folio}
@@ -196,22 +194,19 @@ export default function AprobacionesPage() {
                     type="button"
                     onClick={() => abrirConfirmarDevolucion(loan)}
                     disabled={abriendoDevolucionId === loan.id}
-                    className="btn-go text-xs px-3 py-1.5 flex items-center gap-1.5"
+                    className="btn-go text-xs px-3 py-1.5"
                   >
-                    <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 12.5l4 4L13 8.5M9.5 12.5l4 4L21 8.5" />
-                    </svg>
                     {abriendoDevolucionId === loan.id ? "Abriendo..." : "Confirmar devolución"}
                   </button>
                 </li>
               ))}
             </ul>
           )}
-        </section>
+        </div>
       )}
 
       {puede("equipos_aprobacion", "cerrar_incidencia") && (
-        <section>
+        <div>
           <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
             Incidencias abiertas ({incidencias.length})
           </h2>
@@ -220,7 +215,7 @@ export default function AprobacionesPage() {
           ) : (
             <ul className="space-y-2">
               {incidencias.map((loan) => (
-                <li key={loan.id} className="go-card flex flex-wrap items-center justify-between gap-3">
+                <li key={loan.id} className="flex flex-wrap items-center justify-between gap-3 rounded-go border p-3" style={{ borderColor: "var(--go-border)", background: "var(--go-surface-sunken)" }}>
                   <div>
                     <Link to={`/equipos/prestamo/${loan.folio}`} className="font-mono text-sm font-semibold" style={{ color: "var(--go-orange)" }}>
                       {loan.folio}
@@ -236,8 +231,9 @@ export default function AprobacionesPage() {
               ))}
             </ul>
           )}
-        </section>
+        </div>
       )}
+    </GlassPanel>
 
       {modalDevolucion && (
         <ConfirmarDevolucionModal
@@ -261,6 +257,6 @@ export default function AprobacionesPage() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

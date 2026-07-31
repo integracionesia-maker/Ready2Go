@@ -10,11 +10,9 @@ export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
   return (
     <header
       className="glass fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 sm:px-6"
-      style={{ borderColor: "var(--go-border)" }}
+      style={{ borderColor: "var(--go-border)", borderRadius: 0, boxShadow: "none" }}
     >
-      <div className="veil absolute inset-0 -z-10" aria-hidden="true" />
-
-      <div className="relative z-10 flex items-center gap-3">
+      <div className="flex items-center gap-3">
         <button
           onClick={onOpenMobileMenu}
           className="-ml-1 flex h-9 w-9 items-center justify-center rounded-go transition-colors hover:bg-white/5 md:hidden"

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { fetchTickets } from "@/api";
+import { GlassPanel } from "@/design";
 
 const ADMIN_SECTIONS = [
   {
@@ -62,11 +63,10 @@ function SectionCard({ to, onClick, title, description, icon }) {
   return (
     <Tag
       {...(to ? { to } : { type: "button", onClick })}
-      className="go-card group w-full text-left transition-all duration-200 hover:-translate-y-0.5"
+      className="group w-full text-left transition-all duration-200 hover:-translate-y-0.5"
       style={{ textDecoration: "none" }}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--go-orange)")}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--go-border)")}
     >
+      <GlassPanel className="h-full p-5 sm:p-6">
       <div
         className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-go-lg transition-colors duration-200 group-hover:bg-[var(--go-orange-tint)]"
         style={{ background: "var(--go-surface-sunken)" }}
@@ -91,6 +91,7 @@ function SectionCard({ to, onClick, title, description, icon }) {
       <p className="mt-1.5 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
         {description}
       </p>
+    </GlassPanel>
     </Tag>
   );
 }
@@ -144,7 +145,7 @@ function CreatorHome({ creator, onNewTicket }) {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* ── Estatus de mi presupuesto ─────────────────────────────────── */}
-      <div className="go-card">
+      <GlassPanel className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="go-eyebrow">Mi presupuesto</span>
           {hasCycle && (
@@ -209,7 +210,7 @@ function CreatorHome({ creator, onNewTicket }) {
             Aún no tienes un ciclo de presupuesto asignado. Contacta a tu administrador.
           </p>
         )}
-      </div>
+      </GlassPanel>
 
       {/* ── Mis tickets por estado ────────────────────────────────────── */}
       {counts && (
@@ -219,12 +220,12 @@ function CreatorHome({ creator, onNewTicket }) {
             { label: "Aprobados", value: counts.aprobado, badge: "go-badge-success" },
             { label: "Rechazados", value: counts.rechazado, badge: "go-badge-error" },
           ].map((c) => (
-            <div key={c.label} className="go-card flex items-center justify-between py-4">
+            <GlassPanel key={c.label} className="flex items-center justify-between py-4 px-5">
               <span className={`go-badge ${c.badge}`}>{c.label}</span>
               <span className="font-mono text-2xl font-semibold" style={{ color: "var(--go-text-primary)" }}>
                 {c.value}
               </span>
-            </div>
+            </GlassPanel>
           ))}
         </div>
       )}

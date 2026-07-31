@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { EmptyState, SkeletonShimmer, useToast } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, useToast } from "@/design";
 import { esCodigo, ApiError } from "@/api";
 import { fetchLoans, fetchLoansExport } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -165,7 +165,7 @@ export default function HistorialPage() {
         )}
       </div>
 
-      <div className="go-card flex flex-wrap items-end gap-3">
+      <GlassPanel className="flex flex-wrap items-end gap-3 p-4 sm:p-5">
         <div className="min-w-[200px] flex-1">
           <label className="go-eyebrow mb-1.5 block">Buscar</label>
           <input
@@ -195,11 +195,12 @@ export default function HistorialPage() {
           <label className="go-eyebrow mb-1.5 block">Hasta</label>
           <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="go-input" />
         </div>
-      </div>
+      </GlassPanel>
 
       {resultado.items.length === 0 ? (
         <EmptyState title="Sin resultados" message="Ningún préstamo coincide con estos filtros." />
       ) : (
+        <GlassPanel className="p-4 sm:p-6">
         <div className="go-table-scroll-wrapper">
           <div className="overflow-x-auto rounded-go-lg border go-table-scroll" style={{ borderColor: "var(--go-border)" }}>
             <table className="go-table w-full">
@@ -237,6 +238,7 @@ export default function HistorialPage() {
             </table>
           </div>
         </div>
+        </GlassPanel>
       )}
 
       {resultado.items.length > 0 && (

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchEquipmentDashboard, fetchLoans } from "../api";
 import { esCodigo } from "@/api";
-import { KpiTile, StatusDonut, EmptyState, SkeletonShimmer } from "@/design";
+import { GlassPanel, KpiTile, StatusDonut, EmptyState, SkeletonShimmer } from "@/design";
 import LoansByMonthChart from "../components/charts/LoansByMonthChart";
 import TopEquipmentChart from "../components/charts/TopEquipmentChart";
 
@@ -200,24 +200,21 @@ export default function InicioPage() {
       </h1>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <KpiTile label="Prestados" value={dashboard.prestados} accentColor="#FB670B" />
-        <KpiTile label="Atrasados" value={dashboard.atrasados} accentColor="#E53E3E" />
-        <KpiTile label="Pend. confirmación" value={dashboard.pendientes_confirmacion} accentColor="#F59E0B" />
-        {/* Único KPI con cristal en esta pantalla — Header + ambos Sidebars ya
-            son cristal (B5) y DESIGN_SYSTEM.md limita a 3-4 superficies
-            simultáneas; "Disponibles" es la métrica más accionable de un
-            vistazo ("¿puedo prestar algo ahora mismo?"). */}
+        <KpiTile label="Prestados" value={dashboard.prestados} accentColor="#FB670B" glass />
+        <KpiTile label="Atrasados" value={dashboard.atrasados} accentColor="#E53E3E" glass />
+        <KpiTile label="Pend. confirmación" value={dashboard.pendientes_confirmacion} accentColor="#F59E0B" glass />
         <KpiTile label="Disponibles" value={dashboard.disponibles} accentColor="#00A36E" glass />
         <KpiTile
           label="Tiempo promedio"
           value={tiempoPromedioActivo != null ? Math.round(tiempoPromedioActivo) : "—"}
           hint="días, préstamos activos"
           accentColor="#A78BFA"
+          glass
         />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <section className="go-card">
+        <GlassPanel as="section" className="p-4 sm:p-6">
           <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
             Distribución de estados
           </h2>
@@ -236,9 +233,9 @@ export default function InicioPage() {
               </ul>
             </div>
           )}
-        </section>
+        </GlassPanel>
 
-        <section className="go-card">
+        <GlassPanel as="section" className="p-4 sm:p-6">
           <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
             Requiere atención
           </h2>
@@ -267,14 +264,14 @@ export default function InicioPage() {
               ))}
             </ul>
           )}
-        </section>
+        </GlassPanel>
       </div>
 
       {loansForbidden ? (
         <EmptyState title="Sin permiso para ver préstamos" message="Estas métricas requieren acceso a préstamos de equipo." />
       ) : (
         <>
-          <section className="go-card">
+          <GlassPanel as="section" className="p-4 sm:p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
                 Préstamos por mes
@@ -282,17 +279,17 @@ export default function InicioPage() {
               {muestraParcial && <span className="go-eyebrow">Últimos {loans.length} de {loansTotal}</span>}
             </div>
             <LoansByMonthChart data={porMes} />
-          </section>
+          </GlassPanel>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <section className="go-card">
+            <GlassPanel as="section" className="p-4 sm:p-6">
               <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
                 Top equipos prestados
               </h2>
               <TopEquipmentChart data={topEquipos} />
-            </section>
+            </GlassPanel>
 
-            <section className="go-card">
+            <GlassPanel as="section" className="p-4 sm:p-6">
               <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
                 Tasa de devolución a tiempo
               </h2>
@@ -311,7 +308,7 @@ export default function InicioPage() {
                   </ul>
                 </div>
               )}
-            </section>
+            </GlassPanel>
           </div>
         </>
       )}

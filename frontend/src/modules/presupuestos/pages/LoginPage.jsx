@@ -46,10 +46,10 @@ export default function LoginPage() {
               className="font-display text-lg font-bold uppercase tracking-[0.06em]"
               style={{ color: "var(--go-text-primary)" }}
             >
-              Control de Presupuestos
+              Ready2Go
             </h1>
             <p className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
-              Creadores de Contenido — Grupo Ortiz
+              Plataforma de Marketing — Grupo Ortiz
             </p>
           </div>
         </div>

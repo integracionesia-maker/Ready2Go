@@ -5,7 +5,7 @@ import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import Modal from "./Modal";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
-import { RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS } from "@/design";
 
 const CREATOR_COLUMNS = [
   { key: "name", label: "Nombre", type: "string" },
@@ -317,7 +317,7 @@ export default function AdminView({ creators, brands, onChange }) {
 
       {/* ── Creators section ───────────────────────────────────────────── */}
       {section === "creators" && (
-        <div className="space-y-4">
+        <GlassPanel className="space-y-4 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <span className="go-eyebrow">{creators.length} creadores</span>
             <button onClick={() => openCreatorForm()} className="btn-go">
@@ -447,12 +447,12 @@ export default function AdminView({ creators, brands, onChange }) {
             </div>
             </div>
           )}
-        </div>
+        </GlassPanel>
       )}
 
       {/* ── Brands section ─────────────────────────────────────────────── */}
       {section === "brands" && (
-        <div className="space-y-4">
+        <GlassPanel className="space-y-4 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <span className="go-eyebrow">{brands.length} marcas</span>
             <button onClick={() => openBrandForm()} className="btn-go">
@@ -540,7 +540,7 @@ export default function AdminView({ creators, brands, onChange }) {
             </div>
             </div>
           )}
-        </div>
+        </GlassPanel>
       )}
 
       {/* ── Creator create/edit modal ──────────────────────────────────── */}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { EmptyState, SkeletonShimmer, useToast } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, useToast } from "@/design";
 import { esCodigo } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -358,7 +358,7 @@ export default function NuevoPrestamoPage() {
       </div>
 
       {paso === 1 && (
-        <form onSubmit={handleSubmitPaso1} className="go-card mx-auto max-w-xl space-y-4">
+        <GlassPanel as="form" onSubmit={handleSubmitPaso1} className="mx-auto max-w-xl space-y-4 p-5">
           <div>
             <p className="go-eyebrow mb-1.5">Responsable</p>
             <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
@@ -413,7 +413,7 @@ export default function NuevoPrestamoPage() {
               {enviandoPaso1 ? "Creando..." : "Siguiente"}
             </button>
           </div>
-        </form>
+        </GlassPanel>
       )}
 
       {paso === 2 && loan && (
@@ -429,7 +429,7 @@ export default function NuevoPrestamoPage() {
             ) : (
               <div className="space-y-3">
                 {disponibles.map((eq) => (
-                  <div key={eq.id} className="go-card">
+                  <GlassPanel key={eq.id} className="p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
@@ -467,7 +467,7 @@ export default function NuevoPrestamoPage() {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </GlassPanel>
                 ))}
               </div>
             )}
@@ -482,13 +482,15 @@ export default function NuevoPrestamoPage() {
             ) : (
               <ul className="space-y-2" data-testid="equipos-seleccionados">
                 {loan.items.map((it) => (
-                  <li key={it.id} className="go-card flex items-center justify-between">
+                  <li key={it.id}>
+                    <GlassPanel className="flex items-center justify-between">
                     <span className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
                       {it.equipo_nombre}
                     </span>
                     <button type="button" onClick={() => handleQuitarItem(it)} className="btn-go-ghost text-xs px-2 py-1" style={{ color: "var(--go-error)" }}>
                       Quitar
                     </button>
+                    </GlassPanel>
                   </li>
                 ))}
               </ul>
@@ -505,7 +507,7 @@ export default function NuevoPrestamoPage() {
       {paso === 3 && loan && (
         <div className="space-y-6">
           {loan.items.map((it) => (
-            <div key={it.id} className="go-card">
+            <GlassPanel key={it.id} className="p-4">
               <p className="mb-3 font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
                 {it.equipo_nombre}
               </p>
@@ -521,7 +523,7 @@ export default function NuevoPrestamoPage() {
                   onUpload={(blob) => handleUploadFoto(it, "foto_entrega_atras", blob)}
                 />
               </div>
-            </div>
+            </GlassPanel>
           ))}
           <div className="flex justify-between">
             <button type="button" onClick={() => setPaso(2)} className="btn-go-ghost">
@@ -536,14 +538,14 @@ export default function NuevoPrestamoPage() {
 
       {paso === 4 && loan && (
         <div className="mx-auto max-w-xl space-y-6">
-          <div className="go-card">
+          <GlassPanel className="p-4">
             <p className="go-eyebrow mb-2">Firma de quien entrega</p>
             <SignaturePad ref={firmaEntregaRef} />
-          </div>
-          <div className="go-card">
+          </GlassPanel>
+          <GlassPanel className="p-4">
             <p className="go-eyebrow mb-2">Firma del responsable</p>
             <SignaturePad ref={firmaResponsableRef} />
-          </div>
+          </GlassPanel>
 
           {errorConfirmar && (
             <div

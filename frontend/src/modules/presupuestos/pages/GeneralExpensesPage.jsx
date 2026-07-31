@@ -3,7 +3,7 @@ import DateRangeFilter from "../components/DateRangeFilter";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import GeneralExpenseModal from "../components/GeneralExpenseModal";
 import GeneralExpensesExportModal from "../components/GeneralExpensesExportModal";
-import { RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS } from "@/design";
 import { fetchGeneralExpenses, softDeleteGeneralExpense, hardDeleteGeneralExpense, generalExpenseFileUrl } from "@/api";
 
 function formatCurrency(amount) {
@@ -121,11 +121,13 @@ export default function GeneralExpensesPage({ brands = [] }) {
       </div>
 
       {/* ── Date filter ──────────────────────────────────────────────── */}
-      <DateRangeFilter
-        startDate={dateRange.start}
-        endDate={dateRange.end}
-        onChange={(start, end) => setDateRange({ start, end })}
-      />
+      <GlassPanel className="p-4 sm:p-6">
+        <DateRangeFilter
+          startDate={dateRange.start}
+          endDate={dateRange.end}
+          onChange={(start, end) => setDateRange({ start, end })}
+        />
+      </GlassPanel>
 
       {/* ── Error ─────────────────────────────────────────────────────── */}
       {error && (
@@ -185,12 +187,13 @@ export default function GeneralExpensesPage({ brands = [] }) {
 
       {/* ── Table ─────────────────────────────────────────────────────── */}
       {!loading && expenses.length > 0 && (
-        <div className="go-table-scroll-wrapper">
-          <div
-            className="overflow-x-auto rounded-go-lg border go-table-scroll"
-            style={{ borderColor: "var(--go-border)" }}
-          >
-            <table className="go-table">
+        <GlassPanel className="p-4 sm:p-6">
+          <div className="go-table-scroll-wrapper">
+            <div
+              className="overflow-x-auto rounded-go-lg border go-table-scroll"
+              style={{ borderColor: "var(--go-border)" }}
+            >
+              <table className="go-table">
               <thead>
                 <tr>
                   <th>Fecha</th>
@@ -243,6 +246,7 @@ export default function GeneralExpensesPage({ brands = [] }) {
             </table>
           </div>
         </div>
+        </GlassPanel>
       )}
 
       {createModalOpen && (

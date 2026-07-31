@@ -45,15 +45,16 @@
   --go-overlay: rgba(0, 0, 0, 0.6);
 
   /* ── Cristal (liquid glass, WP7) — receta única, DESIGN_SYSTEM.md §Receta ─
-     .glass NO varía por tema: la regla es "fuente única, no improvisar
-     variantes". Solo el velo (--veil-bg) cambia por tema, para que la
-     superficie sólida detrás del texto se mezcle con el fondo real. */
-  --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
-  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.55);
+     Capa única semitransparente: el glass ES la superficie de texto, sin velo
+     separado. El color base es el del tema (oscuro=negro, claro=blanco) al 88%
+     de opacidad — suficiente para legibilidad 4.5:1 y para que el blur deje
+     pasar el fondo real. */
+  --glass-bg: color-mix(in srgb, var(--veil-bg) 88%, transparent);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --glass-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.50);
   --glass-radius: 20px;
-  --veil-bg: var(--go-dark-800);
+  --veil-bg: var(--go-dark-900);
 
   /* ── Movimiento (`motion`) — respeta prefers-reduced-motion: reduce ──── */
   --go-ease: cubic-bezier(0.16, 1, 0.3, 1);

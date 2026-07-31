@@ -3,7 +3,7 @@ import { fetchTickets, softDeleteTicket, hardDeleteTicket } from "@/api";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import MediaViewerModal from "./MediaViewerModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import { RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS } from "@/design";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
 import { useAuth } from "@/context/AuthContext";
@@ -131,10 +131,7 @@ export default function TransactionTable({ creators, brands, onChange }) {
       </div>
 
       {/* ── Filters ──────────────────────────────────────────────────── */}
-      <div
-        className="flex flex-wrap gap-4 rounded-go-lg p-4"
-        style={{ background: "var(--go-surface)", border: "1px solid var(--go-border)" }}
-      >
+      <GlassPanel className="flex flex-wrap gap-4 p-4 sm:p-5">
         <div className="min-w-0 flex-1 sm:min-w-[200px]">
           <label className="go-eyebrow mb-1.5 block">Filtrar por Creador</label>
           <div className="relative">
@@ -230,7 +227,7 @@ export default function TransactionTable({ creators, brands, onChange }) {
             </button>
           </div>
         )}
-      </div>
+      </GlassPanel>
 
       {/* ── Error ─────────────────────────────────────────────────────── */}
       {error && (
@@ -290,6 +287,7 @@ export default function TransactionTable({ creators, brands, onChange }) {
 
       {/* ── Table ─────────────────────────────────────────────────────── */}
       {!loading && sortedTickets.length > 0 && (
+        <GlassPanel className="p-4 sm:p-6">
         <div className="go-table-scroll-wrapper">
         <div
           className="overflow-x-auto rounded-go-lg border go-table-scroll"
@@ -435,6 +433,7 @@ export default function TransactionTable({ creators, brands, onChange }) {
           </div>
         </div>
         </div>
+        </GlassPanel>
       )}
 
       {viewerTicket && <MediaViewerModal ticket={viewerTicket} onClose={() => setViewerTicket(null)} />}

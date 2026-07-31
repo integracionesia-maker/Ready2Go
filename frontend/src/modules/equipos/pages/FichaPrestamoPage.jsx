@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { EmptyState, SkeletonShimmer, Timeline, GlassModal } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, Timeline, GlassModal } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchLoanByFolio, mediaUrl, loanResponsivaUrl } from "../api";
 
@@ -177,7 +177,7 @@ export default function FichaPrestamoPage() {
         )}
       </div>
 
-      <section className="go-card">
+      <GlassPanel as="section" className="p-4 sm:p-6">
         <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
           Datos del préstamo
         </h2>
@@ -211,9 +211,9 @@ export default function FichaPrestamoPage() {
             <span className="font-mono">{loan.fecha_confirmacion ? loan.fecha_confirmacion.slice(0, 10) : "—"}</span>
           </Dato>
         </dl>
-      </section>
+      </GlassPanel>
 
-      <section className="go-card">
+      <GlassPanel as="section" className="p-4 sm:p-6">
         <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
           Firmas
         </h2>
@@ -231,14 +231,14 @@ export default function FichaPrestamoPage() {
             <Miniatura mediaId={loan.firmas?.firma_responsable} label="Firma del responsable" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
           </div>
         </div>
-      </section>
+      </GlassPanel>
 
       <section className="space-y-4">
         <h2 className="font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
           Equipos ({loan.items.length})
         </h2>
         {loan.items.map((it) => (
-          <div key={it.id} className="go-card space-y-3">
+          <GlassPanel key={it.id} className="space-y-3 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
                 {it.equipo_nombre}
@@ -287,16 +287,16 @@ export default function FichaPrestamoPage() {
                 <Miniatura mediaId={it.media.foto_dev_atras} label="Atrás después" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
               </div>
             </div>
-          </div>
+          </GlassPanel>
         ))}
-      </section>
+      </GlassPanel>
 
-      <section className="go-card">
+      <GlassPanel as="section" className="p-4 sm:p-6">
         <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
           Bitácora
         </h2>
         <Timeline events={loan.eventos} />
-      </section>
+      </GlassPanel>
 
       {ampliada && (
         <GlassModal open onClose={() => setAmpliada(null)} title={ampliada.label}>

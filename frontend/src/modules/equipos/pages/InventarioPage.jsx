@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { EmptyState, SkeletonShimmer, RowActions, ICONS } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, RowActions, ICONS } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchEquipmentList } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -185,7 +185,7 @@ export default function InventarioPage() {
       </div>
 
       {/* Filtros en la URL: sobreviven a un F5, se pueden compartir por link. */}
-      <div className="go-card flex flex-wrap items-end gap-3">
+      <GlassPanel className="flex flex-wrap items-end gap-3 p-4 sm:p-5">
         <div className="min-w-[180px] flex-1">
           <label className="go-eyebrow mb-1.5 block">Buscar</label>
           <input
@@ -223,7 +223,7 @@ export default function InventarioPage() {
             <option value="false">No disponible</option>
           </select>
         </div>
-      </div>
+      </GlassPanel>
 
       {resultado.items.length === 0 ? (
         <EmptyState title="Sin equipos" message="Ningún equipo coincide con estos filtros." />

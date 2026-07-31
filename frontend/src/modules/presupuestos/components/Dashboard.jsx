@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { KpiTile } from "@/design";
+import { GlassPanel, KpiTile } from "@/design";
 import DateRangeFilter from "./DateRangeFilter";
 import MonthlySpendChart from "./charts/MonthlySpendChart";
 import CreatorUsageChart from "./charts/CreatorUsageChart";
@@ -138,7 +138,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
   return (
     <div className="space-y-8">
       {/* ── Date filter + descarga de reporte ────────────────────────── */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <GlassPanel as="div" className="flex flex-wrap items-end justify-between gap-4 p-4 sm:p-6">
         <DateRangeFilter
           startDate={dateRange.start}
           endDate={dateRange.end}
@@ -154,7 +154,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
           {pdfState === "rendering" && "Preparando reporte…"}
           {pdfState === "generating" && "Generando PDF…"}
         </button>
-      </div>
+      </GlassPanel>
 
       {/* ── Error ─────────────────────────────────────────────────────── */}
       {error && (
@@ -199,10 +199,8 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               format={formatCurrency}
               hint={`${kpi?.active_creators ?? 0} creadores activos`}
               accentColor={ACCENTS.orange}
+              glass
             />
-            {/* Las dos cifras "de un vistazo" llevan cristal — el resto se
-                queda plano para no pasar de 3 superficies de cristal en
-                pantalla junto con el nav de módulos del shell. */}
             <KpiTile
               label="Total Gastado"
               value={kpi ? kpi.total_spent : "—"}
@@ -224,6 +222,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               value={summary?.active_brands ?? "—"}
               hint="con gastos en el período"
               accentColor={ACCENTS.violet}
+              glass
             />
           </div>
 
@@ -235,18 +234,21 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               format={formatCurrency}
               hint="según filtro de fechas"
               accentColor={ACCENTS.orange}
+              glass
             />
             <KpiTile
               label="Tickets"
               value={summary?.ticket_count ?? "—"}
               hint={`Promedio ${summary ? formatCurrency(summary.avg_ticket) : "—"} por ticket`}
               accentColor={ACCENTS.turquoise}
+              glass
             />
             <KpiTile
               label="Creadores Activos"
               value={creatorUsage.filter((c) => c.spent > 0).length}
               hint="con gastos en el período"
               accentColor={ACCENTS.sky}
+              glass
             />
             <KpiTile
               label="Gastos Generales"
@@ -254,11 +256,12 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               format={formatCurrency}
               hint={`${generalExpensesCount} ${generalExpensesCount === 1 ? "gasto" : "gastos"} en el periodo`}
               accentColor={ACCENTS.orange}
+              glass
             />
           </div>
 
           {/* ── Row: Monthly bar chart ────────────────────────────────── */}
-          <section className="go-card">
+          <GlassPanel as="section" className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <h2
                 className="font-display text-sm font-bold uppercase tracking-[0.08em]"
@@ -269,11 +272,11 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               <span className="go-eyebrow">MXN</span>
             </div>
             <MonthlySpendChart data={monthly} />
-          </section>
+          </GlassPanel>
 
           {/* ── Row: Brand spend + Creator usage (side by side) ────────── */}
           <div className="grid gap-8 lg:grid-cols-2">
-            <section className="go-card">
+            <GlassPanel as="section" className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2
                   className="font-display text-sm font-bold uppercase tracking-[0.08em]"
@@ -284,9 +287,9 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
                 <span className="go-eyebrow">MXN</span>
               </div>
               <BrandSpendApexChart data={brandSpend} />
-            </section>
+            </GlassPanel>
 
-            <section className="go-card">
+            <GlassPanel as="section" className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2
                   className="font-display text-sm font-bold uppercase tracking-[0.08em]"
@@ -297,11 +300,11 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
                 <span className="go-eyebrow">% usado</span>
               </div>
               <CreatorUsageChart data={creatorUsage} />
-            </section>
+            </GlassPanel>
           </div>
 
           {/* ── Row: Cumulative spend trend ────────────────────────────── */}
-          <section className="go-card">
+          <GlassPanel as="section" className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <h2
                 className="font-display text-sm font-bold uppercase tracking-[0.08em]"
@@ -312,10 +315,10 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               <span className="go-eyebrow">MXN</span>
             </div>
             <SpendTrendChart data={monthly} />
-          </section>
+          </GlassPanel>
 
           {/* ── Row: General expenses by month ─────────────────────────── */}
-          <section className="go-card">
+          <GlassPanel as="section" className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <h2
                 className="font-display text-sm font-bold uppercase tracking-[0.08em]"
@@ -326,7 +329,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               <span className="go-eyebrow">MXN</span>
             </div>
             <GeneralExpensesChart data={generalExpensesMonthly} />
-          </section>
+          </GlassPanel>
         </>
       )}
 

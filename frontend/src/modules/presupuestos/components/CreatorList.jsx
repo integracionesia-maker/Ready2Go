@@ -1,3 +1,5 @@
+import { GlassPanel } from "@/design";
+
 function formatCurrency(amount) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -121,7 +123,7 @@ export default function CreatorList({ creators }) {
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {creators.map((c) => (
-          <div key={c.id} className="go-card">
+          <GlassPanel key={c.id} className="p-5">
             {/* ── Avatar + name ──────────────────────────────────── */}
             <div className="mb-4 flex items-center gap-3">
               <div
@@ -206,7 +208,7 @@ export default function CreatorList({ creators }) {
 
             {/* ── Progress bar ───────────────────────────────────── */}
             <BudgetBar spent={c.cycle_spent ?? 0} total={c.cycle_amount ?? 0} />
-          </div>
+          </GlassPanel>
         ))}
       </div>
     </div>

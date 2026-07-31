@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { EmptyState, SkeletonShimmer, useToast, RowActions, ICONS } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, useToast, RowActions, ICONS } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchLoans, fetchLoanById, loanResponsivaUrl } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -151,7 +151,7 @@ export default function ActivosPage() {
         Préstamos activos <span style={{ color: "var(--go-orange)" }}>({filtrados.length})</span>
       </h1>
 
-      <div className="go-card flex flex-wrap items-end gap-3">
+      <GlassPanel className="flex flex-wrap items-end gap-3 p-4 sm:p-5">
         <div className="min-w-[220px] flex-1">
           <label className="go-eyebrow mb-1.5 block">Buscar</label>
           <input
@@ -183,11 +183,12 @@ export default function ActivosPage() {
             ))}
           </select>
         </div>
-      </div>
+      </GlassPanel>
 
       {pageItems.length === 0 ? (
         <EmptyState title="Sin préstamos activos" message="Ningún préstamo coincide con estos filtros." />
       ) : (
+        <GlassPanel className="p-4 sm:p-6">
         <div className="go-table-scroll-wrapper">
           <div className="overflow-x-auto rounded-go-lg border go-table-scroll" style={{ borderColor: "var(--go-border)" }}>
             <table className="go-table w-full">
@@ -254,6 +255,7 @@ export default function ActivosPage() {
             </table>
           </div>
         </div>
+        </GlassPanel>
       )}
 
       {pageItems.length > 0 && (

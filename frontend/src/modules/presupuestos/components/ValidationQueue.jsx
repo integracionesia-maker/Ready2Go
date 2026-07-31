@@ -4,7 +4,7 @@ import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import MediaViewerModal from "./MediaViewerModal";
 import Modal from "./Modal";
-import { RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS } from "@/design";
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("es-MX", {
@@ -119,6 +119,7 @@ export default function ValidationQueue({ onChange }) {
           <p>No hay tickets pendientes de validación.</p>
         </div>
       ) : (
+        <GlassPanel className="p-4 sm:p-6">
         <div className="go-table-scroll-wrapper">
         <div className="overflow-x-auto go-table-scroll rounded-go-lg border" style={{ borderColor: "var(--go-border)" }}>
           <table className="go-table">
@@ -193,6 +194,7 @@ export default function ValidationQueue({ onChange }) {
           </table>
         </div>
         </div>
+        </GlassPanel>
       )}
 
       {viewerTicket && <MediaViewerModal ticket={viewerTicket} onClose={() => setViewerTicket(null)} />}

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { GlassPanel } from "@/design";
 
 const CONDICION_BADGE = {
   bueno: "go-badge-success",
@@ -47,14 +48,15 @@ export default function EquipmentCard({ equipo, onClick }) {
   const ocupadoPor = equipo.tenedor_actual?.nombre;
 
   return (
-    <button
+    <GlassPanel
+      as="button"
       type="button"
       ref={tilt.ref}
       onMouseMove={tilt.onMouseMove}
       onMouseLeave={tilt.onMouseLeave}
       onClick={() => onClick(equipo)}
       style={tilt.style}
-      className="go-card w-full text-left"
+      className="w-full text-left p-4"
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <h3 className="font-display text-sm font-bold leading-snug" style={{ color: "var(--go-text-primary)" }}>
@@ -90,6 +92,6 @@ export default function EquipmentCard({ equipo, onClick }) {
           {equipo.fecha_regreso_esperada && ` · regresa ${equipo.fecha_regreso_esperada}`}
         </p>
       )}
-    </button>
+    </GlassPanel>
   );
 }
