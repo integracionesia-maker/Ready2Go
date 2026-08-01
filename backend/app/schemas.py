@@ -11,6 +11,10 @@ class CreatorCreate(BaseModel):
     cycle_budget_amount: float = Field(..., gt=0, description="Monto del ciclo (semanal/mensual)")
     cycle_period: str = Field(..., description="'semanal' o 'mensual'")
     initial_budget: float = Field(0.0, ge=0, description="Histórico acumulado, opcional")
+    # Datos para crear el usuario vinculado (rol "creador")
+    # El full_name del usuario se toma del name del creador automáticamente
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr = Field(..., max_length=255)
 
 
 class CreatorUpdate(BaseModel):
@@ -32,6 +36,8 @@ class CreatorResponse(BaseModel):
     cycle_period: Optional[str] = None
     cycle_amount: Optional[float] = None
     cycle_spent: Optional[float] = None
+    # Solo presente al crear (POST): contraseña temporal del usuario vinculado
+    temporary_password: Optional[str] = None
     cycle_remaining: Optional[float] = None
     cycle_start_date: Optional[date] = None
     cycle_end_date: Optional[date] = None

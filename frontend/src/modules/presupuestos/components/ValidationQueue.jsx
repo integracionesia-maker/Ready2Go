@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { approveTicket, fetchTickets, hardDeleteTicket, rejectTicket, softDeleteTicket } from "@/api";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import DeleteConfirmModal from "./DeleteConfirmModal";
@@ -23,6 +24,8 @@ function formatDate(iso) {
   });
 }
 
+const UNDO_SECONDS = 5;
+
 export default function ValidationQueue({ onChange }) {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +37,49 @@ export default function ValidationQueue({ onChange }) {
   const [rejectReason, setRejectReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // ── Undo toast ──────────────────────────────────────────────────────
+  const location = useLocation();
+  const [undo, setUndo] = useState(null); // { ticket, action, label, fn }
+  const undoRef = useRef(null);
+  const [undoLeft, setUndoLeft] = useState(0);
+
+  // Expira al cambiar de ruta
+  useEffect(() => { if (undo) ejecutarUndo(); }, [location.pathname]); // eslint-disable-line
+
+  const ejecutarUndo = useCallback(() => {
+    if (!undoRef.current) return;
+    const pendiente = undoRef.current;
+    undoRef.current = null;
+    setUndo(null);
+    pendiente.fn();
+  }, []);
+
+  const programarUndo = useCallback((ticket, action, label, fn) => {
+    // Si ya hay un undo pendiente, ejecutarlo antes de programar el nuevo
+    if (undoRef.current) ejecutarUndo();
+    undoRef.current = { ticket, action, label, fn };
+    setUndo({ ticket, action, label });
+    setUndoLeft(UNDO_SECONDS);
+  }, [ejecutarUndo]);
+
+  // Countdown
+  useEffect(() => {
+    if (!undo || undoLeft <= 0) return;
+    const id = setInterval(() => {
+      setUndoLeft((prev) => {
+        if (prev <= 0.1) { clearInterval(id); ejecutarUndo(); return 0; }
+        return prev - 0.1;
+      });
+    }, 100);
+    return () => clearInterval(id);
+  }, [undo, undoLeft, ejecutarUndo]);
+
+  const cancelarUndo = () => {
+    undoRef.current = null;
+    setUndo(null);
+    setUndoLeft(0);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -51,37 +97,45 @@ export default function ValidationQueue({ onChange }) {
     load();
   }, []);
 
-  const handleApprove = async () => {
-    if (!approveTarget) return;
-    setSubmitting(true);
-    setError(null);
+  const doApprove = async (ticket) => {
+    setSubmitting(true); setError(null);
     try {
-      await approveTicket(approveTarget.id);
-      setApproveTarget(null);
-      load();
-      if (onChange) onChange();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+      await approveTicket(ticket.id);
+      load(); if (onChange) onChange();
+    } catch (err) { setError(err.message); }
+    finally { setSubmitting(false); }
   };
 
-  const handleReject = async () => {
-    if (!rejectTarget || !rejectReason.trim()) return;
-    setSubmitting(true);
-    setError(null);
+  const doReject = async (ticket, reason) => {
+    setSubmitting(true); setError(null);
     try {
-      await rejectTicket(rejectTarget.id, rejectReason.trim());
-      setRejectTarget(null);
-      setRejectReason("");
-      load();
-      if (onChange) onChange();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+      await rejectTicket(ticket.id, reason);
+      setRejectReason(""); load(); if (onChange) onChange();
+    } catch (err) { setError(err.message); }
+    finally { setSubmitting(false); }
+  };
+
+  const doSoftDelete = async (ticket) => {
+    setSubmitting(true); setError(null);
+    try {
+      await softDeleteTicket(ticket.id);
+      load(); if (onChange) onChange();
+    } catch (err) { setError(err.message); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleApprove = () => {
+    if (!approveTarget) return;
+    programarUndo(approveTarget, "aprobado", "Aprobado", () => doApprove(approveTarget));
+    setApproveTarget(null);
+  };
+
+  const handleReject = () => {
+    if (!rejectTarget || !rejectReason.trim()) return;
+    const ticket = rejectTarget;
+    const reason = rejectReason.trim();
+    programarUndo(ticket, "rechazado", "Rechazado", () => doReject(ticket, reason));
+    setRejectTarget(null);
   };
 
   const errorBanner = error && (
@@ -166,24 +220,10 @@ export default function ValidationQueue({ onChange }) {
                     <td>
                       <RowActions
                         actions={[
-                          { key: "ver", label: "Ver", icon: ICONS.ver, onClick: () => setViewerTicket(t) },
-                          { key: "aprobar", label: "Aprobar", icon: ICONS.aprobar, onClick: () => setApproveTarget(t) },
-                          {
-                            key: "rechazar",
-                            label: "Rechazar",
-                            icon: ICONS.rechazar,
-                            onClick: () => {
-                              setRejectTarget(t);
-                              setRejectReason("");
-                            },
-                          },
-                          {
-                            key: "eliminar",
-                            label: "Eliminar",
-                            icon: ICONS.eliminar,
-                            variant: "danger",
-                            onClick: () => setDeleteTarget(t),
-                          },
+                          { key: "ver", label: "Ver comprobante", icon: ICONS.ver, onClick: () => setViewerTicket(t) },
+                          { key: "aprobar", label: "Aprobar", icon: ICONS.aprobar, variant: "success", onClick: () => setApproveTarget(t) },
+                          { key: "rechazar", label: "Rechazar", icon: ICONS.rechazar, variant: "warning", onClick: () => { setRejectTarget(t); setRejectReason(""); } },
+                          { key: "eliminar", label: "Eliminar", icon: ICONS.eliminar, variant: "danger", onClick: () => setDeleteTarget(t) },
                         ]}
                       />
                     </td>
@@ -267,17 +307,49 @@ export default function ValidationQueue({ onChange }) {
         <DeleteConfirmModal
           itemLabel={`el ticket de ${deleteTarget.creator_name} por ${formatCurrency(deleteTarget.amount)}`}
           onClose={() => setDeleteTarget(null)}
-          onSoftDelete={async () => {
-            await softDeleteTicket(deleteTarget.id);
-            load();
-            if (onChange) onChange();
+          onSoftDelete={() => {
+            programarUndo(deleteTarget, "eliminado", "Eliminado", () => doSoftDelete(deleteTarget));
+            setDeleteTarget(null);
           }}
           onHardDelete={async () => {
             await hardDeleteTicket(deleteTarget.id);
+            setDeleteTarget(null);
             load();
             if (onChange) onChange();
           }}
         />
+      )}
+
+      {/* ── Undo toast ──────────────────────────────────────────────── */}
+      {undo && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+          <div
+            className="flex items-center gap-4 rounded-go px-5 py-3 shadow-lg"
+            style={{ background: "var(--go-surface-raised)", border: "1px solid var(--go-border)" }}
+          >
+            <span className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
+              Ticket <strong>{undo.label.toLowerCase()}</strong> — {undo.ticket.creator_name} · {formatCurrency(undo.ticket.amount)}
+            </span>
+            <button
+              type="button"
+              onClick={cancelarUndo}
+              className="rounded-go px-3 py-1 font-display text-xs font-bold uppercase tracking-wide transition-colors hover:opacity-80"
+              style={{ background: "var(--go-orange)", color: "#fff" }}
+            >
+              Deshacer
+            </button>
+          </div>
+          {/* Barra de progreso */}
+          <div className="mx-5 mt-1 h-1 overflow-hidden rounded-full" style={{ background: "var(--go-surface-sunken)" }}>
+            <div
+              className="h-full rounded-full transition-all duration-100"
+              style={{
+                width: `${(undoLeft / UNDO_SECONDS) * 100}%`,
+                background: undo.action === "aprobado" ? "var(--go-success)" : undo.action === "rechazado" ? "var(--go-warning)" : "var(--go-error)",
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

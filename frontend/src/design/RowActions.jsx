@@ -53,7 +53,13 @@ export default function RowActions({ actions }) {
             title={a.label}
             aria-label={a.label}
             className="flex h-8 w-8 items-center justify-center rounded-go transition-colors hover:bg-white/5"
-            style={{ color: a.variant === "danger" ? "var(--go-error)" : "var(--go-text-secondary)" }}
+            style={{
+              color:
+                a.variant === "danger" ? "var(--go-error)" :
+                a.variant === "success" ? "var(--go-success)" :
+                a.variant === "warning" ? "var(--go-warning)" :
+                "var(--go-text-secondary)"
+            }}
           >
             <ActionIcon d={a.icon} className="h-4 w-4 flex-shrink-0" />
           </button>

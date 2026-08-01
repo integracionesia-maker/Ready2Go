@@ -49,12 +49,14 @@ export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
     };
   }, [interactive]);
 
-  const glowGradient = `radial-gradient(circle, var(--go-glow, rgba(251,103,11,0.30)) 0%, color-mix(in srgb, var(--go-glow, rgba(251,103,11,0.30)) 40%, transparent) 40%, transparent 70%)`;
+  const GLOW_COLOR = "rgba(251,103,11,0.30)"; // --go-orange con opacidad
+
+  const glowGradient = `radial-gradient(circle, ${GLOW_COLOR} 0%, color-mix(in srgb, ${GLOW_COLOR} 40%, transparent) 40%, transparent 70%)`;
 
   const glowStyle = reduceMotion
     ? {
         opacity: 1,
-        background: `radial-gradient(circle at 50% 50%, var(--go-glow, rgba(251,103,11,0.30)) 0%, color-mix(in srgb, var(--go-glow, rgba(251,103,11,0.30)) 40%, transparent) 40%, transparent 70%)`,
+        background: `radial-gradient(circle at 50% 50%, ${GLOW_COLOR} 0%, color-mix(in srgb, ${GLOW_COLOR} 40%, transparent) 40%, transparent 70%)`,
       }
     : {
         opacity: glow.visible ? 1 : 0,
