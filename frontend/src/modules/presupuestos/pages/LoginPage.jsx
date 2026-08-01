@@ -34,10 +34,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center px-4"
-      style={{ background: "var(--go-bg)" }}
-    >
+    <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3">
           <BrandLogo variant="imagotipo" className="h-20 sm:h-28 w-auto" />

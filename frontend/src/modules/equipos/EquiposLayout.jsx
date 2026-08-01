@@ -36,8 +36,8 @@ export default function EquiposLayout() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--go-bg)" }}>
-      <Header onOpenMobileMenu={() => setMobileMenuOpen(true)} subtitle="Control de Equipos" />
+    <div className="min-h-screen">
+      <Header onToggleMobileMenu={() => setMobileMenuOpen((v) => !v)} mobileMenuOpen={mobileMenuOpen} subtitle="Control de Equipos" />
       <EquiposSidebar
         collapsed={sidebarCollapsed}
         onToggle={handleToggleSidebar}
@@ -46,7 +46,7 @@ export default function EquiposLayout() {
       />
 
       <main
-        className={`min-h-screen pt-16 transition-all duration-300 ${
+        className={`min-h-screen pt-20 transition-all duration-300 ${
           sidebarCollapsed ? "md:ml-16" : "md:ml-60"
         }`}
       >

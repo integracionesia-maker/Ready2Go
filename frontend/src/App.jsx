@@ -34,7 +34,7 @@ export default function App() {
       <Route
         path="/login"
         element={
-          <Suspense fallback={<div className="min-h-screen" style={{ background: "var(--go-bg)" }} />}>
+          <Suspense fallback={<div className="min-h-screen" />}>
             <LoginPage />
           </Suspense>
         }

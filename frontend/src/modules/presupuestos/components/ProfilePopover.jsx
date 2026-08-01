@@ -27,7 +27,7 @@ function initials(fullName) {
 
 /** Popover de perfil (R1): anclado al botón, cierra con click-fuera, Escape,
  * o al navegar. Reemplaza el bloque de usuario + logout que vivía en el Sidebar. */
-export default function ProfilePopover() {
+export default function ProfilePopover({ onBeforeToggle }) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -63,7 +63,7 @@ export default function ProfilePopover() {
   return (
     <div className="relative" ref={containerRef}>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => { if (onBeforeToggle) onBeforeToggle(); setOpen((o) => !o); }}
         aria-expanded={open}
         aria-haspopup="true"
         className="flex min-h-[44px] items-center gap-2.5 rounded-go px-2 py-1.5 transition-colors hover:bg-white/5"
@@ -99,8 +99,17 @@ export default function ProfilePopover() {
           role="menu"
           className="glass absolute right-0 top-[calc(100%+0.5rem)] z-50 w-52 overflow-hidden"
         >
-          <div className="veil">
-            <div className="border-b px-4 py-3" style={{ borderColor: "var(--go-border)" }}>
+            {/* Orange glow — same as sidebar */}
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden" style={{ borderRadius: "inherit" }}>
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: "linear-gradient(0deg, rgba(251,103,11,0.10) 0%, rgba(251,103,11,0.05) 30%, transparent 60%, rgba(251,103,11,0.03) 100%)",
+                }}
+              />
+            </div>
+
+            <div className="relative z-10 border-b px-4 py-3" style={{ borderColor: "var(--go-border)" }}>
               <p className="truncate font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
                 {user.full_name}
               </p>
@@ -111,7 +120,7 @@ export default function ProfilePopover() {
             <button
               role="menuitem"
               onClick={() => navigate("/perfil")}
-              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
+              className="relative z-10 flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
               style={{ color: "var(--go-text-primary)" }}
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
@@ -123,7 +132,7 @@ export default function ProfilePopover() {
               <button
                 role="menuitem"
                 onClick={() => navigate("/administracion-sistema")}
-                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
+                className="relative z-10 flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
                 style={{ color: "var(--go-text-primary)" }}
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
@@ -140,7 +149,7 @@ export default function ProfilePopover() {
               <button
                 role="menuitem"
                 onClick={() => navigate("/auditoria")}
-                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
+                className="relative z-10 flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
                 style={{ color: "var(--go-text-primary)" }}
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
@@ -152,7 +161,7 @@ export default function ProfilePopover() {
             <button
               role="menuitem"
               onClick={() => logout()}
-              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
+              className="relative z-10 flex w-full items-center gap-2.5 px-4 py-2.5 text-left font-body text-sm transition-colors hover:bg-white/5"
               style={{ color: "var(--go-error)" }}
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
@@ -165,7 +174,6 @@ export default function ProfilePopover() {
               Cerrar sesión
             </button>
           </div>
-        </div>
       )}
     </div>
   );

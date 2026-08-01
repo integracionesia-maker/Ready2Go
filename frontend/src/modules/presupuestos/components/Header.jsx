@@ -3,8 +3,9 @@ import { useReducedMotion } from "motion/react";
 import ProfilePopover from "./ProfilePopover";
 import ThemeToggle from "./ThemeToggle";
 import BrandLogo from "./BrandLogo";
+import ModuleTabs from "../../../shell/ModuleTabs";
 
-const HEADER_HEIGHT = 64; // h-16 = 4rem
+const HEADER_HEIGHT = 80; // top-3 (12px) + h-14 (56px) + holgura
 
 // En táctil no hay hover — el glow queda estático (degradado base).
 const SOPORTA_HOVER_FINO =
@@ -21,7 +22,7 @@ const SOPORTA_HOVER_FINO =
  *   en toda la banda superior (0–64px), trackeado a nivel `document` para
  *   que el switch Presupuestos/Equipos no interrumpa el glow.
  * - `prefers-reduced-motion`: brillo fijo al centro, sin fade. */
-export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
+export default function Header({ onToggleMobileMenu, mobileMenuOpen = false, subtitle = "Ready2Go" }) {
   const headerRef = useRef(null);
   const reduceMotion = useReducedMotion();
   const interactive = SOPORTA_HOVER_FINO && !reduceMotion;
@@ -67,14 +68,17 @@ export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
   return (
     <header
       ref={headerRef}
-      className="glass fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between border-b px-4 sm:px-6"
-      style={{ borderColor: "var(--go-border)", borderRadius: 0, boxShadow: "none" }}
+      className="glass fixed left-2 right-2 top-2 sm:left-3 sm:right-3 sm:top-3 z-40 flex h-14 items-center justify-between px-3 sm:px-5"
+      style={{
+        borderColor: "var(--go-border)",
+        background: "color-mix(in srgb, var(--veil-bg) 68%, transparent)",
+      }}
     >
       {/* Brillo liquid crystal detrás del header */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        style={{ borderRadius: 0 }}
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+        style={{ borderRadius: "inherit" }}
       >
         {/* Capa base: degradado naranja horizontal siempre visible */}
         <div
@@ -101,12 +105,12 @@ export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
         ) : null}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="relative z-10 flex items-center gap-3">
         <button
-          onClick={onOpenMobileMenu}
+          onClick={onToggleMobileMenu}
           className="-ml-1 flex h-10 w-10 items-center justify-center rounded-go transition-colors hover:bg-white/5 md:hidden"
-          title="Abrir menú"
-          aria-label="Abrir menú"
+          title={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
+          aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" style={{ color: "var(--go-text-secondary)" }}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -127,9 +131,14 @@ export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
         </div>
       </div>
 
+      {/* ── Module switch (center) ──────────────────────────────────── */}
+      <div className="relative z-10 hidden sm:block">
+        <ModuleTabs />
+      </div>
+
       <div className="relative z-10 flex items-center gap-2 sm:gap-3">
         <ThemeToggle />
-        <ProfilePopover />
+        <ProfilePopover onBeforeToggle={() => { if (mobileMenuOpen) onToggleMobileMenu(); }} />
       </div>
     </header>
   );

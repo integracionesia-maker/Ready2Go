@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { changePassword, fetchCreators, updateMe } from "@/api";
+import { GlassPanel } from "@/design";
 
 const ROLE_LABELS = {
   superadmin: "Superadministrador",
@@ -131,7 +132,7 @@ export default function ProfilePage() {
       )}
 
       {user.role === "creador" && ownBudget && (
-        <div className="go-card space-y-3">
+        <GlassPanel className="space-y-3 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <span className="go-eyebrow">Mi ciclo de presupuesto</span>
             <span className="font-body text-xs capitalize" style={{ color: "var(--go-text-secondary)" }}>
@@ -172,95 +173,99 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
-        </div>
+        </GlassPanel>
       )}
 
       {!forcedChange && (
-        <form onSubmit={handleProfileSubmit} className="go-card space-y-4">
-          <span className="go-eyebrow">Datos personales</span>
-          <div>
-            <label className="go-eyebrow mb-1.5 block">Nombre completo</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="go-input"
-              maxLength={150}
-              required
-            />
-          </div>
-          <div>
-            <label className="go-eyebrow mb-1.5 block">Correo</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="go-input"
-              required
-            />
-          </div>
-          <div>
-            <label className="go-eyebrow mb-1.5 block">Usuario</label>
-            <input type="text" value={user.username} className="go-input opacity-60" disabled />
-          </div>
+        <form onSubmit={handleProfileSubmit}>
+          <GlassPanel className="space-y-4 p-4 sm:p-6">
+            <span className="go-eyebrow">Datos personales</span>
+            <div>
+              <label className="go-eyebrow mb-1.5 block">Nombre completo</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="go-input"
+                maxLength={150}
+                required
+              />
+            </div>
+            <div>
+              <label className="go-eyebrow mb-1.5 block">Correo</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="go-input"
+                required
+              />
+            </div>
+            <div>
+              <label className="go-eyebrow mb-1.5 block">Usuario</label>
+              <input type="text" value={user.username} className="go-input opacity-60" disabled />
+            </div>
 
-          <Banner type="error">{profileError}</Banner>
-          <Banner type="success">{profileSuccess}</Banner>
+            <Banner type="error">{profileError}</Banner>
+            <Banner type="success">{profileSuccess}</Banner>
 
-          <div className="flex justify-end">
-            <button type="submit" disabled={profileSubmitting} className="btn-go">
-              {profileSubmitting ? "Guardando..." : "Guardar cambios"}
-            </button>
-          </div>
+            <div className="flex justify-end">
+              <button type="submit" disabled={profileSubmitting} className="btn-go">
+                {profileSubmitting ? "Guardando..." : "Guardar cambios"}
+              </button>
+            </div>
+          </GlassPanel>
         </form>
       )}
 
-      <form onSubmit={handlePasswordSubmit} className="go-card space-y-4">
-        <span className="go-eyebrow">Cambiar contraseña</span>
-        <div>
-          <label className="go-eyebrow mb-1.5 block">Contraseña actual</label>
-          <input
-            type="password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            className="go-input"
-            autoComplete="current-password"
-            required
-          />
-        </div>
-        <div>
-          <label className="go-eyebrow mb-1.5 block">Nueva contraseña</label>
-          <input
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="go-input"
-            autoComplete="new-password"
-            minLength={10}
-            required
-          />
-        </div>
-        <div>
-          <label className="go-eyebrow mb-1.5 block">Confirmar nueva contraseña</label>
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="go-input"
-            autoComplete="new-password"
-            minLength={10}
-            required
-          />
-        </div>
+      <form onSubmit={handlePasswordSubmit}>
+        <GlassPanel className="space-y-4 p-4 sm:p-6">
+          <span className="go-eyebrow">Cambiar contraseña</span>
+          <div>
+            <label className="go-eyebrow mb-1.5 block">Contraseña actual</label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="go-input"
+              autoComplete="current-password"
+              required
+            />
+          </div>
+          <div>
+            <label className="go-eyebrow mb-1.5 block">Nueva contraseña</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="go-input"
+              autoComplete="new-password"
+              minLength={10}
+              required
+            />
+          </div>
+          <div>
+            <label className="go-eyebrow mb-1.5 block">Confirmar nueva contraseña</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="go-input"
+              autoComplete="new-password"
+              minLength={10}
+              required
+            />
+          </div>
 
-        <Banner type="error">{passwordError}</Banner>
-        <Banner type="success">{passwordSuccess}</Banner>
+          <Banner type="error">{passwordError}</Banner>
+          <Banner type="success">{passwordSuccess}</Banner>
 
-        <div className="flex justify-end">
-          <button type="submit" disabled={passwordSubmitting} className="btn-go">
-            {passwordSubmitting ? "Actualizando..." : "Actualizar contraseña"}
-          </button>
-        </div>
+          <div className="flex justify-end">
+            <button type="submit" disabled={passwordSubmitting} className="btn-go">
+              {passwordSubmitting ? "Actualizando..." : "Actualizar contraseña"}
+            </button>
+          </div>
+        </GlassPanel>
       </form>
     </div>
   );

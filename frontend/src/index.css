@@ -13,7 +13,13 @@
 
   body {
     @apply min-h-screen font-body antialiased;
-    background: var(--go-bg);
+    background-color: var(--go-bg);
+    background-image:
+      var(--go-noise),
+      radial-gradient(circle, var(--go-dot-color) 1px, transparent 1px);
+    background-size: 200px 200px, 20px 20px;
+    background-repeat: repeat, repeat;
+    background-position: 0 0, 0 0;
     color: var(--go-text-secondary);
     transition: background-color 200ms, color 200ms;
   }

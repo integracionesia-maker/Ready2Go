@@ -121,47 +121,62 @@ export default function InicioPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="font-display text-lg font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
-        Inicio
-      </h1>
+    <div className="space-y-10">
+      {/* ── Welcome ──────────────────────────────────────────────────────── */}
+      <div className="mx-auto max-w-2xl pt-8 text-center">
+        <p className="go-eyebrow mb-3">Grupo Ortiz</p>
+        <h1
+          className="font-display text-2xl font-bold uppercase tracking-[0.04em] sm:text-3xl"
+          style={{ color: "var(--go-text-primary)" }}
+        >
+          Bienvenido al Control de Equipos
+        </h1>
+        <p className="mt-3 font-body text-sm sm:text-base" style={{ color: "var(--go-text-secondary)" }}>
+          Gestiona el inventario de equipo de grabación, solicita préstamos,
+          firma cartas responsiva y monitorea las devoluciones.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      {/* ── Acceso rápido ────────────────────────────────────────────────── */}
+      <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2">
         {EQUIPOS_SECTIONS.map((s) => (
           <SectionCard key={s.to} {...s} />
         ))}
       </div>
 
-      <GlassPanel as="section" className="p-4 sm:p-6">
-        <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
-          Requiere atención
-        </h2>
-        {(dashboard.requiere_atencion || []).length === 0 ? (
-          <EmptyState title="Nada pendiente de atención" />
-        ) : (
-          <ul className="flex flex-col divide-y" style={{ borderColor: "var(--go-border)" }}>
-            {dashboard.requiere_atencion.map((r) => (
-              <li key={r.loan_id} className="py-3">
-                <Link
-                  to={`/equipos/prestamo/${r.folio}`}
-                  className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 font-body text-sm transition-colors hover:text-[var(--go-orange)]"
-                  style={{ color: "var(--go-text-primary)" }}
-                >
-                  <span className="min-w-0">
-                    <span className="font-mono font-semibold" style={{ color: "var(--go-orange)" }}>
-                      {r.folio}
-                    </span>{" "}
-                    — {r.motivo} ({r.responsable})
-                  </span>
-                  <span className="font-body text-xs sm:shrink-0" style={{ color: "var(--go-text-secondary)" }}>
-                    {(r.equipos || []).join(", ")}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </GlassPanel>
+      {/* ── Requiere atención ────────────────────────────────────────────── */}
+      <div className="mx-auto max-w-4xl">
+        <GlassPanel as="section" className="p-4 sm:p-6">
+          <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
+            Requiere atención
+          </h2>
+          {(dashboard.requiere_atencion || []).length === 0 ? (
+            <EmptyState title="Nada pendiente de atención" />
+          ) : (
+            <ul className="flex flex-col divide-y" style={{ borderColor: "var(--go-border)" }}>
+              {dashboard.requiere_atencion.map((r) => (
+                <li key={r.loan_id} className="py-3">
+                  <Link
+                    to={`/equipos/prestamo/${r.folio}`}
+                    className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 font-body text-sm transition-colors hover:text-[var(--go-orange)]"
+                    style={{ color: "var(--go-text-primary)" }}
+                  >
+                    <span className="min-w-0">
+                      <span className="font-mono font-semibold" style={{ color: "var(--go-orange)" }}>
+                        {r.folio}
+                      </span>{" "}
+                      — {r.motivo} ({r.responsable})
+                    </span>
+                    <span className="font-body text-xs sm:shrink-0" style={{ color: "var(--go-text-secondary)" }}>
+                      {(r.equipos || []).join(", ")}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </GlassPanel>
+      </div>
     </div>
   );
 }

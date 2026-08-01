@@ -80,16 +80,19 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
       )}
 
       <aside
-        className={`glass fixed left-0 top-16 z-40 flex h-[calc(100%-4rem)] w-60 flex-col border-r transition-all duration-300 ${
+        className={`glass fixed left-2 md:left-3 bottom-2 md:bottom-3 top-[72px] md:top-[76px] z-40 flex h-[calc(100%-80px)] md:h-[calc(100%-88px)] w-60 flex-col transition-all duration-300 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 ${collapsed ? "md:w-16" : "md:w-60"}`}
-        style={{ borderColor: "var(--go-border)", borderRadius: 0 }}
+        style={{
+          borderColor: "var(--go-border)",
+          background: "color-mix(in srgb, var(--veil-bg) 68%, transparent)",
+        }}
       >
         {/* Brillo liquid crystal estático */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 overflow-hidden"
-          style={{ borderRadius: 0 }}
+          style={{ borderRadius: "inherit" }}
         >
           <div
             className="absolute inset-0"

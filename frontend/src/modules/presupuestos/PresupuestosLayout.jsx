@@ -118,8 +118,8 @@ export default function PresupuestosLayout() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--go-bg)" }}>
-      <Header onOpenMobileMenu={() => setMobileMenuOpen(true)} subtitle="Control de Presupuestos" />
+    <div className="min-h-screen">
+      <Header onToggleMobileMenu={() => setMobileMenuOpen((v) => !v)} mobileMenuOpen={mobileMenuOpen} subtitle="Control de Presupuestos" />
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={handleToggleSidebar}
@@ -130,7 +130,7 @@ export default function PresupuestosLayout() {
       />
 
       <main
-        className={`min-h-screen pt-16 transition-all duration-300 ${
+        className={`min-h-screen pt-20 transition-all duration-300 ${
           sidebarCollapsed ? "md:ml-16" : "md:ml-60"
         }`}
       >

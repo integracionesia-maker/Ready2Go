@@ -64,6 +64,12 @@
 
   /* ── Glow de cristal (C1, Header) — brillo sutil que sigue al cursor ── */
   --go-glow: rgba(255, 255, 255, 0.1);
+
+  /* ── Textura de fondo (liquid crystal foundation) ────────────────────────
+     Ruido SVG (feTurbulence fractal) + retícula de puntos. Apenas perceptible
+     pero rompe el fondo unicolor y prepara la base para cristal líquido. */
+  --go-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.38  0 0 0 0 0.38  0 0 0 0 0.38  0.15 0 0 0 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  --go-dot-color: rgba(255, 255, 255, 0.10);
 }
 
 /* Sin ":root" a propósito: además del tema global en <html>, R8 (reporte PDF)
@@ -86,4 +92,9 @@
   --veil-bg: #ffffff;
 
   --go-glow: rgba(0, 0, 0, 0.05);
+
+  /* Textura: en tema claro el ruido es más oscuro y tiene más presencia
+     para que la retícula de puntos se note contra el fondo blanco. */
+  --go-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.25  0 0 0 0 0.25  0 0 0 0 0.25  0.15 0 0 0 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  --go-dot-color: rgba(0, 0, 0, 0.10);
 }

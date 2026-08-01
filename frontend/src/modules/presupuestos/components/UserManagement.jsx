@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createUser, fetchUserRoles, fetchUsers, resetUserPassword, setUserActive, updateUser } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import Modal from "./Modal";
-import { RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS } from "@/design";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
 
@@ -196,7 +196,7 @@ export default function UserManagement({ creators }) {
   );
 
   return (
-    <div className="space-y-4">
+    <GlassPanel className="space-y-4 p-4 sm:p-6">
       <div className="flex items-center justify-between">
         <span className="go-eyebrow">{users.length} usuarios</span>
         <button onClick={openCreateForm} className="btn-go">
@@ -484,6 +484,6 @@ export default function UserManagement({ creators }) {
           </div>
         </Modal>
       )}
-    </div>
+    </GlassPanel>
   );
 }

@@ -4,10 +4,7 @@ import LoadingScreen from "./LoadingScreen";
 
 function FullScreenSpinner() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ background: "var(--go-bg)" }}
-    >
+    <div className="flex min-h-screen items-center justify-center">
       <div
         className="h-10 w-10 animate-spin rounded-full border-[3px]"
         style={{ borderColor: "var(--go-border)", borderTopColor: "var(--go-orange)" }}
@@ -32,7 +29,7 @@ export default function ProtectedRoute({ roles, children }) {
 
   if (networkError) {
     return (
-      <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--go-bg)" }}>
+      <div className="flex min-h-screen items-center justify-center">
         <LoadingScreen isOffline={!retrying} onRetry={retryCheckSession} />
       </div>
     );
