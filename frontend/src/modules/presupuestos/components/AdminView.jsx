@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createCreator, updateCreator, createBrand, updateBrand, fetchCreatorCycles } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
@@ -69,6 +69,13 @@ export default function AdminView({ creators, brands, onChange }) {
   const [formBudget, setFormBudget] = useState("");
   const [formCyclePeriod, setFormCyclePeriod] = useState("mensual");
   const [formPriority, setFormPriority] = useState("media");
+  // Campos del usuario vinculado (solo al crear creator)
+  const [formUsername, setFormUsername] = useState("");
+  const [formUserEmail, setFormUserEmail] = useState("");
+  // Contraseña temporal mostrada tras crear
+  const [tempPassword, setTempPassword] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const copiedTimeout = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -82,16 +89,21 @@ export default function AdminView({ creators, brands, onChange }) {
 
   const openCreatorForm = (creator = null) => {
     resetFeedback();
+    setTempPassword(null);
+    setCopied(false);
     setEditingCreator(creator);
     setFormName(creator ? creator.name : "");
     setFormBudget(creator ? String(creator.cycle_amount ?? "") : "");
     setFormCyclePeriod(creator ? creator.cycle_period || "mensual" : "mensual");
+    setFormUsername("");
+    setFormUserEmail("");
     setCreatorFormOpen(true);
   };
 
   const closeCreatorForm = () => {
     setCreatorFormOpen(false);
     setEditingCreator(null);
+    setTempPassword(null);
     resetFeedback();
   };
 
@@ -137,6 +149,45 @@ export default function AdminView({ creators, brands, onChange }) {
     resetFeedback();
   };
 
+  /* ── Copy to clipboard ───────────────────────────────────────────────── */
+
+  const handleCopyPassword = async () => {
+    if (!tempPassword) return;
+    try {
+      await navigator.clipboard.writeText(tempPassword.password);
+      setCopied(true);
+      if (copiedTimeout.current) clearTimeout(copiedTimeout.current);
+      copiedTimeout.current = setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // clipboard API may fail silently (non-HTTPS, permission denied, etc.)
+    }
+  };
+
+  // Auto-copy when temp password first appears
+  useEffect(() => {
+    if (!tempPassword) return;
+    const password = tempPassword.password;
+    let cancelled = false;
+    (async () => {
+      try {
+        await navigator.clipboard.writeText(password);
+        if (!cancelled) {
+          setCopied(true);
+          copiedTimeout.current = setTimeout(() => setCopied(false), 2500);
+        }
+      } catch {
+        // clipboard unavailable — user can still Ctrl+C
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (copiedTimeout.current) {
+        clearTimeout(copiedTimeout.current);
+        copiedTimeout.current = null;
+      }
+    };
+  }, [tempPassword]);
+
   /* ── Submit handlers ─────────────────────────────────────────────────── */
 
   const handleCreatorSubmit = async (e) => {
@@ -144,36 +195,46 @@ export default function AdminView({ creators, brands, onChange }) {
     resetFeedback();
 
     const name = formName.trim();
-    if (!name) {
-      setError("El nombre es obligatorio.");
-      return;
-    }
-    if (name.length > 100) {
-      setError("El nombre no puede exceder 100 caracteres.");
-      return;
-    }
-    if (!formBudget || Number(formBudget) <= 0) {
-      setError("El monto del ciclo debe ser mayor a $0.");
-      return;
+    if (!name) { setError("El nombre es obligatorio."); return; }
+    if (name.length > 100) { setError("El nombre no puede exceder 100 caracteres."); return; }
+    if (!formBudget || Number(formBudget) <= 0) { setError("El monto del ciclo debe ser mayor a $0."); return; }
+
+    // Validar campos del usuario vinculado (solo al crear)
+    if (!editingCreator) {
+      if (!formUsername.trim() || formUsername.trim().length < 3) {
+        setError("El nombre de usuario debe tener al menos 3 caracteres.");
+        return;
+      }
+      if (!formUserEmail.trim()) {
+        setError("El correo del creador es obligatorio.");
+        return;
+      }
     }
 
     setSubmitting(true);
     try {
-      const payload = {
-        name,
-        cycle_budget_amount: Number(formBudget),
-        cycle_period: formCyclePeriod,
-      };
       if (editingCreator) {
-        await updateCreator(editingCreator.id, payload);
+        await updateCreator(editingCreator.id, {
+          name,
+          cycle_budget_amount: Number(formBudget),
+          cycle_period: formCyclePeriod,
+        });
+        setSuccessMsg("Creador actualizado.");
+        setTimeout(() => { closeCreatorForm(); onChange(); }, 800);
       } else {
-        await createCreator(payload);
-      }
-      setSuccessMsg("Creador guardado exitosamente.");
-      setTimeout(() => {
-        closeCreatorForm();
+        const result = await createCreator({
+          name,
+          cycle_budget_amount: Number(formBudget),
+          cycle_period: formCyclePeriod,
+          username: formUsername.trim(),
+          email: formUserEmail.trim(),
+        });
+        if (result.temporary_password) {
+          setTempPassword({ username: formUsername.trim(), password: result.temporary_password });
+        }
+        setSuccessMsg("Creador y usuario vinculado creados.");
         onChange();
-      }, 800);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -550,44 +611,47 @@ export default function AdminView({ creators, brands, onChange }) {
           onClose={closeCreatorForm}
           submitting={submitting}
         >
-          <form onSubmit={handleCreatorSubmit} className="space-y-4 px-4 sm:px-6 py-5">
-            <div>
-              <label className="go-eyebrow mb-1.5 block">Nombre</label>
-              <input
-                type="text"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Nombre del creador..."
-                className="go-input"
-                maxLength={100}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="go-eyebrow mb-1.5 block">Monto del ciclo</label>
-              <div className="relative">
-                <span
-                  className="absolute left-3.5 top-[10px] font-mono text-sm"
-                  style={{ color: "var(--go-text-secondary)" }}
-                >
-                  $
-                </span>
+          <form onSubmit={handleCreatorSubmit} className="space-y-3 px-4 sm:px-6 py-4">
+            {/* ── Creator data (2-col on sm+) ──────────────────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="go-eyebrow mb-1 block">Nombre</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={formBudget}
-                  onChange={(e) => setFormBudget(e.target.value)}
-                  placeholder="0.00"
-                  className="go-input pl-7 font-mono"
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="Nombre del creador..."
+                  className="go-input"
+                  maxLength={100}
                   required
                 />
+              </div>
+
+              <div>
+                <label className="go-eyebrow mb-1 block">Monto del ciclo</label>
+                <div className="relative">
+                  <span
+                    className="absolute left-3.5 top-[10px] font-mono text-sm"
+                    style={{ color: "var(--go-text-secondary)" }}
+                  >
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={formBudget}
+                    onChange={(e) => setFormBudget(e.target.value)}
+                    placeholder="0.00"
+                    className="go-input pl-7 font-mono"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
             <div>
-              <label className="go-eyebrow mb-1.5 block">Periodicidad</label>
+              <label className="go-eyebrow mb-1 block">Periodicidad</label>
               <select
                 value={formCyclePeriod}
                 onChange={(e) => setFormCyclePeriod(e.target.value)}
@@ -597,6 +661,78 @@ export default function AdminView({ creators, brands, onChange }) {
                 <option value="semanal">Semanal</option>
               </select>
             </div>
+
+            {/* ── Cuenta de acceso (solo al crear) ──────────────────────── */}
+            {!editingCreator && (
+              <div className="border-t pt-3" style={{ borderColor: "var(--go-border)" }}>
+                <p className="go-eyebrow mb-2">Cuenta de acceso</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="go-eyebrow mb-1 block">Usuario</label>
+                    <input
+                      type="text" value={formUsername}
+                      onChange={(e) => setFormUsername(e.target.value)}
+                      placeholder={formName.trim().toLowerCase().replace(/\s+/g, ".").normalize("NFD").replace(/[̀-ͯ]/g, "") || "usuario.creador"}
+                      className="go-input" minLength={3} maxLength={50} required
+                    />
+                    <p className="mt-1 font-body text-[10px]" style={{ color: "var(--go-text-muted)" }}>
+                      Se genera a partir del nombre. Puedes cambiarlo.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="go-eyebrow mb-1 block">Correo electrónico</label>
+                    <input
+                      type="email" value={formUserEmail}
+                      onChange={(e) => setFormUserEmail(e.target.value)}
+                      placeholder={formUsername.trim() ? `${formUsername.trim()}@creadores.grupo-ortiz.com` : "usuario@creadores.grupo-ortiz.com"}
+                      className="go-input" maxLength={255} required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Contraseña temporal generada ─────────────────────────── */}
+            {tempPassword && (
+              <div
+                className="rounded-go border px-4 py-3 space-y-2"
+                style={{ background: "rgba(251,103,11,0.08)", borderColor: "rgba(251,103,11,0.25)" }}
+              >
+                <p className="font-body text-sm font-bold" style={{ color: "var(--go-orange)" }}>
+                  Contraseña temporal generada
+                </p>
+                <p className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                  Comparte esto con <strong>{tempPassword.username}</strong> por un canal seguro. Deberá cambiarla en su primer inicio de sesión.
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="go-input flex-1 select-all font-mono text-sm" style={{ color: "var(--go-text-primary)" }}>
+                    {tempPassword.password}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyPassword}
+                    className="btn-go shrink-0 flex items-center gap-1.5"
+                  >
+                    {copied ? (
+                      <>
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Copiado
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                        </svg>
+                        Copiar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {editingCreator && (
               <div
@@ -623,7 +759,7 @@ export default function AdminView({ creators, brands, onChange }) {
                 disabled={submitting}
                 className="btn-go-ghost"
               >
-                Cancelar
+                {tempPassword ? "Cerrar" : "Cancelar"}
               </button>
               <button type="submit" disabled={submitting} className="btn-go">
                 {submitting ? (

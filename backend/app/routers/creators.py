@@ -6,7 +6,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import crud, models, schemas
+from .. import crud, models, schemas, security
 from ..database import get_db
 from ..dependencies import get_current_user, require_role
 
@@ -81,7 +81,43 @@ def create_creator(
 ):
     _validate_period(data.cycle_period)
     creator = crud.create_creator(db, data)
-    return crud.creator_to_response(db, creator)
+
+    # Crear usuario vinculado con rol "creador"
+    existing_user = db.query(models.User).filter(
+        (models.User.username == data.username) | (models.User.email == data.email)
+    ).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Ya existe un usuario con ese username ('{existing_user.username}') o email ('{existing_user.email}').",
+        )
+
+    temp_password = security.generate_temp_password()
+    user = models.User(
+        username=data.username,
+        email=data.email,
+        password_hash=security.hash_password(temp_password),
+        full_name=data.name,
+        role=models.UserRole.CREADOR.value,
+        creator_id=creator.id,
+        is_active=True,
+        must_change_password=True,
+    )
+    db.add(user)
+    db.commit()
+
+    crud.log_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="user.create",
+        target_type="user",
+        target_id=user.id,
+        details=f"creador vinculado a creator_id={creator.id}",
+    )
+
+    response = crud.creator_to_response(db, creator)
+    response.temporary_password = temp_password
+    return response
 
 
 @router.put("/{creator_id}", response_model=schemas.CreatorResponse)
