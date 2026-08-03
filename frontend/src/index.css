@@ -20,6 +20,7 @@
     background-size: 200px 200px, 20px 20px;
     background-repeat: repeat, repeat;
     background-position: 0 0, 0 0;
+    background-attachment: fixed, fixed;
     color: var(--go-text-secondary);
     transition: background-color 200ms, color 200ms;
   }
