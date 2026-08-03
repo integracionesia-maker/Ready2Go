@@ -131,7 +131,7 @@ export default function Header({ onToggleMobileMenu, mobileMenuOpen = false, sub
         </div>
       </div>
 
-      {/* ── Module switch (center) ──────────────────────────────────── */}
+      {/* ── Module switch (center, desktop) ─────────────────────────── */}
       <div className="relative z-10 hidden sm:block">
         <ModuleTabs />
       </div>
