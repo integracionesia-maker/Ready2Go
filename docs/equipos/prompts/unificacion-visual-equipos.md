@@ -281,7 +281,7 @@ El `Header.jsx` actual tiene hardcodeado:
 **Opción A (recomendada — mínimo cambio)**: Cambiar el subtítulo a algo genérico que funcione para ambos módulos:
 
 ```jsx
-<p>Ready2Go</p>
+<p>GOCreate</p>
 ```
 
 Esto requiere editar SOLO esa línea en `frontend/src/modules/presupuestos/components/Header.jsx`.
@@ -289,7 +289,7 @@ Esto requiere editar SOLO esa línea en `frontend/src/modules/presupuestos/compo
 **Opción B (más elegante)**: Hacer que el Header reciba una prop `subtitle`:
 
 ```jsx
-export default function Header({ onOpenMobileMenu, subtitle = "Ready2Go" }) {
+export default function Header({ onOpenMobileMenu, subtitle = "GOCreate" }) {
   // ...
   <p>{subtitle}</p>
 }
@@ -448,7 +448,7 @@ Después de implementar, estas cosas deben ser verdad:
 4. Los ModuleTabs (Presupuestos | Equipos) en el centro del Header cambian de módulo y cada módulo muestra su propio sidebar.
 5. Todas las páginas de Equipos usan exclusivamente clases `go-*` y variables `--go-*` para estilos.
 6. No hay `EquiposSubNav` inline — la navegación es solo por sidebar.
-7. El subtítulo del Header refleja el módulo activo o es genérico ("Ready2Go").
+7. El subtítulo del Header refleja el módulo activo o es genérico ("GOCreate").
 8. Ningún botón tiene estilos inline que dupliquen `btn-go` o `btn-go-ghost`.
 9. Las tablas en móvil tienen el degradado de scroll horizontal (`go-table-scroll-wrapper`).
 10. El cambio de tema (oscuro/claro) funciona en todas las páginas de Equipos sin inconsistencias.

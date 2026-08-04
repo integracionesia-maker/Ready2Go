@@ -1,4 +1,4 @@
-# Documentación — Ready2Go
+# Documentación — GOCreate
 
 > Plataforma de Marketing (Presupuestos + Control de Equipos) — Grupo Ortiz
 > Última reestructuración: 2026-07-30

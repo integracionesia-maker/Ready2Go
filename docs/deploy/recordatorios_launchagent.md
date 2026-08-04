@@ -78,7 +78,7 @@ Van en `backend/.env` (jamas al repo).
 | `SMTP_PORT` | `587` | Puerto |
 | `SMTP_USER` | — | Usuario. Vacio = sin autenticacion |
 | `SMTP_PASSWORD` | — | Contraseña. **Nunca se expone por API** |
-| `SMTP_FROM` | — | Remitente. Se manda como `Ready2Go — Control de Equipos <SMTP_FROM>` |
+| `SMTP_FROM` | — | Remitente. Se manda como `GOCreate — Control de Equipos <SMTP_FROM>` |
 | `SMTP_STARTTLS` | `true` | STARTTLS tras conectar |
 | `APP_PUBLIC_URL` | `http://127.0.0.1:5173` | Origen de los enlaces del correo |
 
@@ -88,11 +88,11 @@ Ejemplo de bloque para `.env`:
 NOTIF_ENABLED=true
 SMTP_HOST=smtp.grupo-ortiz.com
 SMTP_PORT=587
-SMTP_USER=ready2go@grupo-ortiz.com
+SMTP_USER=gocreate@grupo-ortiz.com
 SMTP_PASSWORD=cambiame
-SMTP_FROM=ready2go@grupo-ortiz.com
+SMTP_FROM=gocreate@grupo-ortiz.com
 SMTP_STARTTLS=true
-APP_PUBLIC_URL=https://ready2go.grupo-ortiz.com
+APP_PUBLIC_URL=https://gocreate.grupo-ortiz.com
 ```
 
 > **Pendiente que no puedo resolver yo:** el plan §7 pide que estas ocho
@@ -104,7 +104,7 @@ APP_PUBLIC_URL=https://ready2go.grupo-ortiz.com
 
 ## LaunchAgent
 
-`~/Library/LaunchAgents/com.grupoortiz.ready2go.recordatorios.plist`:
+`~/Library/LaunchAgents/com.grupoortiz.gocreate.recordatorios.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -113,7 +113,7 @@ APP_PUBLIC_URL=https://ready2go.grupo-ortiz.com
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.grupoortiz.ready2go.recordatorios</string>
+  <string>com.grupoortiz.gocreate.recordatorios</string>
 
   <key>ProgramArguments</key>
   <array>
@@ -124,7 +124,7 @@ APP_PUBLIC_URL=https://ready2go.grupo-ortiz.com
 
   <!-- Obligatorio: las rutas de base y uploads son relativas al cwd. -->
   <key>WorkingDirectory</key>
-  <string>/Users/grupoortiz/Ready2Go/backend</string>
+  <string>/Users/grupoortiz/GOCreate/backend</string>
 
   <!-- 9:00 todos los dias. -->
   <key>StartCalendarInterval</key>
@@ -139,9 +139,9 @@ APP_PUBLIC_URL=https://ready2go.grupo-ortiz.com
   <false/>
 
   <key>StandardOutPath</key>
-  <string>/Users/grupoortiz/Ready2Go/logs/recordatorios.log</string>
+  <string>/Users/grupoortiz/GOCreate/logs/recordatorios.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/grupoortiz/Ready2Go/logs/recordatorios.err</string>
+  <string>/Users/grupoortiz/GOCreate/logs/recordatorios.err</string>
 </dict>
 </plist>
 ```
@@ -149,16 +149,16 @@ APP_PUBLIC_URL=https://ready2go.grupo-ortiz.com
 Cargar y comprobar:
 
 ```bash
-launchctl load  ~/Library/LaunchAgents/com.grupoortiz.ready2go.recordatorios.plist
-launchctl list | grep ready2go
-launchctl start com.grupoortiz.ready2go.recordatorios   # dispara ya, para probar
-tail -f ~/Ready2Go/logs/recordatorios.log
+launchctl load  ~/Library/LaunchAgents/com.grupoortiz.gocreate.recordatorios.plist
+launchctl list | grep gocreate
+launchctl start com.grupoortiz.gocreate.recordatorios   # dispara ya, para probar
+tail -f ~/GOCreate/logs/recordatorios.log
 ```
 
 Descargar:
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.grupoortiz.ready2go.recordatorios.plist
+launchctl unload ~/Library/LaunchAgents/com.grupoortiz.gocreate.recordatorios.plist
 ```
 
 ## Diagnostico: "no llegan los correos"

@@ -1,4 +1,4 @@
-# RBAC aditivo (patron Bruckner) — Ready2Go
+# RBAC aditivo (patron Bruckner) — GOCreate
 
 > Modulo Control de Equipos, paquete WP1/S1. Diseño original: `docs/equipos/plan-quirurgico.md` §3.
 > Contrato de la respuesta: `docs/contratos/API_EQUIPOS_v1.md` §1 y §7, `docs/contratos/permisos_catalogo.json`.

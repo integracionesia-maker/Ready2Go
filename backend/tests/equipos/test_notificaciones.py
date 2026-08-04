@@ -31,8 +31,8 @@ def smtp_configurado(monkeypatch):
     monkeypatch.setenv("NOTIF_ENABLED", "true")
     monkeypatch.setenv("SMTP_HOST", "smtp.pruebas.local")
     monkeypatch.setenv("SMTP_PORT", "587")
-    monkeypatch.setenv("SMTP_FROM", "ready2go@grupo-ortiz.com")
-    monkeypatch.setenv("APP_PUBLIC_URL", "https://ready2go.grupo-ortiz.com")
+    monkeypatch.setenv("SMTP_FROM", "gocreate@grupo-ortiz.com")
+    monkeypatch.setenv("APP_PUBLIC_URL", "https://gocreate.grupo-ortiz.com")
     return True
 
 
@@ -321,7 +321,7 @@ def test_el_responsable_recibe_su_copia_del_pdf(inventario, ana, melisa, smtp_fa
 def test_el_remitente_lleva_nombre_visible(inventario, ana, melisa, smtp_falso):
     logueado("ana.ruiz")
     _confirmado(logueado("ana.ruiz"))
-    assert smtp_falso[0]["from"].startswith("Ready2Go")
+    assert smtp_falso[0]["from"].startswith("GOCreate")
 
 
 def test_la_devolucion_avisa_a_los_aprobadores(inventario, ana, melisa, smtp_falso):

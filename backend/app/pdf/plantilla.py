@@ -330,7 +330,7 @@ def construir(datos: dict, ancho_util: float) -> list:
     # del mismo folio.
     flujo.append(
         Paragraph(
-            f"Documento generado por Ready2Go · Folio {_t(datos.get('folio'))} · "
+            f"Documento generado por GOCreate · Folio {_t(datos.get('folio'))} · "
             f"Versión {datos.get('version', 1)} · {escape(datos.get('generado_en') or '')}",
             e["aviso"],
         )

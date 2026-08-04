@@ -1,4 +1,4 @@
-# BACKLOG — Ready2Go (Presupuestos + Control de Equipos)
+# BACKLOG — GOCreate (Presupuestos + Control de Equipos)
 
 > Plataforma interna del area de marketing de Grupo Ortiz. Dos modulos, una app.
 > Fase actual: **5 Build** (modulo Control de Equipos, arranca 27/07) · Presupuestos en Fase 5.

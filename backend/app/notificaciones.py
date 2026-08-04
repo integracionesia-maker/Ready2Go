@@ -41,7 +41,7 @@ from .models_equipos import (
     ResponsivaDoc,
 )
 
-log = logging.getLogger("ready2go.notificaciones")
+log = logging.getLogger("gocreate.notificaciones")
 
 __all__ = [
     "MAX_INTENTOS",

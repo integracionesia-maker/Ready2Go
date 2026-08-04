@@ -1,4 +1,4 @@
-"""Crear usuarios para el equipo completo de Ready2Go.
+"""Crear usuarios para el equipo completo de GOCreate.
 Ejecutar desde backend/: python crear_usuarios_equipo.py
 """
 

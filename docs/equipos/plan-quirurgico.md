@@ -1,4 +1,4 @@
-# PLAN QUIRURGICO — Ready2Go: integracion de Control de Prestamo de Equipo
+# PLAN QUIRURGICO — GOCreate: integracion de Control de Prestamo de Equipo
 
 > Fase 3.5 del framework (Planeacion Quirurgica). Estado: **PLAN — sin construir**. Requiere luz verde de Jose.
 > Fecha: 27/07/2026 (lunes) · Rama: `jose-branch` · Repo: `github.com/integracionesia-maker/Ready2Go`
@@ -9,7 +9,7 @@
 ## Capa ejecutiva (3 lineas)
 
 1. **Que paso:** marketing (Emily, Betzabet) pidio plataforma para controlar el prestamo de equipo de grabacion (celulares, micros, estabilizadores) con carta responsiva firmada y aprobacion de Melisa. Traian una maqueta HTML con localStorage.
-2. **Que significa para el negocio:** el equipo de marketing hoy no tiene control real de quien tiene que equipo ni responsiva digital; el proyecto de presupuestos ya tiene auth, roles y deploy runbook, asi que absorber Equipos ahi cuesta menos que un sistema nuevo. El repo pasa a llamarse **Ready2Go** y queda como la plataforma de marketing (Presupuestos + Equipos).
+2. **Que significa para el negocio:** el equipo de marketing hoy no tiene control real de quien tiene que equipo ni responsiva digital; el proyecto de presupuestos ya tiene auth, roles y deploy runbook, asi que absorber Equipos ahi cuesta menos que un sistema nuevo. El repo pasa a llamarse **Ready2Go** y queda como la plataforma de marketing (Presupuestos + Equipos). (Renombrado nuevamente a **GOCreate** el 04/08/2026; el repo de GitHub sigue en `Ready2Go`.)
 3. **Que se necesita de direccion:** (a) luz verde para construir, (b) tabla de nombres+correos GO del area de marketing, (c) inventario de camaras/luces/tripies, (d) nombre de dominio y aprobacion firmada de Melisa para el costo (~11 USD/ano, va al presupuesto del departamento).
 
 ---
@@ -44,7 +44,7 @@ Reunion 27/07/2026 (Emily Vianney Perez Morales, Betzabet Fuentes Ramos, Jose Ag
 | Arquitectura | **Misma app FastAPI, misma DB SQLite, tablas nuevas** | DB aparte (rompe joins/backups); servicio aparte (mas piezas que operar) |
 | Notificaciones | **Correo SMTP GO** | Telegram (bot extra que administrar); Resend (API key y cuenta nueva); WhatsApp (API de Meta, costo) |
 | Responsiva firmada | **PDF generado en servidor + adjunto al correo** | PDF en cliente (depende del navegador, sin copia servidor); + Drive (requiere service account y dueno de carpeta) |
-| Nombre del proyecto | **Ready2Go** (repo renombrado 27/07) | — |
+| Nombre del proyecto | **Ready2Go** (repo renombrado 27/07), renombrado nuevamente a **GOCreate** el 04/08/2026 | — |
 
 ### 1.3 Problema tecnico de la maqueta (no se porta tal cual)
 
@@ -64,7 +64,7 @@ Reunion 27/07/2026 (Emily Vianney Perez Morales, Betzabet Fuentes Ramos, Jose Ag
 ## 2. ARQUITECTURA OBJETIVO
 
 ```
-Ready2Go (un repo, un login, un deploy, un dominio)
+GOCreate (un repo, un login, un deploy, un dominio)
 ├── backend/  FastAPI + SQLAlchemy + SQLite
 │   ├── app/routers/  auth users creators brands tickets dashboard general_expenses
 │   │                 + equipment loans approvals notifications          <- NUEVOS

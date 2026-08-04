@@ -204,7 +204,7 @@ def generar_a_disco(db: Session, prestamo: Loan, destino: Path, version: int = 1
         topMargin=est.MARGENES["top"],
         bottomMargin=est.MARGENES["bottom"],
         title=f"Carta responsiva {prestamo.folio or ''}".strip(),
-        author="Ready2Go",
+        author="GOCreate",
         subject="Carta responsiva de equipo",
     )
     ancho_util = documento.width

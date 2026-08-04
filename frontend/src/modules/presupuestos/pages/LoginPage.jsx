@@ -43,7 +43,7 @@ export default function LoginPage() {
               className="font-display text-lg font-bold uppercase tracking-[0.06em]"
               style={{ color: "var(--go-text-primary)" }}
             >
-              Ready2Go
+              GOCreate
             </h1>
             <p className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
               Plataforma de Marketing — Grupo Ortiz

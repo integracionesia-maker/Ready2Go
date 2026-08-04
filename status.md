@@ -1,4 +1,4 @@
-# status.md — Ready2Go (Presupuestos + Control de Equipos)
+# status.md — GOCreate (Presupuestos + Control de Equipos)
 
 - Fase: **5 Build** (modulo Control de Equipos, arranca 27/07) · Presupuestos sigue en Fase 5
 - Clasificacion: Herramienta interna — desarrollo activo
@@ -11,7 +11,7 @@
 
 ## Estado
 
-Repo renombrado de `presupuesto_creadores` a **Ready2Go** (remote `github.com/integracionesia-maker/Ready2Go`, rama `jose-branch` creada para supervision). El proyecto absorbe el sistema de **Control de Prestamo de Equipo** pedido por marketing en la reunion del 27/07 (Emily Perez, Betzabet Fuentes; Melisa aprueba).
+Repo renombrado de `presupuesto_creadores` a **Ready2Go** (remote `github.com/integracionesia-maker/Ready2Go`, rama `jose-branch` creada para supervision). El proyecto absorbe el sistema de **Control de Prestamo de Equipo** pedido por marketing en la reunion del 27/07 (Emily Perez, Betzabet Fuentes; Melisa aprueba). Renombrado nuevamente a **GOCreate** el 04/08/2026 (remote de GitHub sin cambios, sigue en `Ready2Go`).
 
 Plan quirurgico completo entregado el mismo dia: `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md` — RBAC aditivo estilo Bruckner, modelo de datos de 11 tablas nuevas, maquina de estados del prestamo, PDF de responsiva en servidor versionado, notificaciones SMTP con log e idempotencia, y direccion visual liquid glass para toda la app. Incluye 22 hallazgos de revision adversarial (5 criticos) resueltos en el diseno antes de escribir codigo.
 

@@ -1,4 +1,4 @@
-# MVP Breakdown — Ready2Go (Presupuestos + Control de Equipos)
+# MVP Breakdown — GOCreate (Presupuestos + Control de Equipos)
 
 > Formula: `% MVP = completados / total * 100`
 > Alcance ampliado el 2026-07-27: el proyecto absorbe el modulo Control de Equipos. El % total **baja** porque el denominador crecio, no porque se haya perdido trabajo.

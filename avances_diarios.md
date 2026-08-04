@@ -1,7 +1,29 @@
-# Avances Diarios — Ready2Go (Presupuestos + Control de Equipos)
+# Avances Diarios — GOCreate (Presupuestos + Control de Equipos)
 
 > Owner: Damian (marketing) · Supervision: Jose Aguilar
 > Inicio de seguimiento: 2026-07-15
+
+---
+
+## Semana 32 — Agosto 2026
+
+### MAR 04/08 — Renombre a GOCreate
+
+**Que hice:**
+- Cambio de nombre del proyecto: **Ready2Go** → **GOCreate**. Actualizadas las menciones de marca en los documentos de la raiz (`CLAUDE.md`, `status.md`, `context.md`, `RISKS.md`, `BACKLOG.md`, `MVP_BREAKDOWN.md`, `CHANGELOG.md`), en `docs/`, en el frontend (`LoginPage.jsx`, `Header.jsx`, `<title>` de `index.html`) y en el backend (plantillas de correo, PDF de responsiva, logger, `.env.example`).
+- El repo de GitHub **no** se renombro: sigue en `github.com/integracionesia-maker/Ready2Go` (decision explicita para no romper los remotes de Jose/`jose-branch` y Beni/`BeniBranch` sin coordinar primero). Las referencias textuales a esa URL se dejaron intactas.
+- Historial de nombres del proyecto: `presupuesto_creadores` → `Ready2Go` (27/07/2026) → `GOCreate` (04/08/2026).
+
+**Evidencia:**
+- `git diff` de la raiz, `frontend/`, `docs/` y `backend/` con las menciones de marca actualizadas.
+
+**MVP:** sin cambio (renombre de marca, no afecta entregables).
+
+**Bloqueo:** ninguno.
+
+**Siguiente:** seguir con lo que estaba en curso antes del renombre (WP1 del modulo Equipos en espera de luz verde).
+
+**Semaforo:** Verde
 
 ---
 

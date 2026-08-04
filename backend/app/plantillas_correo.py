@@ -37,7 +37,7 @@ TIPO_VENCIMIENTO = "vencimiento"
 
 PIE = (
     "\n\n--\n"
-    "Mensaje automatico de Ready2Go — Control de Equipos.\n"
+    "Mensaje automatico de GOCreate — Control de Equipos.\n"
     "No respondas a esta direccion."
 )
 
@@ -57,7 +57,7 @@ def _enlace(base: str, ruta: str) -> str:
 
 
 def confirmado_aprobador(d: dict) -> tuple[str, str]:
-    asunto = f"[Ready2Go] Prestamo {d['folio']} listo para autorizar"
+    asunto = f"[GOCreate] Prestamo {d['folio']} listo para autorizar"
     cuerpo = (
         f"Se registro un prestamo de equipo que necesita tu autorizacion.\n\n"
         f"Folio: {d['folio']}\n"
@@ -76,7 +76,7 @@ def confirmado_aprobador(d: dict) -> tuple[str, str]:
 
 
 def confirmado_responsable(d: dict) -> tuple[str, str]:
-    asunto = f"[Ready2Go] Tu carta responsiva {d['folio']}"
+    asunto = f"[GOCreate] Tu carta responsiva {d['folio']}"
     cuerpo = (
         f"Hola {d['responsable']}:\n\n"
         f"Adjuntamos tu copia de la carta responsiva del equipo que recibiste.\n\n"
@@ -92,7 +92,7 @@ def confirmado_responsable(d: dict) -> tuple[str, str]:
 
 
 def devolucion_aprobador(d: dict) -> tuple[str, str]:
-    asunto = f"[Ready2Go] Devolucion registrada del prestamo {d['folio']}"
+    asunto = f"[GOCreate] Devolucion registrada del prestamo {d['folio']}"
     cuerpo = (
         f"Se registro la devolucion de un prestamo y falta confirmarla.\n\n"
         f"Folio: {d['folio']}\n"
@@ -109,7 +109,7 @@ def devolucion_aprobador(d: dict) -> tuple[str, str]:
 def devolucion_confirmada(d: dict) -> tuple[str, str]:
     hay_incidencias = bool(d.get("incidencias"))
     estado = "con incidencias" if hay_incidencias else "en buen estado"
-    asunto = f"[Ready2Go] Devolucion confirmada — {d['folio']} ({estado})"
+    asunto = f"[GOCreate] Devolucion confirmada — {d['folio']} ({estado})"
 
     detalle = ""
     if hay_incidencias:
@@ -132,7 +132,7 @@ def devolucion_confirmada(d: dict) -> tuple[str, str]:
 def vencimiento(d: dict) -> tuple[str, str]:
     dias = d.get("dias_atraso", 0)
     plural = "s" if dias != 1 else ""
-    asunto = f"[Ready2Go] Equipo con {dias} dia{plural} de atraso — {d['folio']}"
+    asunto = f"[GOCreate] Equipo con {dias} dia{plural} de atraso — {d['folio']}"
     cuerpo = (
         f"El prestamo {d['folio']} paso su fecha de regreso.\n\n"
         f"Responsable: {d['responsable']}\n"

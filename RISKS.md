@@ -1,4 +1,4 @@
-# RISKS — Ready2Go (Presupuestos + Control de Equipos)
+# RISKS — GOCreate (Presupuestos + Control de Equipos)
 
 > Registro de riesgos activos y cerrados del sistema.
 > Los riesgos del modulo Control de Equipos que ya estan **mitigados en el diseno** (22 hallazgos adversariales) viven en §10 de `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md`. Aqui solo los que siguen abiertos como riesgo real del proyecto.

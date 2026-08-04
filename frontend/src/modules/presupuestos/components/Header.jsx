@@ -22,7 +22,7 @@ const SOPORTA_HOVER_FINO =
  *   en toda la banda superior (0–64px), trackeado a nivel `document` para
  *   que el switch Presupuestos/Equipos no interrumpa el glow.
  * - `prefers-reduced-motion`: brillo fijo al centro, sin fade. */
-export default function Header({ onToggleMobileMenu, mobileMenuOpen = false, subtitle = "Ready2Go" }) {
+export default function Header({ onToggleMobileMenu, mobileMenuOpen = false, subtitle = "GOCreate" }) {
   const headerRef = useRef(null);
   const reduceMotion = useReducedMotion();
   const interactive = SOPORTA_HOVER_FINO && !reduceMotion;

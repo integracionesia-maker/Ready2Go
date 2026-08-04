@@ -1,4 +1,4 @@
-# Contexto — Ready2Go (Plataforma de Marketing: Presupuestos + Control de Equipos)
+# Contexto — GOCreate (Plataforma de Marketing: Presupuestos + Control de Equipos)
 
 > Conexiones pool: [[CLAUDE]] | [[context_proyectos]] | [[framework_operative_enforcement/CLAUDE]] | [[framework_operative_enforcement/PLAYBOOK]] | [[framework_operative_enforcement/FRAMEWORK]]
 > Recursos: [[IDENTIDAD DE MARCA/context_design]] (visual)
@@ -6,7 +6,7 @@
 
 ## 1. Resumen
 
-- Proyecto: **Ready2Go** — plataforma interna del area de marketing (antes `presupuesto_creadores`, renombrado 2026-07-27)
+- Proyecto: **GOCreate** — plataforma interna del area de marketing (antes `presupuesto_creadores` → `Ready2Go` el 2026-07-27 → **GOCreate** el 2026-08-04; repo de GitHub sigue en `Ready2Go`, sin renombrar)
 - Departamento: Inteligencia Operativa / Marketing (Grupo Ortiz)
 - Owner: Damian (marketing) — supervision: Jose Aguilar
 - Repo: `github.com/integracionesia-maker/Ready2Go` · ramas: `master`, `dami-branch`, `jose-branch`, `BeniBranch`

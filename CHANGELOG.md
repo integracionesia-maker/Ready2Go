@@ -1,6 +1,14 @@
-# CHANGELOG — Ready2Go
+# CHANGELOG — GOCreate
 
 Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Eliminado` / `Corregido`.
+
+---
+
+## 2026-08-04 — Renombre a GOCreate
+
+### Actualizado
+- Nombre del proyecto: **Ready2Go** → **GOCreate**. Actualizadas las menciones de marca en `CLAUDE.md`, `status.md`, `context.md`, `RISKS.md`, `BACKLOG.md`, `MVP_BREAKDOWN.md`, `avances_diarios.md`, `docs/`, frontend (`LoginPage.jsx`, `Header.jsx`, `index.html`) y backend (correos, PDF, logger, `.env.example`).
+- El repo de GitHub **no** se renombro: sigue en `github.com/integracionesia-maker/Ready2Go` (decision explicita, para no romper los remotes de Jose/Beni sin coordinar). Las referencias textuales a esa URL se dejaron intactas.
 
 ---
 

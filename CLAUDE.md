@@ -1,4 +1,4 @@
-# Ready2Go — Plataforma de Marketing (Presupuestos + Control de Equipos) — Grupo Ortiz
+# GOCreate — Plataforma de Marketing (Presupuestos + Control de Equipos) — Grupo Ortiz
 
 > Conexiones pool: [[CLAUDE]] | [[context_proyectos]] | [[framework_operative_enforcement/CLAUDE]] | [[framework_operative_enforcement/PLAYBOOK]] | [[framework_operative_enforcement/FRAMEWORK]]
 > Recursos compartidos: [[IDENTIDAD DE MARCA/context_design]] (visual)
@@ -13,7 +13,7 @@ Dos modulos de negocio, una sola app, un login, un deploy:
 - **Presupuestos** (Fase 5, en uso interno): control de presupuesto de creadores de contenido — ciclos, tickets con comprobante, validacion, gastos generales, dashboard.
 - **Control de Equipos** (Fase 3.5, plan aprobado, **sin construir**): prestamo de equipo de grabacion de marketing — inventario, carta responsiva firmada en PDF, fotos antes/despues, autorizacion y confirmacion de la aprobadora (Melisa), notificacion por correo.
 
-Antes se llamaba `presupuesto_creadores`. Renombrado a **Ready2Go** el 27/07/2026 al absorber Control de Equipos (reunion con marketing: Emily Perez, Betzabet Fuentes).
+Antes se llamaba `presupuesto_creadores`. Renombrado a **Ready2Go** el 27/07/2026 al absorber Control de Equipos (reunion con marketing: Emily Perez, Betzabet Fuentes). Renombrado nuevamente a **GOCreate** el 04/08/2026 (el repo de GitHub sigue en `github.com/integracionesia-maker/Ready2Go`, sin renombrar).
 
 Plan de integracion, RBAC aditivo, modelo de datos y revision adversarial: **`docs/equipos/plan-quirurgico.md`**. Especificacion funcional original de marketing: `docs/equipos/maqueta/CONTROL_DE_EQUIPOS_maqueta_mkt.htm` (maqueta HTML+localStorage — referencia funcional, su implementacion NO se porta; ver §1.3 del plan).
 

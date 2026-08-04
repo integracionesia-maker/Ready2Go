@@ -34,7 +34,7 @@ __all__ = [
     "NOMBRE_REMITENTE",
 ]
 
-NOMBRE_REMITENTE = "Ready2Go — Control de Equipos"
+NOMBRE_REMITENTE = "GOCreate — Control de Equipos"
 
 
 def _bool_env(nombre: str, default: bool) -> bool:
