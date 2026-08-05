@@ -3,30 +3,42 @@
 from app import models
 
 
-def test_middleware_registra_request_autenticada(client, logged_in_superadmin, superadmin_user, db):
-    resp = logged_in_superadmin.get("/api/auth/me")
+def test_middleware_registra_mutacion_autenticada(client, logged_in_superadmin, superadmin_user, db):
+    # El middleware ya no audita GET (son la mayoria del trafico y no
+    # cambian nada) -- se prueba con una mutacion real, /auth/logout.
+    resp = logged_in_superadmin.post("/api/auth/logout")
     assert resp.status_code == 200
 
     fila = (
         db.query(models.AuditLog)
-        .filter(models.AuditLog.endpoint_path == "/api/auth/me")
+        .filter(models.AuditLog.endpoint_path == "/api/auth/logout")
         .order_by(models.AuditLog.id.desc())
         .first()
     )
     assert fila is not None
     assert fila.actor_user_id == superadmin_user.id
-    assert fila.http_method == "GET"
+    assert fila.http_method == "POST"
     assert fila.response_status == 200
     assert fila.duration_ms is not None and fila.duration_ms >= 0
 
 
-def test_middleware_registra_request_no_autenticada(client, db):
-    resp = client.get("/api/auth/me")
+def test_middleware_no_audita_get(client, logged_in_superadmin, db):
+    antes = db.query(models.AuditLog).count()
+
+    resp = logged_in_superadmin.get("/api/auth/me")
+    assert resp.status_code == 200
+
+    despues = db.query(models.AuditLog).count()
+    assert despues == antes
+
+
+def test_middleware_registra_mutacion_no_autenticada(client, db):
+    resp = client.post("/api/auth/logout")
     assert resp.status_code == 401
 
     fila = (
         db.query(models.AuditLog)
-        .filter(models.AuditLog.endpoint_path == "/api/auth/me")
+        .filter(models.AuditLog.endpoint_path == "/api/auth/logout")
         .order_by(models.AuditLog.id.desc())
         .first()
     )

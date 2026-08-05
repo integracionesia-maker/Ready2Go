@@ -183,12 +183,12 @@ export function rejectTicket(id, reason) {
   });
 }
 
-export function fetchBrandSpendBreakdown(startDate, endDate) {
+export function fetchBrandSpendBreakdown(startDate, endDate, { signal } = {}) {
   const params = new URLSearchParams();
   if (startDate) params.set("start_date", startDate);
   if (endDate) params.set("end_date", endDate);
   const qs = params.toString();
-  return request(`/tickets/brand-spend${qs ? `?${qs}` : ""}`);
+  return request(`/tickets/brand-spend${qs ? `?${qs}` : ""}`, { signal });
 }
 
 export async function uploadTicket({ creatorId, brandId, amount, notes, file }) {
@@ -268,34 +268,34 @@ export function fetchGeneralExpensesExport(months) {
 
 /* ── Dashboard ─────────────────────────────────────────────────────────────── */
 
-export function fetchDashboardSummary(startDate, endDate) {
+export function fetchDashboardSummary(startDate, endDate, { signal } = {}) {
   const params = new URLSearchParams();
   if (startDate) params.set("start_date", startDate);
   if (endDate) params.set("end_date", endDate);
   const qs = params.toString();
-  return request(`/dashboard/summary${qs ? `?${qs}` : ""}`);
+  return request(`/dashboard/summary${qs ? `?${qs}` : ""}`, { signal });
 }
 
-export function fetchMonthlySpend(startDate, endDate) {
+export function fetchMonthlySpend(startDate, endDate, { signal } = {}) {
   const params = new URLSearchParams();
   if (startDate) params.set("start_date", startDate);
   if (endDate) params.set("end_date", endDate);
   const qs = params.toString();
-  return request(`/dashboard/monthly-spend${qs ? `?${qs}` : ""}`);
+  return request(`/dashboard/monthly-spend${qs ? `?${qs}` : ""}`, { signal });
 }
 
-export function fetchCreatorUsage(startDate, endDate) {
+export function fetchCreatorUsage(startDate, endDate, { signal } = {}) {
   const params = new URLSearchParams();
   if (startDate) params.set("start_date", startDate);
   if (endDate) params.set("end_date", endDate);
   const qs = params.toString();
-  return request(`/dashboard/creator-usage${qs ? `?${qs}` : ""}`);
+  return request(`/dashboard/creator-usage${qs ? `?${qs}` : ""}`, { signal });
 }
 
-export function fetchGeneralExpensesMonthly(startDate, endDate) {
+export function fetchGeneralExpensesMonthly(startDate, endDate, { signal } = {}) {
   const params = new URLSearchParams();
   if (startDate) params.set("start_date", startDate);
   if (endDate) params.set("end_date", endDate);
   const qs = params.toString();
-  return request(`/dashboard/general-expenses-monthly${qs ? `?${qs}` : ""}`);
+  return request(`/dashboard/general-expenses-monthly${qs ? `?${qs}` : ""}`, { signal });
 }

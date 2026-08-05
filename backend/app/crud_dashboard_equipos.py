@@ -95,6 +95,11 @@ def _requiere_atencion(db: Session, referencia: date) -> list[dict]:
     prestamo atrasado *y* sin autorizar sale una sola vez, como atrasado: una
     lista con el mismo folio tres veces no ayuda a nadie.
     """
+    # Tope defensivo: esta pantalla es la que mas se abre y hoy trae TODOS los
+    # prestamos activos a Python para calcular el motivo. Con 0 prestamos no
+    # se nota, pero sin limite escala 1:1 con el uso real del modulo. 200 mas
+    # urgentes (fecha de regreso mas vencida primero) es un techo razonable
+    # para una lista de "requiere atencion", no un reporte historico completo.
     candidatos = (
         db.query(Loan)
         .filter(Loan.is_deleted.is_(False))
@@ -107,7 +112,8 @@ def _requiere_atencion(db: Session, referencia: date) -> list[dict]:
                 ]
             )
         )
-        .order_by(Loan.id)
+        .order_by(Loan.fecha_regreso_esperada.asc().nullslast(), Loan.id)
+        .limit(200)
         .all()
     )
 

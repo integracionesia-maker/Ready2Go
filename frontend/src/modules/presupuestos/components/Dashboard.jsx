@@ -54,18 +54,18 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
   const [pdfState, setPdfState] = useState("idle"); // idle | rendering | generating
   const pdfSnapshotRef = useRef(null);
 
-  const loadDashboardData = useCallback(async () => {
+  const loadDashboardData = useCallback(async (signal) => {
     setLoading(true);
     setError(null);
     try {
       const start = fmtDateParam(dateRange.start);
       const end = fmtDateParam(dateRange.end);
       const [s, m, c, b, ge] = await Promise.all([
-        fetchDashboardSummary(start, end),
-        fetchMonthlySpend(start, end),
-        fetchCreatorUsage(start, end),
-        fetchBrandSpendBreakdown(start, end),
-        fetchGeneralExpensesMonthly(start, end),
+        fetchDashboardSummary(start, end, { signal }),
+        fetchMonthlySpend(start, end, { signal }),
+        fetchCreatorUsage(start, end, { signal }),
+        fetchBrandSpendBreakdown(start, end, { signal }),
+        fetchGeneralExpensesMonthly(start, end, { signal }),
       ]);
       setSummary(s);
       setMonthly(m);
@@ -73,14 +73,32 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
       setBrandSpend(b);
       setGeneralExpensesMonthly(ge);
     } catch (e) {
+      if (e.name === "AbortError") return; // reemplazada por un filtro mas reciente, no es un error real
       setError(e.message);
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   }, [dateRange]);
 
+  // Cambiar de fecha con más de un clic/tecleo rápido no debe disparar un
+  // Promise.all de 5 requests por cada cambio intermedio: se espera a que el
+  // usuario se detenga (debounce) y cualquier carga que haya quedado a medias
+  // se cancela con AbortController en vez de dejarla correr para nada.
+  const isFirstLoadRef = useRef(true);
+
   useEffect(() => {
-    loadDashboardData();
+    const controller = new AbortController();
+    const delay = isFirstLoadRef.current ? 0 : 350;
+    isFirstLoadRef.current = false;
+
+    const timeoutId = window.setTimeout(() => {
+      loadDashboardData(controller.signal);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [loadDashboardData]);
 
   const spentPct =

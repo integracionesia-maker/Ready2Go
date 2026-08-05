@@ -1,5 +1,8 @@
-"""Middleware de auditoria automatica: registra CADA request (autenticada o
-no) en `audit_log`, a nivel HTTP generico (metodo, ruta, status, duracion).
+"""Middleware de auditoria automatica: registra cada request de MUTACION
+(autenticada o no) en `audit_log`, a nivel HTTP generico (metodo, ruta,
+status, duracion). Los GET (dashboard, listados, polling) no se auditan aqui
+-- son la mayoria del trafico y no cambian nada; auditarlos solo suma
+volumen de escritura de fondo sin aportar rastro util.
 
 Convive a proposito con las ~35 llamadas manuales a `crud.log_audit(...)` que
 ya existen en los routers (login, altas/bajas de usuario, concesion de
@@ -18,6 +21,7 @@ from __future__ import annotations
 
 import time
 
+from starlette.background import BackgroundTasks
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
@@ -63,10 +67,26 @@ async def _resumen_body(request: Request) -> str | None:
     return texto
 
 
+def _escribir_auditoria(**kwargs) -> None:
+    """Corre en el threadpool de Starlette (via BackgroundTasks), nunca en el
+    event loop: es I/O de DB sincrono y bajo trafico concurrente bloquearlo
+    en el loop congela la app entera para todos, no solo para este request."""
+    try:
+        db = SessionLocal()
+        try:
+            from . import crud
+
+            crud.log_audit(db, **kwargs)
+        finally:
+            db.close()
+    except Exception as exc:  # nunca debe tumbar la request real
+        print(f"[middleware_audit] fallo al registrar auditoria: {exc}")
+
+
 class AuditMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if path.startswith(RUTAS_EXCLUIDAS):
+        if path.startswith(RUTAS_EXCLUIDAS) or request.method == "GET":
             return await call_next(request)
 
         inicio = time.monotonic()
@@ -77,25 +97,27 @@ class AuditMiddleware(BaseHTTPMiddleware):
 
         try:
             duracion_ms = int((time.monotonic() - inicio) * 1000)
-            db = SessionLocal()
-            try:
-                from . import crud
+            kwargs = dict(
+                action=f"{request.method} {path}",
+                actor_user_id=actor_user_id,
+                http_method=request.method,
+                endpoint_path=path,
+                request_params=str(request.query_params) or None,
+                request_body_summary=body_resumen,
+                response_status=response.status_code,
+                user_agent=request.headers.get("user-agent"),
+                duration_ms=duracion_ms,
+                ip_address=request.client.host if request.client else None,
+            )
 
-                crud.log_audit(
-                    db,
-                    action=f"{request.method} {path}",
-                    actor_user_id=actor_user_id,
-                    http_method=request.method,
-                    endpoint_path=path,
-                    request_params=str(request.query_params) or None,
-                    request_body_summary=body_resumen,
-                    response_status=response.status_code,
-                    user_agent=request.headers.get("user-agent"),
-                    duration_ms=duracion_ms,
-                    ip_address=request.client.host if request.client else None,
-                )
-            finally:
-                db.close()
+            # El endpoint puede ya traer sus propias BackgroundTasks (ej. envio
+            # de correo en loans/approvals) -- se encadena, nunca se pisa.
+            if not isinstance(response.background, BackgroundTasks):
+                tareas = BackgroundTasks()
+                if response.background is not None:
+                    tareas.add_task(response.background)
+                response.background = tareas
+            response.background.add_task(_escribir_auditoria, **kwargs)
         except Exception as exc:  # nunca debe tumbar la request real
             print(f"[middleware_audit] fallo al registrar auditoria: {exc}")
 

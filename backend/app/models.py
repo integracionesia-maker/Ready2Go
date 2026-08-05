@@ -269,6 +269,14 @@ class AuditLog(Base):
     user_agent = Column(String(255), nullable=True)
     duration_ms = Column(Integer, nullable=True)
 
+    __table_args__ = (
+        # created_at: orden por defecto y filtro de rango de fecha en cada
+        # GET /api/audit-logs/. actor_user_id: filtro directo por usuario.
+        # Sin estos, cada request de esa pantalla es un table scan completo.
+        Index("ix_audit_log_created_at", "created_at"),
+        Index("ix_audit_log_actor_user_id", "actor_user_id"),
+    )
+
 
 # Re-export al final, no arriba: los modulos de abajo referencian tablas de este
 # archivo por nombre de cadena, nunca por import, para no cerrar un ciclo.

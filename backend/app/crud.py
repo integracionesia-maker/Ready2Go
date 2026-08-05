@@ -236,6 +236,10 @@ def get_tickets(
     creator_name: Optional[str] = None,
     brand_name: Optional[str] = None,
     status: Optional[str] = None,
+    creator_id: Optional[int] = None,
+    uploaded_by_user_id: Optional[int] = None,
+    limit: Optional[int] = None,
+    offset: int = 0,
 ) -> List[models.Ticket]:
     q = db.query(models.Ticket).filter(models.Ticket.is_deleted == False)
     if creator_name:
@@ -244,7 +248,14 @@ def get_tickets(
         q = q.join(models.Brand).filter(models.Brand.name.ilike(f"%{brand_name}%"))
     if status:
         q = q.filter(models.Ticket.status == status)
-    return q.order_by(models.Ticket.upload_date.desc()).all()
+    if creator_id is not None:
+        q = q.filter(models.Ticket.creator_id == creator_id)
+    if uploaded_by_user_id is not None:
+        q = q.filter(models.Ticket.uploaded_by_user_id == uploaded_by_user_id)
+    q = q.order_by(models.Ticket.upload_date.desc())
+    if limit is not None:
+        q = q.offset(offset).limit(limit)
+    return q.all()
 
 
 def get_ticket(db: Session, ticket_id: int) -> Optional[models.Ticket]:
@@ -416,6 +427,25 @@ def get_monthly_spend(
     ]
 
 
+def _peek_cycle_budget(db: Session, creator: models.Creator, target_date: date) -> float:
+    """Version de solo lectura de `get_or_create_cycle_for_date`: para el
+    dashboard (GET) no tiene sentido materializar un ciclo -- y menos un
+    commit por creador dentro de un loop en un endpoint de solo lectura. Si
+    no hay ciclo vigente, el monto es el mismo que se usaria para crear uno."""
+    existing = (
+        db.query(models.BudgetCycle)
+        .filter(
+            models.BudgetCycle.creator_id == creator.id,
+            models.BudgetCycle.start_date <= target_date,
+            models.BudgetCycle.end_date >= target_date,
+        )
+        .first()
+    )
+    if existing:
+        return existing.amount
+    return creator.cycle_budget_amount or 0.0
+
+
 def get_creator_usage(
     db: Session, start_date: Optional[date] = None, end_date: Optional[date] = None
 ) -> List[schemas.CreatorUsageItem]:
@@ -443,8 +473,7 @@ def get_creator_usage(
 
     items = []
     for creator, spent in rows:
-        cycle = get_or_create_cycle_for_date(db, creator, date.today())
-        budget = cycle.amount
+        budget = _peek_cycle_budget(db, creator, date.today())
         items.append(
             schemas.CreatorUsageItem(
                 creator_id=creator.id,

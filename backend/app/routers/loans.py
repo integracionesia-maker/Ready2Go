@@ -28,6 +28,7 @@ from fastapi import (
 )
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from .. import (
     crud,
@@ -343,7 +344,12 @@ async def subir_media(
             raise NoEncontrado("Renglon no encontrado en este prestamo.")
 
     contenido = await file.read()
-    fila = media_manager.reemplazar(
+    # media_manager.reemplazar decodifica con PIL (verificacion de dimensiones)
+    # y escribe a disco -- todo sincrono y bloqueante. Corrido directo aqui
+    # congelaria el event loop para el resto de requests concurrentes; se
+    # manda al threadpool de Starlette igual que la escritura de auditoria.
+    fila = await run_in_threadpool(
+        media_manager.reemplazar,
         db,
         contenido=contenido,
         kind=kind,

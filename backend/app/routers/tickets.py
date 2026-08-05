@@ -49,23 +49,37 @@ def list_tickets(
     creator_name: Optional[str] = None,
     brand_name: Optional[str] = None,
     status: Optional[str] = Query(None),
+    limit: Optional[int] = Query(None, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
     if status is not None and status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail=f"Estado inválido: '{status}'.")
 
+    # `limit`/`offset` opcionales (sin cambio de contrato: sin ellos se
+    # comporta exactamente igual que antes). El filtro por creador/usuario
+    # ahora se aplica en SQL, no trayendo todo y filtrando en Python despues
+    # -- si no, limit/offset paginarian sobre el total de la tabla, no sobre
+    # lo que el rol puede ver, y un creador podria perder tickets propios.
     if current_user.role == "creador":
         # Se ignora cualquier filtro por nombre de creador: un creador solo ve lo suyo.
-        tickets = crud.get_tickets(db, creator_name=None, brand_name=brand_name, status=status)
-        tickets = [t for t in tickets if t.creator_id == current_user.creator_id]
+        tickets = crud.get_tickets(
+            db, brand_name=brand_name, status=status,
+            creator_id=current_user.creator_id, limit=limit, offset=offset,
+        )
     elif current_user.role == "marketing_basico":
         # "ver_propio" para este rol es lo que EL subio, no un creator_id propio
         # (no son creadores de contenido). Ver organigrama de accesos jul-2026.
-        tickets = crud.get_tickets(db, creator_name=creator_name, brand_name=brand_name, status=status)
-        tickets = [t for t in tickets if t.uploaded_by_user_id == current_user.id]
+        tickets = crud.get_tickets(
+            db, creator_name=creator_name, brand_name=brand_name, status=status,
+            uploaded_by_user_id=current_user.id, limit=limit, offset=offset,
+        )
     else:
-        tickets = crud.get_tickets(db, creator_name=creator_name, brand_name=brand_name, status=status)
+        tickets = crud.get_tickets(
+            db, creator_name=creator_name, brand_name=brand_name, status=status,
+            limit=limit, offset=offset,
+        )
     return [_ticket_to_response(t) for t in tickets]
 
 

@@ -45,6 +45,26 @@ function emptyForm() {
   return { username: "", email: "", full_name: "", role: "creador", creator_id: "", password: "" };
 }
 
+// Evita disparar un GET /roles por usuario en paralelo sin limite (18 usuarios
+// = 18 requests simultaneos, suficiente para saturar el pool de conexiones del
+// backend). Un pool fijo de workers procesa la lista de a poco.
+const ROLES_FETCH_CONCURRENCY = 4;
+
+async function mapWithConcurrencyLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const current = nextIndex++;
+      results[current] = await fn(items[current], current);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 export default function UserManagement({ creators }) {
   const { user: currentUser } = useAuth();
 
@@ -80,16 +100,14 @@ export default function UserManagement({ creators }) {
   };
 
   const loadRolesPorUsuario = async (usersToLoad) => {
-    const entries = await Promise.all(
-      usersToLoad.map(async (u) => {
-        try {
-          const detalle = await fetchUserRoles(u.id);
-          return [u.id, detalle.aditivos || []];
-        } catch {
-          return [u.id, []];
-        }
-      })
-    );
+    const entries = await mapWithConcurrencyLimit(usersToLoad, ROLES_FETCH_CONCURRENCY, async (u) => {
+      try {
+        const detalle = await fetchUserRoles(u.id);
+        return [u.id, detalle.aditivos || []];
+      } catch {
+        return [u.id, []];
+      }
+    });
     setRolesPorUsuario(Object.fromEntries(entries));
   };
 
