@@ -47,9 +47,13 @@ export function changePassword(currentPassword, newPassword) {
 
 /* ── Usuarios (Administración) ──────────────────────────────────────────── */
 
-export function fetchUsers(role) {
-  const qs = role ? `?role=${role}` : "";
-  return request(`/users/${qs}`);
+export function fetchUsers(params = {}) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") qs.set(k, v);
+  });
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return request(`/users/${suffix}`);
 }
 
 export function createUser(data) {

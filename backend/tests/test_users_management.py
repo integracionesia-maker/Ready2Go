@@ -37,8 +37,10 @@ def test_creador_forbidden_from_user_management(logged_in_creador):
 def test_superadmin_sees_all_roles(logged_in_superadmin, superadmin_user, admin_user, creador_user):
     resp = logged_in_superadmin.get("/api/users/")
     assert resp.status_code == 200
-    usernames = {u["username"] for u in resp.json()}
+    data = resp.json()
+    usernames = {u["username"] for u in data["items"]}
     assert {superadmin_user.username, admin_user.username, creador_user.username} <= usernames
+    assert data["total"] >= 3
 
 
 def test_superadmin_can_create_admin(logged_in_superadmin):

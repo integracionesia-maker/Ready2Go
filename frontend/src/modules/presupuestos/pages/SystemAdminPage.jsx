@@ -26,9 +26,9 @@ export default function SystemAdminPage({ creators }) {
     let active = true;
     setUsersLoading(true);
     setUsersError(null);
-    fetchUsers()
+    fetchUsers({ page_size: 200 })
       .then((data) => {
-        if (active) setUsers(data);
+        if (active) setUsers(data.items);
       })
       .catch((err) => {
         if (active) setUsersError(err.message);

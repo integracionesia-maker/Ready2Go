@@ -73,6 +73,13 @@ export default function UserManagement({ creators }) {
   const [error, setError] = useState(null);
   const [rolesPorUsuario, setRolesPorUsuario] = useState({});
 
+  // Paginación y filtros
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(25);
+  const [total, setTotal] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const [filters, setFilters] = useState({ role: "", is_active: "" });
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState(emptyForm());
@@ -85,15 +92,31 @@ export default function UserManagement({ creators }) {
 
   const { sortedItems: sortedUsers, sortKey, sortDir, cycleSort } = useSortable(users, USER_COLUMNS);
 
+  // Debounce de 300ms para la búsqueda
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(1);
+      setFilters((f) => ({ ...f, search: searchInput }));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
-      const fetchedUsers = await fetchUsers();
-      setUsers(fetchedUsers);
-      loadRolesPorUsuario(fetchedUsers);
+      const params = { page, page_size: pageSize };
+      if (filters.search) params.search = filters.search;
+      if (filters.role) params.role = filters.role;
+      if (filters.is_active) params.is_active = filters.is_active === "1";
+      const data = await fetchUsers(params);
+      setUsers(data.items);
+      setTotal(data.total);
+      loadRolesPorUsuario(data.items);
     } catch (err) {
       setError(err.message);
+      setUsers([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -111,9 +134,7 @@ export default function UserManagement({ creators }) {
     setRolesPorUsuario(Object.fromEntries(entries));
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, [page, pageSize, filters]);
 
   const openCreateForm = () => {
     setEditingUser(null);
@@ -204,6 +225,11 @@ export default function UserManagement({ creators }) {
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const rangeStart = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, total);
+
   const errorBanner = error && (
     <div
       className="rounded-go border px-4 py-3 font-body text-sm"
@@ -214,14 +240,60 @@ export default function UserManagement({ creators }) {
   );
 
   return (
+    <>
     <GlassPanel className="space-y-4 p-4 sm:p-6">
       <div className="flex items-center justify-between">
-        <span className="go-eyebrow">{users.length} usuarios</span>
+        <span className="go-eyebrow">{total} usuarios</span>
         <button onClick={openCreateForm} className="btn-go">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
           Nuevo Usuario
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-[200px] flex-1">
+          <label className="go-eyebrow mb-1.5 block">Buscar</label>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Nombre, usuario o correo..."
+            className="go-input"
+          />
+        </div>
+        <div className="min-w-[140px]">
+          <label className="go-eyebrow mb-1.5 block">Rol</label>
+          <select
+            value={filters.role}
+            onChange={(e) => { setPage(1); setFilters((f) => ({ ...f, role: e.target.value })); }}
+            className="go-select"
+          >
+            <option value="">Todos</option>
+            {ROLE_OPTIONS.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="min-w-[120px]">
+          <label className="go-eyebrow mb-1.5 block">Estado</label>
+          <select
+            value={filters.is_active}
+            onChange={(e) => { setPage(1); setFilters((f) => ({ ...f, is_active: e.target.value })); }}
+            className="go-select"
+          >
+            <option value="">Todos</option>
+            <option value="1">Activo</option>
+            <option value="0">Inactivo</option>
+          </select>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setSearchInput(""); setPage(1); setFilters({ role: "", is_active: "" }); }}
+          className="btn-go-ghost"
+        >
+          Limpiar
         </button>
       </div>
 
@@ -239,6 +311,7 @@ export default function UserManagement({ creators }) {
           <p>No hay usuarios registrados.</p>
         </div>
       ) : (
+        <>
         <div className="go-table-scroll-wrapper">
         <div className="overflow-x-auto go-table-scroll rounded-go-lg border" style={{ borderColor: "var(--go-border)" }}>
           <table className="go-table w-full table-fixed">
@@ -351,157 +424,189 @@ export default function UserManagement({ creators }) {
           </table>
         </div>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-2">
+            <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+              {rangeStart}–{rangeEnd} de {total}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="btn-go-ghost text-xs px-3 py-1.5 disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <span className="font-body text-xs tabular-nums" style={{ color: "var(--go-text-secondary)" }}>
+                Página {page} de {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="btn-go-ghost text-xs px-3 py-1.5 disabled:opacity-40"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
-      {formOpen && (
-        <Modal title={editingUser ? "Editar Usuario" : "Crear Usuario"} onClose={closeForm} submitting={submitting}>
-          <form onSubmit={handleSubmit} className="space-y-4 px-4 sm:px-6 py-5">
-            {!editingUser && (
-              <div>
-                <label className="go-eyebrow mb-1.5 block">Usuario</label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="go-input"
-                  minLength={3}
-                  maxLength={50}
-                  required
-                />
-              </div>
-            )}
+    </GlassPanel>
+
+    {formOpen && (
+      <Modal title={editingUser ? "Editar Usuario" : "Crear Usuario"} onClose={closeForm} submitting={submitting}>
+        <form onSubmit={handleSubmit} className="space-y-4 px-4 sm:px-6 py-5">
+          {!editingUser && (
             <div>
-              <label className="go-eyebrow mb-1.5 block">Nombre completo</label>
+              <label className="go-eyebrow mb-1.5 block">Usuario</label>
               <input
                 type="text"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 className="go-input"
-                maxLength={150}
+                minLength={3}
+                maxLength={50}
                 required
               />
             </div>
+          )}
+          <div>
+            <label className="go-eyebrow mb-1.5 block">Nombre completo</label>
+            <input
+              type="text"
+              value={formData.full_name}
+              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+              className="go-input"
+              maxLength={150}
+              required
+            />
+          </div>
+          <div>
+            <label className="go-eyebrow mb-1.5 block">Correo</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="go-input"
+              required
+            />
+          </div>
+          <div>
+            <label className="go-eyebrow mb-1.5 block">Rol</label>
+            <select
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value, creator_id: "" })}
+              className="go-select"
+            >
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {formData.role === "creador" && (
             <div>
-              <label className="go-eyebrow mb-1.5 block">Correo</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="go-input"
-                required
-              />
-            </div>
-            <div>
-              <label className="go-eyebrow mb-1.5 block">Rol</label>
+              <label className="go-eyebrow mb-1.5 block">Creador vinculado</label>
               <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value, creator_id: "" })}
+                value={formData.creator_id}
+                onChange={(e) => setFormData({ ...formData, creator_id: e.target.value })}
                 className="go-select"
+                required
               >
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
+                <option value="">Selecciona un creador...</option>
+                {creators.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
                 ))}
               </select>
             </div>
-            {formData.role === "creador" && (
-              <div>
-                <label className="go-eyebrow mb-1.5 block">Creador vinculado</label>
-                <select
-                  value={formData.creator_id}
-                  onChange={(e) => setFormData({ ...formData, creator_id: e.target.value })}
-                  className="go-select"
-                  required
-                >
-                  <option value="">Selecciona un creador...</option>
-                  {creators.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {!editingUser && (
-              <div>
-                <label className="go-eyebrow mb-1.5 block">Contraseña (opcional)</label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="go-input"
-                  placeholder="Dejar en blanco para generar una temporal"
-                  minLength={10}
-                />
-              </div>
-            )}
-
-            {formError && (
-              <div
-                className="rounded-go border px-4 py-3 font-body text-sm"
-                style={{ background: "rgba(229,62,62,0.08)", borderColor: "rgba(229,62,62,0.25)", color: "var(--go-error)" }}
-              >
-                {formError}
-              </div>
-            )}
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button type="button" onClick={closeForm} disabled={submitting} className="btn-go-ghost">
-                Cancelar
-              </button>
-              <button type="submit" disabled={submitting} className="btn-go">
-                {submitting ? "Guardando..." : editingUser ? "Guardar" : "Crear"}
-              </button>
+          )}
+          {!editingUser && (
+            <div>
+              <label className="go-eyebrow mb-1.5 block">Contraseña (opcional)</label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="go-input"
+                placeholder="Dejar en blanco para generar una temporal"
+                minLength={10}
+              />
             </div>
-          </form>
-        </Modal>
-      )}
+          )}
 
-      {confirmToggle && (
-        <Modal title="Confirmar cambio de estado" onClose={() => setConfirmToggle(null)} submitting={submitting}>
-          <div className="space-y-4 px-4 sm:px-6 py-5">
-            <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
-              {confirmToggle.newActive
-                ? `¿Reactivar a ${confirmToggle.user.full_name}?`
-                : `¿Desactivar a ${confirmToggle.user.full_name}? No podrá iniciar sesión hasta que sea reactivado.`}
-            </p>
-
-            {errorBanner}
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setConfirmToggle(null)}
-                disabled={submitting}
-                className="btn-go-ghost"
-              >
-                Cancelar
-              </button>
-              <button type="button" onClick={handleToggleConfirm} disabled={submitting} className="btn-go">
-                {submitting ? "Aplicando..." : "Confirmar"}
-              </button>
+          {formError && (
+            <div
+              className="rounded-go border px-4 py-3 font-body text-sm"
+              style={{ background: "rgba(229,62,62,0.08)", borderColor: "rgba(229,62,62,0.25)", color: "var(--go-error)" }}
+            >
+              {formError}
             </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button type="button" onClick={closeForm} disabled={submitting} className="btn-go-ghost">
+              Cancelar
+            </button>
+            <button type="submit" disabled={submitting} className="btn-go">
+              {submitting ? "Guardando..." : editingUser ? "Guardar" : "Crear"}
+            </button>
           </div>
-        </Modal>
-      )}
+        </form>
+      </Modal>
+    )}
 
-      {resetResult && (
-        <Modal title="Contraseña temporal generada" onClose={() => setResetResult(null)}>
-          <div className="space-y-4 px-4 sm:px-6 py-5">
-            <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
-              Comparte esta contraseña temporal con <strong>{resetResult.username}</strong> por un canal seguro.
-              Solo se muestra una vez.
-            </p>
-            <div className="go-input select-all font-mono">{resetResult.temporary_password}</div>
-            <div className="flex justify-end">
-              <button onClick={() => setResetResult(null)} className="btn-go">
-                Cerrar
-              </button>
-            </div>
+    {confirmToggle && (
+      <Modal title="Confirmar cambio de estado" onClose={() => setConfirmToggle(null)} submitting={submitting}>
+        <div className="space-y-4 px-4 sm:px-6 py-5">
+          <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
+            {confirmToggle.newActive
+              ? `¿Reactivar a ${confirmToggle.user.full_name}?`
+              : `¿Desactivar a ${confirmToggle.user.full_name}? No podrá iniciar sesión hasta que sea reactivado.`}
+          </p>
+
+          {errorBanner}
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setConfirmToggle(null)}
+              disabled={submitting}
+              className="btn-go-ghost"
+            >
+              Cancelar
+            </button>
+            <button type="button" onClick={handleToggleConfirm} disabled={submitting} className="btn-go">
+              {submitting ? "Aplicando..." : "Confirmar"}
+            </button>
           </div>
-        </Modal>
-      )}
-    </GlassPanel>
+        </div>
+      </Modal>
+    )}
+
+    {resetResult && (
+      <Modal title="Contraseña temporal generada" onClose={() => setResetResult(null)}>
+        <div className="space-y-4 px-4 sm:px-6 py-5">
+          <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
+            Comparte esta contraseña temporal con <strong>{resetResult.username}</strong> por un canal seguro.
+            Solo se muestra una vez.
+          </p>
+          <div className="go-input select-all font-mono">{resetResult.temporary_password}</div>
+          <div className="flex justify-end">
+            <button onClick={() => setResetResult(null)} className="btn-go">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </Modal>
+    )}
+    </>
   );
 }

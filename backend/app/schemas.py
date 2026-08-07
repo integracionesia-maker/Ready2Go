@@ -219,6 +219,14 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UserListResponse(BaseModel):
+    items: list[UserResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 class LoginResponse(BaseModel):
     user: UserResponse
 

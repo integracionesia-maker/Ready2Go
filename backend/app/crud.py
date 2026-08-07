@@ -645,11 +645,38 @@ def get_user_by_identifier(db: Session, identifier: str) -> Optional[models.User
     return get_user_by_username(db, identifier) or get_user_by_email(db, identifier)
 
 
-def list_users(db: Session, role: Optional[str] = None) -> List[models.User]:
+def list_users(
+    db: Session,
+    *,
+    role: Optional[str] = None,
+    search: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    page: int = 1,
+    page_size: int = 50,
+    sort_by: str = "username",
+    sort_dir: str = "asc",
+) -> tuple[list, int]:
     q = db.query(models.User)
     if role:
         q = q.filter(models.User.role == role)
-    return q.order_by(models.User.username).all()
+    if is_active is not None:
+        q = q.filter(models.User.is_active == is_active)
+    if search:
+        patron = f"%{search}%"
+        q = q.filter(
+            (models.User.username.like(patron))
+            | (models.User.email.like(patron))
+            | (models.User.full_name.like(patron))
+        )
+    total = q.count()
+
+    columna = getattr(models.User, sort_by, models.User.username)
+    columna = columna.desc() if sort_dir == "desc" else columna.asc()
+
+    page = max(1, page)
+    page_size = max(1, min(page_size, 200))
+    filas = q.order_by(columna).offset((page - 1) * page_size).limit(page_size).all()
+    return filas, total
 
 
 def create_user(

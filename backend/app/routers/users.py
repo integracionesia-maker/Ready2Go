@@ -5,7 +5,7 @@ usuarios de rol 'creador'; ahora TODA la gestión de usuarios es exclusiva del
 superadmin. El rol/estado del propio superadmin sigue siendo inmutable por API.
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
@@ -41,13 +41,35 @@ def _get_target_or_404(db: Session, user_id: int) -> models.User:
     return user
 
 
-@router.get("/", response_model=List[schemas.UserResponse])
+@router.get("/", response_model=schemas.UserListResponse)
 def list_users(
     role: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, description="Buscar en username, email o nombre"),
+    is_active: Optional[bool] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    sort_by: str = Query("username"),
+    sort_dir: str = Query("asc"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
 ):
-    return crud.list_users(db, role=role)
+    filas, total = crud.list_users(
+        db,
+        role=role,
+        search=search,
+        is_active=is_active,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
+    return schemas.UserListResponse(
+        items=[schemas.UserResponse.model_validate(f) for f in filas],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=max(1, -(-total // page_size)),
+    )
 
 
 @router.post("/", response_model=schemas.UserResponse, status_code=201)

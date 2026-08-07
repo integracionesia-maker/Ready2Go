@@ -85,7 +85,7 @@ export default function AuditLogPage() {
   const [detailLog, setDetailLog] = useState(null);
 
   useEffect(() => {
-    fetchUsers().then(setUsers).catch(() => setUsers([]));
+    fetchUsers({ page_size: 200 }).then((data) => setUsers(data.items)).catch(() => setUsers([]));
   }, []);
 
   // Debounce de 300ms para el input de búsqueda global.
