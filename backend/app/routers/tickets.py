@@ -199,7 +199,7 @@ def create_ticket(
 def aprobar_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin")),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket or ticket.is_deleted:
@@ -223,7 +223,7 @@ def rechazar_ticket(
     ticket_id: int,
     data: schemas.TicketRejectRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin")),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket or ticket.is_deleted:
@@ -247,7 +247,7 @@ def rechazar_ticket(
 def soft_delete_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin")),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket or ticket.is_deleted:
@@ -268,7 +268,7 @@ def soft_delete_ticket(
 def hard_delete_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
+    current_user: models.User = Depends(require_role("admin", "superadmin")),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket:
