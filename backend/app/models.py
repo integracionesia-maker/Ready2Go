@@ -269,6 +269,12 @@ class AuditLog(Base):
     user_agent = Column(String(255), nullable=True)
     duration_ms = Column(Integer, nullable=True)
 
+    # Esquema estandar de auditoria para export/ingesta en proyectos futuros.
+    # JSON serializado como texto — mismo patron que accesorios_tipicos en
+    # models_equipos.py. Las columnas planas de arriba se mantienen para
+    # compatibilidad con la UI existente (AuditLogPage.jsx).
+    standard_fields = Column(Text, nullable=True)
+
     __table_args__ = (
         # created_at: orden por defecto y filtro de rango de fecha en cada
         # GET /api/audit-logs/. actor_user_id: filtro directo por usuario.

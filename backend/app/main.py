@@ -1,6 +1,7 @@
 """FastAPI application entry point."""
 
 import os
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
@@ -8,6 +9,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import audit_queue
 from .database import engine, Base
 from .errores import registrar_manejadores
 from .middleware_audit import AuditMiddleware
@@ -26,11 +28,20 @@ CORS_ORIGINS = os.getenv(
 # En producción se deshabilitan /docs y /redoc (Swagger/Redoc quedaban abiertos sin auth).
 IS_PRODUCTION = os.getenv("ENV", "development") == "production"
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Arranca y detiene el consumidor de la cola de auditoria."""
+    tarea = audit_queue.iniciar_consumidor()
+    yield
+    await audit_queue.detener_consumidor(tarea)
+
+
 app = FastAPI(
     title="Control de Presupuestos - Creadores de Contenido",
     version="1.0.0",
     docs_url=None if IS_PRODUCTION else "/docs",
     redoc_url=None if IS_PRODUCTION else "/redoc",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

@@ -26,6 +26,7 @@ class AuditLogItem(BaseModel):
     user_agent: Optional[str] = None
     duration_ms: Optional[int] = None
     created_at: datetime
+    standard_fields: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

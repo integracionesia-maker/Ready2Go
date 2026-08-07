@@ -810,6 +810,7 @@ def log_audit(
     response_status: Optional[int] = None,
     user_agent: Optional[str] = None,
     duration_ms: Optional[int] = None,
+    standard_fields: Optional[str] = None,
 ) -> None:
     entry = models.AuditLog(
         actor_user_id=actor_user_id,
@@ -825,6 +826,7 @@ def log_audit(
         response_status=response_status,
         user_agent=user_agent,
         duration_ms=duration_ms,
+        standard_fields=standard_fields,
     )
     db.add(entry)
     db.commit()

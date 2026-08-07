@@ -114,6 +114,16 @@ def a_item(db: Session, fila: models.AuditLog) -> dict:
     no debe arrastrar ni bloquear su historial de auditoria, por eso el FK es
     ON DELETE SET NULL)."""
     info = _actor_info(db, fila)
+
+    # SQLite no soporta datetimes con timezone — los almacena como naive.
+    # Al leerlos de vuelta sin tzinfo, el JSON encoder de FastAPI omite el
+    # offset y el frontend no sabe que es UTC. Reinsertamos UTC explicito
+    # para que la serializacion produzca "+00:00" y JS haga la conversion
+    # a hora local correctamente.
+    created_at = fila.created_at
+    if created_at is not None and created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+
     return {
         "id": fila.id,
         "actor_user_id": fila.actor_user_id,
@@ -130,7 +140,8 @@ def a_item(db: Session, fila: models.AuditLog) -> dict:
         "ip_address": fila.ip_address,
         "user_agent": fila.user_agent,
         "duration_ms": fila.duration_ms,
-        "created_at": fila.created_at,
+        "created_at": created_at,
+        "standard_fields": fila.standard_fields,
     }
 
 

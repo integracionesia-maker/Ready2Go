@@ -24,6 +24,8 @@ function statusBadgeClass(status) {
 
 function formatDate(iso) {
   if (!iso) return "—";
+  // El backend ahora devuelve created_at con tzinfo (+00:00), y JS lo
+  // convierte automaticamente a la zona local del navegador (CDMX = UTC-6).
   return new Date(iso).toLocaleDateString("es-MX", {
     year: "numeric",
     month: "short",
@@ -31,6 +33,20 @@ function formatDate(iso) {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
+function epochToLocal(epoch) {
+  if (epoch == null) return "—";
+  return new Date(epoch * 1000).toLocaleDateString("es-MX", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
   });
 }
 
@@ -357,7 +373,9 @@ export default function AuditLogPage() {
       {detailLog && (
         <Modal title={`Auditoría #${detailLog.id}`} onClose={() => setDetailLog(null)}>
           <div className="space-y-3 px-4 sm:px-6 py-5 font-mono text-xs" style={{ color: "var(--go-text-primary)" }}>
-            {[
+            {(() => {
+              const sf = (() => { try { return typeof detailLog.standard_fields === "string" ? JSON.parse(detailLog.standard_fields) : detailLog.standard_fields; } catch { return null; } })();
+              return [
               ["Fecha/Hora", formatDate(detailLog.created_at)],
               ["Usuario", detailLog.actor_full_name ? `${detailLog.actor_full_name} (${detailLog.actor_username})` : userLabelById.get(detailLog.actor_user_id) || "—"],
               ["Acción", detailLog.action],
@@ -369,12 +387,18 @@ export default function AuditLogPage() {
               ["User-Agent", detailLog.user_agent || "—"],
               ["Tipo de objetivo", detailLog.target_type || "—"],
               ["ID de objetivo", detailLog.target_id ?? "—"],
+              ...(sf ? [
+                ["⏱ Epoch (time)", sf.time != null ? sf.time : "—"],
+                ["📅 ISO 8601 (date)", sf.date || "—"],
+                ["🖥 Host", sf.host?.name || "—"],
+                ["📋 Endpoint type", sf.endpoint?.type || "—"],
+              ] : []),
             ].map(([label, value]) => (
               <div key={label} className="grid grid-cols-3 gap-2">
                 <span className="go-eyebrow col-span-1">{label}</span>
                 <span className="col-span-2 break-all">{value}</span>
               </div>
-            ))}
+            ));})()}
 
             {detailLog.details && (
               <div>

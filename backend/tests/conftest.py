@@ -16,7 +16,7 @@ os.environ.setdefault("CORS_ORIGINS", "http://localhost:5173")
 import pytest
 from fastapi.testclient import TestClient
 
-from app import models, security
+from app import audit_queue, models, security
 from app.database import Base, SessionLocal, engine
 from app.main import app
 
@@ -27,6 +27,9 @@ def _clean_state():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     security._login_attempts_by_ip.clear()
+    # La cola de auditoria es estado a nivel modulo — descartar eventos
+    # de tests anteriores cuyos usuarios ya no existen en la DB nueva.
+    audit_queue.limpiar_cola()
     yield
 
 

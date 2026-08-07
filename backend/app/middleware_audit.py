@@ -1,17 +1,16 @@
-"""Middleware de auditoria automatica: registra cada request de MUTACION
-(autenticada o no) en `audit_log`, a nivel HTTP generico (metodo, ruta,
-status, duracion). Los GET (dashboard, listados, polling) no se auditan aqui
--- son la mayoria del trafico y no cambian nada; auditarlos solo suma
-volumen de escritura de fondo sin aportar rastro util.
+"""Middleware de auditoria automatica: registra cada request a /api/* en
+`audit_log` via cola en memoria (nunca directo a la DB desde el event loop).
+
+La escritura real la hace una unica tarea de fondo (`audit_queue._consumidor`)
+que junta eventos en lotes y los flushea por threadpool — un solo escritor a
+la vez, sin competir por el pool de conexiones ni por el lock de SQLite.
 
 Convive a proposito con las ~35 llamadas manuales a `crud.log_audit(...)` que
 ya existen en los routers (login, altas/bajas de usuario, concesion de
 roles, aprobaciones de prestamo, etc.): esas siguen escribiendo sus propias
 filas con `action`/`target_type` curados a mano. Este middleware NO las
-reemplaza ni las deduplica -- cubre el resto de la superficie (la mayoria de
-los endpoints de Presupuestos/Equipos hoy no llaman a log_audit en absoluto)
-con un rastro generico de "quien pidio que ruta y que le respondio el
-servidor", que antes no existia para nada fuera de esos ~35 puntos.
+reemplaza ni las deduplica -- cubre el resto de la superficie con un rastro
+generico de "quien pidio que ruta y que le respondio el servidor".
 
 Nunca debe tumbar una request real: todo el cuerpo corre en try/except y el
 fallo se imprime a consola, no se propaga.
@@ -20,13 +19,13 @@ fallo se imprime a consola, no se propaga.
 from __future__ import annotations
 
 import time
+from datetime import datetime, timezone
 
-from starlette.background import BackgroundTasks
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 from . import security
-from .database import SessionLocal
+from . import audit_queue
 
 RUTAS_EXCLUIDAS = ("/api/audit-logs", "/api/health")
 # No se captura el cuerpo de login: contendria la contraseña en texto plano.
@@ -67,26 +66,14 @@ async def _resumen_body(request: Request) -> str | None:
     return texto
 
 
-def _escribir_auditoria(**kwargs) -> None:
-    """Corre en el threadpool de Starlette (via BackgroundTasks), nunca en el
-    event loop: es I/O de DB sincrono y bajo trafico concurrente bloquearlo
-    en el loop congela la app entera para todos, no solo para este request."""
-    try:
-        db = SessionLocal()
-        try:
-            from . import crud
-
-            crud.log_audit(db, **kwargs)
-        finally:
-            db.close()
-    except Exception as exc:  # nunca debe tumbar la request real
-        print(f"[middleware_audit] fallo al registrar auditoria: {exc}")
-
-
 class AuditMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if path.startswith(RUTAS_EXCLUIDAS) or request.method == "GET":
+
+        # Allowlist positivo: solo se auditan requests a /api/*.
+        # Esto excluye automaticamente assets estaticos (/assets/*) y el
+        # catch-all del SPA que sirve index.html para cualquier otra ruta.
+        if not path.startswith("/api/") or path.startswith(RUTAS_EXCLUIDAS):
             return await call_next(request)
 
         inicio = time.monotonic()
@@ -97,8 +84,11 @@ class AuditMiddleware(BaseHTTPMiddleware):
 
         try:
             duracion_ms = int((time.monotonic() - inicio) * 1000)
-            kwargs = dict(
-                action=f"{request.method} {path}",
+            # El instante del evento se captura AQUI (momento del enqueue),
+            # no en el flush — si se usara el momento del flush, todas las
+            # filas de un mismo lote tendrian timestamps casi identicos.
+            evento = dict(
+                ocurrido_en=datetime.now(timezone.utc),
                 actor_user_id=actor_user_id,
                 http_method=request.method,
                 endpoint_path=path,
@@ -109,16 +99,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 duration_ms=duracion_ms,
                 ip_address=request.client.host if request.client else None,
             )
-
-            # El endpoint puede ya traer sus propias BackgroundTasks (ej. envio
-            # de correo en loans/approvals) -- se encadena, nunca se pisa.
-            if not isinstance(response.background, BackgroundTasks):
-                tareas = BackgroundTasks()
-                if response.background is not None:
-                    tareas.add_task(response.background)
-                response.background = tareas
-            response.background.add_task(_escribir_auditoria, **kwargs)
+            audit_queue.enqueue(evento)
         except Exception as exc:  # nunca debe tumbar la request real
-            print(f"[middleware_audit] fallo al registrar auditoria: {exc}")
+            print(f"[middleware_audit] fallo al encolar auditoria: {exc}")
 
         return response
