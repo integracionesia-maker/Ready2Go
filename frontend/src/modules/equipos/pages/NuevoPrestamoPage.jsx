@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EmptyState, GlassPanel, SkeletonShimmer, useToast } from "@/design";
-import { esCodigo } from "@/api";
+import { esCodigo, fetchBrands } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import {
   createLoan,
@@ -12,7 +12,6 @@ import {
   cancelLoan,
   confirmLoan,
   uploadMedia,
-  fetchEmpresas,
   fetchEquipmentList,
 } from "../api";
 import AccesoriosPicker from "../components/AccesoriosPicker";
@@ -34,7 +33,7 @@ export default function NuevoPrestamoPage() {
   const [errorInicial, setErrorInicial] = useState(null);
   const [borradorPrevio, setBorradorPrevio] = useState(null);
   const [reanudando, setReanudando] = useState(false);
-  const [empresas, setEmpresas] = useState([]);
+  const [brands, setBrands] = useState([]);
 
   const [loan, setLoan] = useState(null);
   const [paso, setPaso] = useState(1);
@@ -78,11 +77,11 @@ export default function NuevoPrestamoPage() {
   useEffect(() => {
     async function init() {
       try {
-        const [emp, borradores] = await Promise.all([
-          fetchEmpresas(),
+        const [brandList, borradores] = await Promise.all([
+          fetchBrands(),
           fetchLoans({ estado: "borrador", mios: true }),
         ]);
-        setEmpresas(emp.filter((e) => e.is_active));
+        setBrands(brandList.filter((b) => b.is_active));
         if (borradores.items.length > 0) {
           setBorradorPrevio(borradores.items[0]);
         }
@@ -370,12 +369,12 @@ export default function NuevoPrestamoPage() {
             <input type="text" value={area} onChange={(e) => setArea(e.target.value)} className="go-input" required />
           </div>
           <div>
-            <label className="go-eyebrow mb-1.5 block">Empresa</label>
+            <label className="go-eyebrow mb-1.5 block">Marca</label>
             <select value={empresaSel} onChange={(e) => setEmpresaSel(e.target.value)} className="go-select" required>
               <option value="">Selecciona...</option>
-              {empresas.map((emp) => (
-                <option key={emp.id} value={emp.razon_social}>
-                  {emp.razon_social}
+              {brands.map((b) => (
+                <option key={b.id} value={b.name}>
+                  {b.name}
                 </option>
               ))}
             </select>
