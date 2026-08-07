@@ -54,18 +54,24 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
   const [pdfState, setPdfState] = useState("idle"); // idle | rendering | generating
   const pdfSnapshotRef = useRef(null);
 
-  const loadDashboardData = useCallback(async (signal) => {
+  const loadDashboardData = useCallback(async (signal, isFirstLoad) => {
     setLoading(true);
     setError(null);
     try {
       const start = fmtDateParam(dateRange.start);
       const end = fmtDateParam(dateRange.end);
+      // En la primera carga NO se pasa AbortSignal: si el token expiró, el
+      // refresh cycle de client.js necesita completar sin que React Strict
+      // Mode lo aborte a medio camino (lo que dejaría 401s visibles en
+      // consola). Las cargas subsecuentes (debounced por cambio de fecha)
+      // sí usan AbortController para cancelar requests obsoletas.
+      const opts = isFirstLoad ? {} : { signal };
       const [s, m, c, b, ge] = await Promise.all([
-        fetchDashboardSummary(start, end, { signal }),
-        fetchMonthlySpend(start, end, { signal }),
-        fetchCreatorUsage(start, end, { signal }),
-        fetchBrandSpendBreakdown(start, end, { signal }),
-        fetchGeneralExpensesMonthly(start, end, { signal }),
+        fetchDashboardSummary(start, end, opts),
+        fetchMonthlySpend(start, end, opts),
+        fetchCreatorUsage(start, end, opts),
+        fetchBrandSpendBreakdown(start, end, opts),
+        fetchGeneralExpensesMonthly(start, end, opts),
       ]);
       setSummary(s);
       setMonthly(m);
@@ -76,7 +82,8 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
       if (e.name === "AbortError") return; // reemplazada por un filtro mas reciente, no es un error real
       setError(e.message);
     } finally {
-      if (!signal.aborted) setLoading(false);
+      if (!isFirstLoad && !signal.aborted) setLoading(false);
+      else if (isFirstLoad) setLoading(false);
     }
   }, [dateRange]);
 
@@ -87,12 +94,13 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
   const isFirstLoadRef = useRef(true);
 
   useEffect(() => {
+    const isFirstLoad = isFirstLoadRef.current;
     const controller = new AbortController();
-    const delay = isFirstLoadRef.current ? 0 : 350;
+    const delay = isFirstLoad ? 0 : 350;
     isFirstLoadRef.current = false;
 
     const timeoutId = window.setTimeout(() => {
-      loadDashboardData(controller.signal);
+      loadDashboardData(controller.signal, isFirstLoad);
     }, delay);
 
     return () => {
