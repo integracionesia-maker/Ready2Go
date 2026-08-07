@@ -12,7 +12,7 @@
   }
 
   body {
-    @apply min-h-screen font-body antialiased;
+    @apply min-h-screen font-body antialiased overflow-x-hidden;
     background-color: var(--go-bg);
     background-image:
       var(--go-noise),

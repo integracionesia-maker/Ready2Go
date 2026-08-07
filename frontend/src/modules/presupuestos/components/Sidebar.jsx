@@ -81,7 +81,7 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
 
       <aside
         className={`glass fixed left-2 md:left-3 bottom-2 md:bottom-3 top-[72px] md:top-[76px] z-40 flex h-[calc(100%-80px)] md:h-[calc(100%-88px)] w-60 flex-col transition-all duration-300 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          mobileOpen ? "translate-x-0" : "-translate-x-[calc(100%+0.5rem)]"
         } md:translate-x-0 ${collapsed ? "md:w-16" : "md:w-60"}`}
         style={{
           borderColor: "var(--go-border)",
