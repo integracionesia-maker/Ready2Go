@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { createGeneralExpense } from "@/api";
+import { CameraCaptureButton, useMobile } from "@/design";
 
 const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".pdf"];
 const ALLOWED_MIME = [
@@ -8,6 +9,15 @@ const ALLOWED_MIME = [
   "image/jpg",
   "application/pdf",
 ];
+// Ver UploadTicketModal.jsx: con solo extensiones, varias versiones de Chrome
+// en Android no ofrecen la cámara en el selector.
+const ACCEPT = "image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf";
+
+/** Extensión en minúsculas, o cadena vacía si el nombre no trae ninguna. */
+function extensionDe(nombre) {
+  const partes = (nombre || "").split(".");
+  return partes.length > 1 ? `.${partes.pop().toLowerCase()}` : "";
+}
 
 export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
   const [brandId, setBrandId] = useState("");
@@ -15,6 +25,7 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
   const [amount, setAmount] = useState("");
   const [file, setFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const esMovil = useMobile();
 
   const activeBrands = (brands || []).filter((b) => b.is_active);
 
@@ -30,10 +41,12 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
     setError(null);
     if (!f) return;
 
-    const ext = "." + f.name.split(".").pop().toLowerCase();
+    const ext = extensionDe(f.name);
     if (!ALLOWED_EXTS.includes(ext)) {
       setError(
-        `Formato no permitido: ${ext}. Solo: ${ALLOWED_EXTS.join(", ")}`
+        ext
+          ? `Formato no permitido: ${ext}. Solo: ${ALLOWED_EXTS.join(", ")}`
+          : `El archivo no tiene extensión. Solo: ${ALLOWED_EXTS.join(", ")}`
       );
       setFile(null);
       return;
@@ -72,6 +85,9 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
 
   const handleFileSelect = (e) => {
     const f = e.target.files[0];
+    // Ver UploadTicketModal.jsx: sin limpiar `value`, reelegir el mismo archivo
+    // tras un error no vuelve a disparar `change`.
+    e.target.value = "";
     if (f) validateAndSet(f);
   };
 
@@ -272,10 +288,18 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
-                    Arrastra el archivo aquí o{" "}
-                    <span className="font-semibold" style={{ color: "var(--go-orange)" }}>
-                      haz clic para seleccionar
-                    </span>
+                    {esMovil ? (
+                      <span className="font-semibold" style={{ color: "var(--go-orange)" }}>
+                        Toca para elegir un archivo
+                      </span>
+                    ) : (
+                      <>
+                        Arrastra el archivo aquí o{" "}
+                        <span className="font-semibold" style={{ color: "var(--go-orange)" }}>
+                          haz clic para seleccionar
+                        </span>
+                      </>
+                    )}
                   </p>
                   <p className="mt-1 font-body text-xs" style={{ color: "var(--go-text-muted)" }}>
                     PNG, JPG o PDF — Máx. 10 MB
@@ -285,10 +309,15 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".jpg,.jpeg,.png,.pdf"
+                accept={ACCEPT}
                 onChange={handleFileSelect}
                 className="hidden"
               />
+            </div>
+
+            {/* Solo en móvil (ver CameraCaptureButton). */}
+            <div className="mt-2">
+              <CameraCaptureButton onFile={validateAndSet} onError={setError} />
             </div>
           </div>
 

@@ -8,6 +8,8 @@ export { default as StatusDonut } from "./StatusDonut";
 export { default as Timeline } from "./Timeline";
 export { default as SkeletonShimmer } from "./SkeletonShimmer";
 export { default as MediaViewer } from "./MediaViewer";
+export { default as CameraCaptureButton } from "./CameraCaptureButton";
+export { comprimirImagen } from "./imagen";
 export { default as EmptyState } from "./EmptyState";
 export { default as RoleBadge } from "./RoleBadge";
 export { ToastProvider, useToast } from "./Toast";
