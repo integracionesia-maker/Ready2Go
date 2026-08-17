@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MediaViewer } from "@/design";
 import { mediaUrl } from "../api";
 
 const MAX_DIM = 900;
@@ -30,6 +31,11 @@ export default function PhotoCapture({ label, existingMediaId, onUpload }) {
   const [estado, setEstado] = useState(existingMediaId ? "listo" : "vacio"); // vacio | comprimiendo | subiendo | listo | error
   const [error, setError] = useState(null);
   const [existingUrl, setExistingUrl] = useState(null);
+  // Ampliación de la foto. El recuadro mide 128px y va recortado
+  // (`object-cover`): sin esto no hay forma de comprobar si la foto salió
+  // movida antes de mandarla, que es justo lo que se está revisando aquí.
+  const [ampliada, setAmpliada] = useState(false);
+  const [urlCompleta, setUrlCompleta] = useState(null);
   const blobRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -89,7 +95,31 @@ export default function PhotoCapture({ label, existingMediaId, onUpload }) {
       <p className="go-eyebrow">{label}</p>
       <div
         className="flex h-32 items-center justify-center overflow-hidden rounded-go border"
-        style={{ borderColor: "var(--go-border)", background: "var(--go-surface)" }}
+        style={{
+          borderColor: "var(--go-border)",
+          background: "var(--go-surface)",
+          cursor: preview || existingUrl ? "zoom-in" : "default",
+        }}
+        onClick={() => {
+          if (!preview && !existingUrl) return;
+          // El recuadro usa la miniatura de 96px; para ampliar hace falta el
+          // original. Si la foto es de esta sesión, el objectURL local ya es
+          // la imagen completa.
+          if (preview) setUrlCompleta(preview);
+          else if (!urlCompleta && existingMediaId) {
+            mediaUrl(existingMediaId).then(setUrlCompleta);
+          }
+          setAmpliada(true);
+        }}
+        role={preview || existingUrl ? "button" : undefined}
+        tabIndex={preview || existingUrl ? 0 : undefined}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && (preview || existingUrl)) {
+            e.preventDefault();
+            e.currentTarget.click();
+          }
+        }}
+        aria-label={preview || existingUrl ? `Ampliar ${label}` : undefined}
       >
         {preview ? (
           <img src={preview} alt={label} className="h-full w-full object-cover" />
@@ -151,6 +181,16 @@ export default function PhotoCapture({ label, existingMediaId, onUpload }) {
       >
         {yaSubida ? "Reemplazar foto" : "Tomar / elegir foto"}
       </button>
+
+      {ampliada && (
+        <MediaViewer
+          url={urlCompleta}
+          fileName={`${label}.jpg`}
+          mimeType="image/*"
+          title={label}
+          onClose={() => setAmpliada(false)}
+        />
+      )}
     </div>
   );
 }

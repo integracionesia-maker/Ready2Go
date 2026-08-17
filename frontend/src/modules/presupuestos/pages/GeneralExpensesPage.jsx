@@ -3,7 +3,7 @@ import DateRangeFilter from "../components/DateRangeFilter";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import GeneralExpenseModal from "../components/GeneralExpenseModal";
 import GeneralExpensesExportModal from "../components/GeneralExpensesExportModal";
-import { GlassPanel, RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS, MediaViewer } from "@/design";
 import { fetchGeneralExpenses, softDeleteGeneralExpense, hardDeleteGeneralExpense, generalExpenseFileUrl } from "@/api";
 
 function formatCurrency(amount) {
@@ -56,6 +56,7 @@ export default function GeneralExpensesPage({ brands = [] }) {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [viewerExpense, setViewerExpense] = useState(null);
 
   const loadExpenses = useCallback(() => {
     let cancelled = false;
@@ -224,11 +225,14 @@ export default function GeneralExpensesPage({ brands = [] }) {
                       <RowActions
                         actions={[
                           {
+                            // Antes era un window.open que, con el
+                            // `Content-Disposition: attachment` del backend,
+                            // descargaba el archivo en vez de mostrarlo. Ahora
+                            // abre el mismo visor que Transacciones.
                             key: "ver",
                             label: "Ver",
                             icon: ICONS.ver,
-                            onClick: () =>
-                              window.open(generalExpenseFileUrl(expense.id), "_blank", "noopener,noreferrer"),
+                            onClick: () => setViewerExpense(expense),
                           },
                           {
                             key: "eliminar",
@@ -254,6 +258,16 @@ export default function GeneralExpensesPage({ brands = [] }) {
       )}
 
       {exportModalOpen && <GeneralExpensesExportModal onClose={() => setExportModalOpen(false)} />}
+
+      {viewerExpense && (
+        <MediaViewer
+          url={generalExpenseFileUrl(viewerExpense.id)}
+          fileName={viewerExpense.file_name}
+          mimeType={viewerExpense.mime_type || ""}
+          title={`Comprobante — ${viewerExpense.description}`}
+          onClose={() => setViewerExpense(null)}
+        />
+      )}
 
       {deleteTarget && (
         <DeleteConfirmModal
