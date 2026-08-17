@@ -8,6 +8,7 @@ import LoadingScreen from "./components/LoadingScreen";
 import { SkeletonShimmer } from "@/design";
 import { useAuth } from "@/context/AuthContext";
 import { fetchCreators, fetchCreatorsKpi, fetchBrands, fetchTickets, isNetworkError } from "@/api";
+import { ADMIN_ROLES, PRESUPUESTOS_ROLES, SUPERADMIN_ONLY } from "./roles";
 
 // React.lazy por ruta (B-I03, I1 commit 4): el dashboard y sus 5 gráficos
 // ApexCharts salen del chunk inicial. LoadingScreen sigue siendo el estado
@@ -25,9 +26,6 @@ const ForbiddenPage = lazy(() => import("./pages/ForbiddenPage"));
 const SystemAdminPage = lazy(() => import("./pages/SystemAdminPage"));
 const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
 
-const ADMIN_ROLES = ["admin", "superadmin"];
-const SUPERADMIN_ONLY = ["superadmin"];
-
 function firstOfMonth(y, m) {
   return new Date(y, m, 1);
 }
@@ -43,7 +41,12 @@ function today() {
 // UploadTicketModal). Movido tal cual desde App.jsx, sin cambiar su lógica.
 export default function PresupuestosLayout() {
   const { user } = useAuth();
-  const isPrivileged = user && ADMIN_ROLES.includes(user.role);
+  // Dos flags distintos a propósito: el KPI alimenta Dashboard/Creadores (que
+  // marketing_admin sí ve) y el conteo de pendientes alimenta el badge de
+  // Validación (que no ve). Con un solo flag se pedía la cola de validación
+  // para pintar un item de menú inexistente.
+  const canSeeReports = user && PRESUPUESTOS_ROLES.includes(user.role);
+  const canValidate = user && ADMIN_ROLES.includes(user.role);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
@@ -81,9 +84,9 @@ export default function PresupuestosLayout() {
     try {
       const [c, k, b, pending] = await Promise.all([
         fetchCreators(),
-        isPrivileged ? fetchCreatorsKpi() : Promise.resolve(null),
+        canSeeReports ? fetchCreatorsKpi() : Promise.resolve(null),
         fetchBrands(false), // incluye marcas inactivas para la vista de administración
-        isPrivileged ? fetchTickets({ status: "pendiente" }) : Promise.resolve([]),
+        canValidate ? fetchTickets({ status: "pendiente" }) : Promise.resolve([]),
       ]);
       setCreators(c);
       setKpi(k);
@@ -106,7 +109,7 @@ export default function PresupuestosLayout() {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [isPrivileged]);
+  }, [canSeeReports, canValidate]);
 
   useEffect(() => {
     loadData();
@@ -162,7 +165,7 @@ export default function PresupuestosLayout() {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute roles={ADMIN_ROLES}>
+                <ProtectedRoute roles={PRESUPUESTOS_ROLES}>
                   {loading || networkError ? (
                     <LoadingScreen isOffline={networkError} onRetry={loadData} />
                   ) : (
@@ -180,7 +183,7 @@ export default function PresupuestosLayout() {
             <Route
               path="/creadores"
               element={
-                <ProtectedRoute roles={ADMIN_ROLES}>
+                <ProtectedRoute roles={PRESUPUESTOS_ROLES}>
                   {loading || networkError ? (
                     <LoadingScreen isOffline={networkError} onRetry={loadData} />
                   ) : (
@@ -230,7 +233,7 @@ export default function PresupuestosLayout() {
             <Route
               path="/gastos-generales"
               element={
-                <ProtectedRoute roles={ADMIN_ROLES}>
+                <ProtectedRoute roles={PRESUPUESTOS_ROLES}>
                   <GeneralExpensesPage brands={brands} />
                 </ProtectedRoute>
               }

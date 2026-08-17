@@ -1,22 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { CameraCaptureButton, MediaViewer, comprimirImagen } from "@/design";
 import { mediaUrl } from "../api";
 
+// 900px/0.72 son los parámetros de este módulo, más agresivos que los de
+// `comprimirImagen` por defecto (1600/0.85): aquí se fotografían objetos, no
+// texto que alguien tenga que leer para validar un monto.
 const MAX_DIM = 900;
 const QUALITY = 0.72;
 const MAX_BYTES = 3 * 1024 * 1024;
-
-async function compressImage(file) {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_DIM / Math.max(bitmap.width, bitmap.height));
-  const w = Math.round(bitmap.width * scale);
-  const h = Math.round(bitmap.height * scale);
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  canvas.getContext("2d").drawImage(bitmap, 0, 0, w, h);
-  bitmap.close?.();
-  return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", QUALITY));
-}
 
 /**
  * Una foto, un slot (frente/atrás de un equipo). Compresión en cliente a
@@ -30,6 +21,11 @@ export default function PhotoCapture({ label, existingMediaId, onUpload }) {
   const [estado, setEstado] = useState(existingMediaId ? "listo" : "vacio"); // vacio | comprimiendo | subiendo | listo | error
   const [error, setError] = useState(null);
   const [existingUrl, setExistingUrl] = useState(null);
+  // Ampliación de la foto. El recuadro mide 128px y va recortado
+  // (`object-cover`): sin esto no hay forma de comprobar si la foto salió
+  // movida antes de mandarla, que es justo lo que se está revisando aquí.
+  const [ampliada, setAmpliada] = useState(false);
+  const [urlCompleta, setUrlCompleta] = useState(null);
   const blobRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -49,12 +45,23 @@ export default function PhotoCapture({ label, existingMediaId, onUpload }) {
     };
   }, [existingMediaId, preview]);
 
+  // Los objectURL del preview no se revocaban: cada "Reemplazar foto" dejaba el
+  // Blob anterior retenido en memoria hasta recargar la página. El cleanup corre
+  // antes del siguiente efecto y al desmontar, así que libera el que se va.
+  useEffect(() => {
+    if (!preview) return undefined;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
+
   async function handleFile(file) {
     if (!file) return;
     setError(null);
     setEstado("comprimiendo");
     try {
-      const compressed = await compressImage(file);
+      const compressed = await comprimirImagen(file, {
+        maxDim: MAX_DIM,
+        calidad: QUALITY,
+      });
       if (compressed.size > MAX_BYTES) {
         setEstado("error");
         setError(`La foto sigue pesando ${(compressed.size / 1024 / 1024).toFixed(1)} MB tras comprimir — el límite es 3 MB. Intenta con otra foto.`);
@@ -83,13 +90,38 @@ export default function PhotoCapture({ label, existingMediaId, onUpload }) {
   }
 
   const yaSubida = estado === "listo";
+  const ocupado = estado === "comprimiendo" || estado === "subiendo";
 
   return (
     <div className="flex flex-col gap-2">
       <p className="go-eyebrow">{label}</p>
       <div
         className="flex h-32 items-center justify-center overflow-hidden rounded-go border"
-        style={{ borderColor: "var(--go-border)", background: "var(--go-surface)" }}
+        style={{
+          borderColor: "var(--go-border)",
+          background: "var(--go-surface)",
+          cursor: preview || existingUrl ? "zoom-in" : "default",
+        }}
+        onClick={() => {
+          if (!preview && !existingUrl) return;
+          // El recuadro usa la miniatura de 96px; para ampliar hace falta el
+          // original. Si la foto es de esta sesión, el objectURL local ya es
+          // la imagen completa.
+          if (preview) setUrlCompleta(preview);
+          else if (!urlCompleta && existingMediaId) {
+            mediaUrl(existingMediaId).then(setUrlCompleta);
+          }
+          setAmpliada(true);
+        }}
+        role={preview || existingUrl ? "button" : undefined}
+        tabIndex={preview || existingUrl ? 0 : undefined}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && (preview || existingUrl)) {
+            e.preventDefault();
+            e.currentTarget.click();
+          }
+        }}
+        aria-label={preview || existingUrl ? `Ampliar ${label}` : undefined}
       >
         {preview ? (
           <img src={preview} alt={label} className="h-full w-full object-cover" />
@@ -111,13 +143,20 @@ export default function PhotoCapture({ label, existingMediaId, onUpload }) {
         )}
       </div>
 
+      {/* Sin `capture`: este input es el de "elegir archivo". Antes lo llevaba,
+          lo que en móvil dejaba la cámara como ÚNICA vía — no se podía subir una
+          foto que ya estuviera en la galería. La cámara ahora es el botón
+          aparte de abajo. */}
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
-        onChange={(e) => handleFile(e.target.files[0])}
+        onChange={(e) => {
+          const f = e.target.files[0];
+          e.target.value = "";
+          handleFile(f);
+        }}
       />
 
       {estado === "comprimiendo" && (
@@ -143,14 +182,39 @@ export default function PhotoCapture({ label, existingMediaId, onUpload }) {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        disabled={estado === "comprimiendo" || estado === "subiendo"}
-        className="btn-go-ghost text-xs px-3 py-1.5"
-      >
-        {yaSubida ? "Reemplazar foto" : "Tomar / elegir foto"}
-      </button>
+      <div className="flex flex-col gap-2">
+        {/* Solo aparece en móvil. `comprimir={false}`: la compresión la hace
+            handleFile con los parámetros de este módulo, no los del util. */}
+        <CameraCaptureButton
+          label={yaSubida ? "Volver a tomar" : "Tomar foto"}
+          onFile={handleFile}
+          onError={(m) => {
+            setEstado("error");
+            setError(m);
+          }}
+          comprimir={false}
+          disabled={ocupado}
+          className="btn-go-ghost justify-center text-xs px-3 py-1.5"
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={ocupado}
+          className="btn-go-ghost justify-center text-xs px-3 py-1.5"
+        >
+          {yaSubida ? "Elegir otro archivo" : "Elegir archivo"}
+        </button>
+      </div>
+
+      {ampliada && (
+        <MediaViewer
+          url={urlCompleta}
+          fileName={`${label}.jpg`}
+          mimeType="image/*"
+          title={label}
+          onClose={() => setAmpliada(false)}
+        />
+      )}
     </div>
   );
 }

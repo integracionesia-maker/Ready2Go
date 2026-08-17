@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { EmptyState, GlassPanel, SkeletonShimmer, Timeline, GlassModal } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, Timeline, MediaViewer } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchLoanByFolio, mediaUrl, loanResponsivaUrl } from "../api";
 
@@ -298,18 +298,19 @@ export default function FichaPrestamoPage() {
         <Timeline events={loan.eventos} />
       </GlassPanel>
 
-      {ampliada && (
-        <GlassModal open onClose={() => setAmpliada(null)} title={ampliada.label} mobileFullscreen>
-          <FotoCompleta mediaId={ampliada.mediaId} label={ampliada.label} />
-        </GlassModal>
-      )}
+      {ampliada && <FotoCompleta {...ampliada} onClose={() => setAmpliada(null)} />}
     </div>
   );
 }
 
-function FotoCompleta({ mediaId, label }) {
+/**
+ * Foto de entrega/devolución a tamaño completo. `mediaUrl()` es asíncrono (el
+ * mock resuelve un dataURL), así que el visor arranca sin `url` y muestra su
+ * propio esqueleto hasta que resuelve.
+ */
+function FotoCompleta({ mediaId, label, onClose }) {
   const [url, setUrl] = useState(null);
-  const [error, setError] = useState(false);
+
   useEffect(() => {
     let cancelado = false;
     mediaUrl(mediaId).then((u) => {
@@ -320,20 +321,13 @@ function FotoCompleta({ mediaId, label }) {
     };
   }, [mediaId]);
 
-  if (error) {
-    return (
-      <p className="py-12 text-center font-body text-sm" style={{ color: "var(--go-text-muted)" }}>
-        No se pudo cargar la imagen.
-      </p>
-    );
-  }
-  if (!url) return <SkeletonShimmer className="h-64 w-full" />;
   return (
-    <img
-      src={url}
-      alt={label}
-      className="max-h-[70vh] w-full rounded-go object-contain"
-      onError={() => setError(true)}
+    <MediaViewer
+      url={url}
+      fileName={`${label}.jpg`}
+      mimeType="image/*"
+      title={label}
+      onClose={onClose}
     />
   );
 }

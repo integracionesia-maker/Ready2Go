@@ -84,7 +84,15 @@ function BudgetBar({ spent, total }) {
 }
 
 export default function CreatorList({ creators }) {
-  if (!creators || creators.length === 0) {
+  // Esta vista es el panel del ciclo vigente, y un creador inactivo no tiene
+  // ciclo en curso: su tarjeta solo mostraba ceros y desalineaba el conteo del
+  // encabezado con el KPI del dashboard, que sí cuenta solo activos
+  // (`crud.get_creators_kpi`). Los inactivos se siguen viendo —y reactivando—
+  // en Administración, que es donde se gestiona el estado.
+  const todos = creators || [];
+  const activos = todos.filter((c) => c.is_active);
+
+  if (activos.length === 0) {
     return (
       <div
         className="flex flex-col items-center justify-center py-24 font-body text-sm"
@@ -103,7 +111,18 @@ export default function CreatorList({ creators }) {
             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
           />
         </svg>
-        <p>No hay creadores registrados.</p>
+        {/* Dos mensajes distintos: "no hay ninguno" y "hay, pero todos
+            inactivos" se arreglan de formas distintas. */}
+        {todos.length === 0 ? (
+          <p>No hay creadores registrados.</p>
+        ) : (
+          <>
+            <p>No hay creadores activos.</p>
+            <p className="mt-1 text-xs">
+              Los {todos.length} registrados están inactivos. Puedes reactivarlos desde Administración.
+            </p>
+          </>
+        )}
       </div>
     );
   }
@@ -116,13 +135,13 @@ export default function CreatorList({ creators }) {
           style={{ color: "var(--go-text-primary)" }}
         >
           Creadores{" "}
-          <span style={{ color: "var(--go-orange)" }}>({creators.length})</span>
+          <span style={{ color: "var(--go-orange)" }}>({activos.length})</span>
         </h2>
         <span className="go-eyebrow">Ciclo vigente por creador</span>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {creators.map((c) => (
+        {activos.map((c) => (
           <GlassPanel key={c.id} className="p-5">
             {/* ── Avatar + name ──────────────────────────────────── */}
             <div className="mb-4 flex items-center gap-3">

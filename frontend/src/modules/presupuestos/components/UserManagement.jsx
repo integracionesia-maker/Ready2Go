@@ -45,6 +45,61 @@ function emptyForm() {
   return { username: "", email: "", full_name: "", role: "creador", creator_id: "", password: "" };
 }
 
+// Reseteo de contraseña: idle → confirmando → enviando → listo. Vive dentro del
+// modal de edición (no como acción de fila ni como segundo modal), así que la
+// contraseña temporal aparece en el mismo lugar donde se pidió.
+const RESET_INICIAL = { fase: "idle", password: null, error: null };
+
+/**
+ * Contraseña temporal recién generada, dentro del modal de edición.
+ * Se muestra una sola vez: el backend solo devuelve el texto plano en la
+ * respuesta del reset (users.py:reset_password), después ya es un hash.
+ */
+function PasswordTemporal({ username, password }) {
+  const [copiado, setCopiado] = useState(false);
+
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(password);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      // Sin portapapeles (contexto no seguro o permiso denegado): el campo
+      // sigue siendo select-all, así que se puede copiar a mano.
+    }
+  };
+
+  return (
+    <div
+      className="space-y-2 rounded-go border p-3"
+      style={{ background: "rgba(52,168,83,0.08)", borderColor: "rgba(52,168,83,0.25)" }}
+    >
+      <p className="font-body text-xs" style={{ color: "var(--go-text-primary)" }}>
+        Contraseña temporal de <strong>{username}</strong>. Solo se muestra una vez — cópiala antes
+        de cerrar. Sus sesiones activas se cerraron y deberá cambiarla al entrar.
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="go-input select-all flex-1 font-mono text-sm">{password}</code>
+        <button type="button" onClick={copiar} className="btn-go-ghost whitespace-nowrap text-xs">
+          {copiado ? "Copiado" : "Copiar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Renglón etiqueta/valor del modal informativo. */
+function DetalleFila({ label, children }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-2" style={{ borderBottom: "1px solid var(--go-border)" }}>
+      <span className="go-eyebrow flex-shrink-0 pt-0.5">{label}</span>
+      <span className="text-right font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
+        {children}
+      </span>
+    </div>
+  );
+}
+
 // Evita disparar un GET /roles por usuario en paralelo sin limite (18 usuarios
 // = 18 requests simultaneos, suficiente para saturar el pool de conexiones del
 // backend). Un pool fijo de workers procesa la lista de a poco.
@@ -88,7 +143,10 @@ export default function UserManagement({ creators }) {
 
   const [confirmToggle, setConfirmToggle] = useState(null);
 
-  const [resetResult, setResetResult] = useState(null);
+  // Modal informativo (solo lectura) que abre al hacer clic en cualquier fila.
+  const [detalleUser, setDetalleUser] = useState(null);
+
+  const [reset, setReset] = useState(RESET_INICIAL);
 
   const { sortedItems: sortedUsers, sortKey, sortDir, cycleSort } = useSortable(users, USER_COLUMNS);
 
@@ -140,6 +198,7 @@ export default function UserManagement({ creators }) {
     setEditingUser(null);
     setFormData(emptyForm());
     setFormError(null);
+    setReset(RESET_INICIAL);
     setFormOpen(true);
   };
 
@@ -154,6 +213,7 @@ export default function UserManagement({ creators }) {
       password: "",
     });
     setFormError(null);
+    setReset(RESET_INICIAL);
     setFormOpen(true);
   };
 
@@ -161,6 +221,7 @@ export default function UserManagement({ creators }) {
     setFormOpen(false);
     setEditingUser(null);
     setFormError(null);
+    setReset(RESET_INICIAL);
   };
 
   const handleSubmit = async (e) => {
@@ -195,13 +256,19 @@ export default function UserManagement({ creators }) {
     }
   };
 
-  const handleResetPassword = async (u) => {
-    setError(null);
+  const handleResetPassword = async () => {
+    if (!editingUser) return;
+    setReset({ fase: "enviando", password: null, error: null });
     try {
-      const result = await resetUserPassword(u.id);
-      setResetResult({ username: u.username, temporary_password: result.temporary_password });
+      const result = await resetUserPassword(editingUser.id);
+      setReset({ fase: "listo", password: result.temporary_password, error: null });
+      // El backend deja `must_change_password=true`; se refleja en la fila que ya
+      // está en memoria en vez de recargar la página entera detrás del modal.
+      setUsers((prev) =>
+        prev.map((x) => (x.id === editingUser.id ? { ...x, must_change_password: true } : x))
+      );
     } catch (err) {
-      setError(err.message);
+      setReset({ fase: "idle", password: null, error: err.message });
     }
   };
 
@@ -355,7 +422,19 @@ export default function UserManagement({ creators }) {
                 const isSelf = u.id === currentUser.id;
                 const isTargetSuperadmin = u.role === "superadmin";
                 return (
-                  <tr key={u.id}>
+                  <tr
+                    key={u.id}
+                    onClick={() => setDetalleUser(u)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setDetalleUser(u);
+                      }
+                    }}
+                    tabIndex={0}
+                    title="Ver detalle"
+                    className="cursor-pointer"
+                  >
                     <td className="font-mono text-xs truncate" title={u.username}>{u.username}</td>
                     <td>
                       <span className="truncate block font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }} title={u.full_name}>
@@ -391,7 +470,9 @@ export default function UserManagement({ creators }) {
                     <td className="font-body text-xs whitespace-nowrap" style={{ color: "var(--go-text-secondary)" }}>
                       {formatLastLogin(u.last_login)}
                     </td>
-                    <td>
+                    {/* stopPropagation: un clic en una acción no debe abrir además
+                        el modal informativo de la fila. */}
+                    <td onClick={(e) => e.stopPropagation()}>
                       <RowActions
                         actions={[
                           !isTargetSuperadmin && {
@@ -399,13 +480,6 @@ export default function UserManagement({ creators }) {
                             label: "Editar",
                             icon: ICONS.editar,
                             onClick: () => openEditForm(u),
-                          },
-                          !isTargetSuperadmin && {
-                            key: "reset",
-                            label: "Resetear contraseña",
-                            mobileLabel: "Reset",
-                            icon: ICONS.resetear,
-                            onClick: () => handleResetPassword(u),
                           },
                           !isTargetSuperadmin && {
                             key: "toggle",
@@ -460,7 +534,10 @@ export default function UserManagement({ creators }) {
 
     {formOpen && (
       <Modal title={editingUser ? "Editar Usuario" : "Crear Usuario"} onClose={closeForm} submitting={submitting}>
-        <form onSubmit={handleSubmit} className="space-y-4 px-4 sm:px-6 py-5">
+        {/* max-h + scroll propio: el bloque de contraseña alargó el formulario y
+            `Modal` es `overflow-hidden` sin altura máxima — sin esto, en una
+            pantalla baja los botones quedan recortados y sin forma de llegar. */}
+        <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto px-4 sm:px-6 py-5">
           {!editingUser && (
             <div>
               <label className="go-eyebrow mb-1.5 block">Usuario</label>
@@ -542,6 +619,77 @@ export default function UserManagement({ creators }) {
             </div>
           )}
 
+          {/* Reseteo de contraseña: sale de las acciones de la fila (estaba a un
+              clic de distancia, sin confirmación) y vive aquí, con confirmación
+              y con la contraseña temporal en línea. */}
+          {editingUser && (
+            <div
+              className="space-y-3 rounded-go border p-4"
+              style={{ borderColor: "var(--go-border)", background: "var(--go-surface-sunken)" }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="go-eyebrow">Contraseña</p>
+                  <p className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                    Genera una temporal y cierra las sesiones activas del usuario.
+                  </p>
+                </div>
+                {reset.fase === "idle" && (
+                  <button
+                    type="button"
+                    onClick={() => setReset({ fase: "confirmando", password: null, error: null })}
+                    className="btn-go-ghost flex-shrink-0 whitespace-nowrap text-xs"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d={ICONS.resetear} />
+                    </svg>
+                    Resetear
+                  </button>
+                )}
+              </div>
+
+              {reset.error && (
+                <p className="font-body text-xs" style={{ color: "var(--go-error)" }}>
+                  {reset.error}
+                </p>
+              )}
+
+              {(reset.fase === "confirmando" || reset.fase === "enviando") && (
+                <div
+                  className="space-y-3 rounded-go border p-3"
+                  style={{ background: "rgba(245,158,11,0.08)", borderColor: "rgba(245,158,11,0.25)" }}
+                >
+                  <p className="font-body text-xs" style={{ color: "var(--go-text-primary)" }}>
+                    ¿Resetear la contraseña de <strong>{editingUser.full_name}</strong>? Su contraseña
+                    actual dejará de funcionar de inmediato y se cerrarán todas sus sesiones.
+                  </p>
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setReset(RESET_INICIAL)}
+                      disabled={reset.fase === "enviando"}
+                      className="btn-go-ghost text-xs"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetPassword}
+                      disabled={reset.fase === "enviando"}
+                      className="btn-go text-xs"
+                    >
+                      {reset.fase === "enviando" ? "Reseteando..." : "Sí, resetear"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {reset.fase === "listo" && (
+                <PasswordTemporal username={editingUser.username} password={reset.password} />
+              )}
+            </div>
+          )}
+
           {formError && (
             <div
               className="rounded-go border px-4 py-3 font-body text-sm"
@@ -591,16 +739,58 @@ export default function UserManagement({ creators }) {
       </Modal>
     )}
 
-    {resetResult && (
-      <Modal title="Contraseña temporal generada" onClose={() => setResetResult(null)}>
-        <div className="space-y-4 px-4 sm:px-6 py-5">
-          <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
-            Comparte esta contraseña temporal con <strong>{resetResult.username}</strong> por un canal seguro.
-            Solo se muestra una vez.
-          </p>
-          <div className="go-input select-all font-mono">{resetResult.temporary_password}</div>
+    {/* Modal informativo: solo lectura. Cualquier cambio se hace desde "Editar". */}
+    {detalleUser && (
+      <Modal title="Detalle del usuario" onClose={() => setDetalleUser(null)}>
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 sm:px-6 py-5">
+          <div>
+            <DetalleFila label="Usuario">
+              <span className="font-mono text-xs">{detalleUser.username}</span>
+            </DetalleFila>
+            <DetalleFila label="Nombre">{detalleUser.full_name}</DetalleFila>
+            <DetalleFila label="Correo">
+              <span className="break-all">{detalleUser.email}</span>
+            </DetalleFila>
+            <DetalleFila label="Rol">
+              <span
+                className="go-badge whitespace-nowrap"
+                style={{ background: "var(--go-surface-sunken)", color: "var(--go-text-secondary)" }}
+              >
+                {ROLE_LABELS[detalleUser.role] || detalleUser.role}
+              </span>
+            </DetalleFila>
+            <DetalleFila label="Paquetes">
+              {(rolesPorUsuario[detalleUser.id] || []).length === 0 ? (
+                <span style={{ color: "var(--go-text-secondary)" }}>—</span>
+              ) : (
+                <span className="flex flex-wrap justify-end gap-1">
+                  {rolesPorUsuario[detalleUser.id].map((a) => (
+                    <span key={a.role_name} className="go-badge go-badge-warning whitespace-nowrap">
+                      {a.role_name}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </DetalleFila>
+            {detalleUser.creator_id && (
+              <DetalleFila label="Creador">
+                {creators.find((c) => c.id === detalleUser.creator_id)?.name || `#${detalleUser.creator_id}`}
+              </DetalleFila>
+            )}
+            <DetalleFila label="Estado">
+              <span className={`go-badge whitespace-nowrap ${detalleUser.is_active ? "go-badge-success" : "go-badge-error"}`}>
+                {detalleUser.is_active ? "Activo" : "Inactivo"}
+              </span>
+            </DetalleFila>
+            <DetalleFila label="Contraseña">
+              {detalleUser.must_change_password ? "Debe cambiarla al entrar" : "Definitiva"}
+            </DetalleFila>
+            <DetalleFila label="Último acceso">{formatLastLogin(detalleUser.last_login)}</DetalleFila>
+            <DetalleFila label="Alta">{formatLastLogin(detalleUser.created_at)}</DetalleFila>
+          </div>
+
           <div className="flex justify-end">
-            <button onClick={() => setResetResult(null)} className="btn-go">
+            <button type="button" onClick={() => setDetalleUser(null)} className="btn-go">
               Cerrar
             </button>
           </div>
