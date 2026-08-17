@@ -2,38 +2,44 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { fetchTickets } from "@/api";
 import { GlassPanel, SectionCard } from "@/design";
+import { PRESUPUESTOS_ROLES } from "../roles";
 
+// `roles: null` = visible para cualquier sesión, igual que en Sidebar.jsx.
+// Una tarjeta que lleva a una ruta que el rol no puede abrir manda al usuario
+// a /403 desde la portada, así que la lista se filtra por rol.
 const ADMIN_SECTIONS = [
   {
     to: "/dashboard",
     title: "Dashboard",
     description: "Resumen de gastos, KPIs y tendencias por periodo.",
     icon: "M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z",
+    roles: PRESUPUESTOS_ROLES,
   },
   {
     to: "/creadores",
     title: "Creadores",
     description: "Consulta el presupuesto y progreso de cada creador.",
     icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z",
+    roles: PRESUPUESTOS_ROLES,
   },
   {
     to: "/transacciones",
     title: "Transacciones",
     description: "Historial detallado de tickets y comprobantes.",
     icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+    roles: null,
   },
   {
     to: "/gastos-generales",
     title: "Gastos Generales",
     description: "Registra y consulta gastos operativos no ligados a creadores.",
     icon: "M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z",
+    roles: PRESUPUESTOS_ROLES,
   },
-  {
-    to: "/administracion",
-    title: "Administración",
-    description: "Gestiona creadores, marcas y estados del sistema.",
-    icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z",
-  },
+  // Administración no tiene tarjeta a propósito: es la vista más destructiva
+  // del módulo (creadores, marcas, estados) y no necesita un acceso directo en
+  // la portada. Se sigue llegando por el menú lateral, que solo la muestra a
+  // admin/superadmin.
 ];
 
 const TICKET_ICON =
@@ -56,11 +62,13 @@ function formatDateShort(iso) {
   });
 }
 
-/* ── Inicio para admin / superadmin: las 4 tarjetas de siempre ─────────── */
-function AdminHome() {
+/* ── Inicio para todo rol que no sea creador ───────────────────────────── */
+function AdminHome({ role }) {
+  const secciones = ADMIN_SECTIONS.filter((s) => !s.roles || s.roles.includes(role));
+
   return (
     <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2">
-      {ADMIN_SECTIONS.map((s) => (
+      {secciones.map(({ roles, ...s }) => (
         <SectionCard key={s.to} {...s} />
       ))}
     </div>
@@ -239,7 +247,7 @@ export default function HomePage({ creators = [], onNewTicket }) {
       {isCreator ? (
         <CreatorHome creator={myCreator} onNewTicket={onNewTicket} />
       ) : (
-        <AdminHome />
+        <AdminHome role={user?.role} />
       )}
     </div>
   );
