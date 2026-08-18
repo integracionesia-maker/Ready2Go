@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
+import { useCommandPalette } from "@/design";
 import ProfilePopover from "./ProfilePopover";
 import ThemeToggle from "./ThemeToggle";
 import BrandLogo from "./BrandLogo";
@@ -25,6 +26,7 @@ const SOPORTA_HOVER_FINO =
 export default function Header({ onToggleMobileMenu, mobileMenuOpen = false, subtitle = "GOCreate" }) {
   const headerRef = useRef(null);
   const reduceMotion = useReducedMotion();
+  const { setOpen: setPaletaAbierta } = useCommandPalette();
   const interactive = SOPORTA_HOVER_FINO && !reduceMotion;
   const [glow, setGlow] = useState({ x: 0.5, visible: false });
 
@@ -137,6 +139,23 @@ export default function Header({ onToggleMobileMenu, mobileMenuOpen = false, sub
       </div>
 
       <div className="relative z-10 flex items-center gap-2 sm:gap-3">
+        {/* Hint de la paleta de comandos (lote de calidad 2026-08-18): la
+            paleta existía pero ningún elemento de la UI la hacía
+            descubrible. Solo desktop: en móvil no hay atajo de teclado que
+            insinuar. */}
+        <button
+          type="button"
+          onClick={() => setPaletaAbierta(true)}
+          className="hidden md:flex h-9 items-center gap-1.5 rounded-go border px-2.5 font-mono text-xs transition-colors hover:bg-white/5"
+          style={{ borderColor: "var(--go-border)", color: "var(--go-text-muted)" }}
+          title="Paleta de comandos"
+          aria-label="Abrir paleta de comandos (Ctrl+K)"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+          </svg>
+          Ctrl K
+        </button>
         <ThemeToggle />
         <ProfilePopover onBeforeToggle={() => { if (mobileMenuOpen) onToggleMobileMenu(); }} />
       </div>
