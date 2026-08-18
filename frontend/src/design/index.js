@@ -12,6 +12,7 @@ export { default as CameraCaptureButton } from "./CameraCaptureButton";
 export { comprimirImagen } from "./imagen";
 export { default as EmptyState } from "./EmptyState";
 export { default as NotFoundPage } from "./NotFoundPage";
+export { default as ErrorBoundary } from "./ErrorBoundary";
 export { default as RoleBadge } from "./RoleBadge";
 export { ToastProvider, useToast } from "./Toast";
 export { CommandPaletteProvider, useCommandPalette, useRegisterCommand } from "./CommandPalette";
