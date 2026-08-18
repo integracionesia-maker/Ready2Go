@@ -90,7 +90,7 @@ class MediaInvalida(ErrorEquipos):
 
 
 class MediaMuyGrande(ErrorEquipos):
-    def __init__(self, detail: str = "El archivo excede el tamano permitido."):
+    def __init__(self, detail: str = "El archivo excede el tamaño permitido."):
         super().__init__(413, detail, MEDIA_MUY_GRANDE)
 
 

@@ -40,7 +40,7 @@ def save_upload(file: UploadFile) -> Tuple[str, str, str]:
         if len(contents) > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=400,
-                detail=f"El archivo excede el tamano maximo de {MAX_FILE_SIZE // (1024 * 1024)} MB.",
+                detail=f"El archivo excede el tamaño máximo de {MAX_FILE_SIZE // (1024 * 1024)} MB.",
             )
         dest_path.write_bytes(contents)
     except HTTPException:

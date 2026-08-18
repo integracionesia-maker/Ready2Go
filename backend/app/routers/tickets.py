@@ -150,7 +150,7 @@ def create_ticket(
         if not creator:
             raise HTTPException(status_code=404, detail="Creador no encontrado.")
         if not creator.is_active:
-            raise HTTPException(status_code=400, detail="El creador esta inactivo.")
+            raise HTTPException(status_code=400, detail="El creador está inactivo.")
 
         brand = crud.get_brand(db, brand_id)
         if not brand:
