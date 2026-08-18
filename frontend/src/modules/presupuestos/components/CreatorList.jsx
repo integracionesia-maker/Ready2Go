@@ -1,12 +1,6 @@
 import { GlassPanel, usePageTitle } from "@/design";
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatMXN } from "@/design";
 
 const MONTH_ABBR = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
@@ -197,7 +191,7 @@ export default function CreatorList({ creators }) {
                   className="mt-0.5 font-mono text-sm font-semibold tracking-tight"
                   style={{ color: "var(--go-text-primary)" }}
                 >
-                  {formatCurrency(c.cycle_amount ?? 0)}
+                  {formatMXN(c.cycle_amount ?? 0)}
                 </p>
               </div>
               <div>
@@ -208,7 +202,7 @@ export default function CreatorList({ creators }) {
                   className="mt-0.5 font-mono text-sm font-semibold tracking-tight"
                   style={{ color: "var(--go-warning)" }}
                 >
-                  {formatCurrency(c.cycle_spent ?? 0)}
+                  {formatMXN(c.cycle_spent ?? 0)}
                 </p>
               </div>
               <div className="col-span-2 border-t pt-2" style={{ borderColor: "var(--go-border)" }}>
@@ -221,7 +215,7 @@ export default function CreatorList({ creators }) {
                     color: (c.cycle_remaining ?? 0) <= 0 ? "var(--go-error)" : "var(--go-success)",
                   }}
                 >
-                  {formatCurrency(c.cycle_remaining ?? 0)}
+                  {formatMXN(c.cycle_remaining ?? 0)}
                 </p>
               </div>
             </div>

@@ -16,13 +16,7 @@ const CREATOR_COLUMNS = [
 
 const BRAND_COLUMNS = [{ key: "name", label: "Nombre", type: "string" }];
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatMXN } from "@/design";
 
 const SECTIONS = [
   { key: "creators", label: "Creadores" },
@@ -444,9 +438,9 @@ export default function AdminView({ creators, brands, onChange }) {
                           {c.cycle_period === "semanal" ? "Semanal" : "Mensual"}
                         </span>
                       </td>
-                      <td className="num text-right">{formatCurrency(c.cycle_amount ?? 0)}</td>
+                      <td className="num text-right">{formatMXN(c.cycle_amount ?? 0)}</td>
                       <td className="num text-right" style={{ color: "var(--go-warning)" }}>
-                        {formatCurrency(c.cycle_spent ?? 0)}
+                        {formatMXN(c.cycle_spent ?? 0)}
                       </td>
                       <td
                         className="num text-right font-semibold"
@@ -454,7 +448,7 @@ export default function AdminView({ creators, brands, onChange }) {
                           color: (c.cycle_remaining ?? 0) <= 0 ? "var(--go-error)" : "var(--go-success)",
                         }}
                       >
-                        {formatCurrency(c.cycle_remaining ?? 0)}
+                        {formatMXN(c.cycle_remaining ?? 0)}
                       </td>
                       <td className="text-center">
                         <span className={`go-badge ${c.is_active ? "go-badge-success" : "go-badge-error"}`}>
@@ -895,15 +889,15 @@ export default function AdminView({ creators, brands, onChange }) {
                       {cycleHistory.map((cy) => (
                         <tr key={cy.id}>
                           <td>{cy.start_date} — {cy.end_date}</td>
-                          <td className="num text-right">{formatCurrency(cy.amount)}</td>
+                          <td className="num text-right">{formatMXN(cy.amount)}</td>
                           <td className="num text-right" style={{ color: "var(--go-warning)" }}>
-                            {formatCurrency(cy.spent)}
+                            {formatMXN(cy.spent)}
                           </td>
                           <td
                             className="num text-right font-semibold"
                             style={{ color: cy.remaining <= 0 ? "var(--go-error)" : "var(--go-success)" }}
                           >
-                            {formatCurrency(cy.remaining)}
+                            {formatMXN(cy.remaining)}
                           </td>
                         </tr>
                       ))}

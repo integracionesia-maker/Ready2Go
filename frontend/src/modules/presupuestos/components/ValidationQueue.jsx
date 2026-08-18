@@ -7,13 +7,7 @@ import MediaViewerModal from "./MediaViewerModal";
 import Modal from "./Modal";
 import { GlassPanel, RowActions, ICONS, usePageTitle } from "@/design";
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatMXN } from "@/design";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -209,14 +203,14 @@ export default function ValidationQueue({ onChange }) {
                       </div>
                     </td>
                     <td className="num text-right font-semibold" style={{ color: "var(--go-warning)" }}>
-                      {formatCurrency(t.amount)}
+                      {formatMXN(t.amount)}
                     </td>
                     <td style={{ color: "var(--go-text-secondary)" }}>{formatDate(t.upload_date)}</td>
                     <td
                       className="num text-right"
                       style={{ color: cycleRemaining != null && cycleRemaining < t.amount ? "var(--go-error)" : "var(--go-text-secondary)" }}
                     >
-                      {cycleRemaining != null ? formatCurrency(cycleRemaining) : "—"}
+                      {cycleRemaining != null ? formatMXN(cycleRemaining) : "—"}
                     </td>
                     <td>
                       <RowActions
@@ -245,7 +239,7 @@ export default function ValidationQueue({ onChange }) {
           <div className="space-y-4 px-4 sm:px-6 py-5">
             <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
               ¿Aprobar el ticket de <strong>{approveTarget.creator_name}</strong> por{" "}
-              <strong>{formatCurrency(approveTarget.amount)}</strong>?
+              <strong>{formatMXN(approveTarget.amount)}</strong>?
             </p>
             {wouldGoNegative && (
               <div
@@ -273,7 +267,7 @@ export default function ValidationQueue({ onChange }) {
           <div className="space-y-4 px-4 sm:px-6 py-5">
             <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
               Rechazar el ticket de <strong>{rejectTarget.creator_name}</strong> por{" "}
-              <strong>{formatCurrency(rejectTarget.amount)}</strong>. El motivo es obligatorio y lo verá el creador.
+              <strong>{formatMXN(rejectTarget.amount)}</strong>. El motivo es obligatorio y lo verá el creador.
             </p>
             <div>
               <label className="go-eyebrow mb-1.5 block">Motivo del rechazo</label>
@@ -306,7 +300,7 @@ export default function ValidationQueue({ onChange }) {
 
       {deleteTarget && (
         <DeleteConfirmModal
-          itemLabel={`el ticket de ${deleteTarget.creator_name} por ${formatCurrency(deleteTarget.amount)}`}
+          itemLabel={`el ticket de ${deleteTarget.creator_name} por ${formatMXN(deleteTarget.amount)}`}
           onClose={() => setDeleteTarget(null)}
           onSoftDelete={() => {
             programarUndo(deleteTarget, "eliminado", "Eliminado", () => doSoftDelete(deleteTarget));
@@ -329,7 +323,7 @@ export default function ValidationQueue({ onChange }) {
             style={{ background: "var(--go-surface-raised)", border: "1px solid var(--go-border)" }}
           >
             <span className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
-              Ticket <strong>{undo.label.toLowerCase()}</strong> — {undo.ticket.creator_name} · {formatCurrency(undo.ticket.amount)}
+              Ticket <strong>{undo.label.toLowerCase()}</strong> — {undo.ticket.creator_name} · {formatMXN(undo.ticket.amount)}
             </span>
             <button
               type="button"

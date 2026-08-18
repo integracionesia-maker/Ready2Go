@@ -7,13 +7,7 @@ import KpiCard from "../KpiCard";
 import { PRIORITY_LABELS, sortByPriority } from "../../utils/priority";
 import isotipoNaranja from "@/assets/logos/isotipo-go-naranja.png";
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount || 0);
-}
+import { formatMXN } from "@/design";
 
 function formatDateLong(d) {
   if (!d) return "—";
@@ -106,14 +100,14 @@ export default function DashboardPdfTemplate({
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "12px" }}>
-          <KpiCard title="Presupuesto Total" value={kpi ? formatCurrency(kpi.total_budget) : "—"} subtitle={`${kpi?.active_creators ?? 0} creadores activos`} accent="orange" />
-          <KpiCard title="Total Gastado" value={kpi ? formatCurrency(kpi.total_spent) : "—"} subtitle={`${spentPct.toFixed(1)}% ejecutado`} accent="turquoise" />
-          <KpiCard title="Total Disponible" value={kpi ? formatCurrency(kpi.total_remaining) : "—"} subtitle={`${remainingPct.toFixed(1)}% restante`} accent="sky" />
+          <KpiCard title="Presupuesto Total" value={kpi ? formatMXN(kpi.total_budget) : "—"} subtitle={`${kpi?.active_creators ?? 0} creadores activos`} accent="orange" />
+          <KpiCard title="Total Gastado" value={kpi ? formatMXN(kpi.total_spent) : "—"} subtitle={`${spentPct.toFixed(1)}% ejecutado`} accent="turquoise" />
+          <KpiCard title="Total Disponible" value={kpi ? formatMXN(kpi.total_remaining) : "—"} subtitle={`${remainingPct.toFixed(1)}% restante`} accent="sky" />
           <KpiCard title="Marcas Activas" value={summary?.active_brands ?? "—"} subtitle="con gastos en el período" accent="violet" />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-          <KpiCard title="Gastado en el Período" value={summary ? formatCurrency(summary.total_spent) : "—"} subtitle="según filtro de fechas" accent="orange" />
-          <KpiCard title="Tickets" value={summary?.ticket_count ?? "—"} subtitle={`Promedio ${summary ? formatCurrency(summary.avg_ticket) : "—"} por ticket`} accent="turquoise" />
+          <KpiCard title="Gastado en el Período" value={summary ? formatMXN(summary.total_spent) : "—"} subtitle="según filtro de fechas" accent="orange" />
+          <KpiCard title="Tickets" value={summary?.ticket_count ?? "—"} subtitle={`Promedio ${summary ? formatMXN(summary.avg_ticket) : "—"} por ticket`} accent="turquoise" />
           <KpiCard title="Creadores Activos" value={activeCreatorsInPeriod} subtitle="con gastos en el período" accent="sky" />
         </div>
       </div>
@@ -171,7 +165,7 @@ export default function DashboardPdfTemplate({
                 <tr key={b.brand_name}>
                   <td>{b.brand_name}</td>
                   <td>{PRIORITY_LABELS[b.priority] || b.priority}</td>
-                  <td className="num" style={{ textAlign: "right" }}>{formatCurrency(b.total_spent)}</td>
+                  <td className="num" style={{ textAlign: "right" }}>{formatMXN(b.total_spent)}</td>
                 </tr>
               ))}
             </tbody>
@@ -200,8 +194,8 @@ export default function DashboardPdfTemplate({
               {creatorRows.map((c) => (
                 <tr key={c.creator_id}>
                   <td>{c.name}</td>
-                  <td className="num" style={{ textAlign: "right" }}>{formatCurrency(c.spent)}</td>
-                  <td className="num" style={{ textAlign: "right" }}>{formatCurrency(c.initial_budget)}</td>
+                  <td className="num" style={{ textAlign: "right" }}>{formatMXN(c.spent)}</td>
+                  <td className="num" style={{ textAlign: "right" }}>{formatMXN(c.initial_budget)}</td>
                   <td className="num" style={{ textAlign: "right" }}>{c.percentage.toFixed(1)}%</td>
                 </tr>
               ))}
@@ -232,13 +226,13 @@ export default function DashboardPdfTemplate({
                 {generalExpensesMonthly.map((m) => (
                   <tr key={m.month}>
                     <td>{m.month}</td>
-                    <td className="num" style={{ textAlign: "right" }}>{formatCurrency(m.total)}</td>
+                    <td className="num" style={{ textAlign: "right" }}>{formatMXN(m.total)}</td>
                     <td className="num" style={{ textAlign: "right" }}>{m.count}</td>
                   </tr>
                 ))}
                 <tr style={{ fontWeight: 700 }}>
                   <td>Total</td>
-                  <td className="num" style={{ textAlign: "right" }}>{formatCurrency(generalExpensesTotal)}</td>
+                  <td className="num" style={{ textAlign: "right" }}>{formatMXN(generalExpensesTotal)}</td>
                   <td className="num" style={{ textAlign: "right" }}>{generalExpensesCount}</td>
                 </tr>
               </tbody>
