@@ -105,19 +105,29 @@ app.openapi()
 def health_check():
     return {"status": "ok", "version": "1.0.0"}
 
-_frontend_dist = os.path.join(
+# realpath: resuelve symlinks y "." para poder comparar contra el candidato de
+# cada request y confirmar que la ruta pedida no se sale del directorio.
+_frontend_dist = os.path.realpath(os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
     "frontend", "dist"
-)
+))
 
 if os.path.isdir(_frontend_dist):
     _assets_dir = os.path.join(_frontend_dist, "assets")
     if os.path.isdir(_assets_dir):
         app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
 
+    _index_html = os.path.join(_frontend_dist, "index.html")
+
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
-        file_path = os.path.join(_frontend_dist, full_path)
-        if os.path.isfile(file_path):
-            return FileResponse(file_path)
-        return FileResponse(os.path.join(_frontend_dist, "index.html"))
+        # Contención de path traversal. Starlette NO normaliza el `..` de la
+        # ruta antes de llegar aquí, así que `os.path.join(dist, full_path)` con
+        # `full_path="../../backend/.env"` apuntaba fuera de dist y servía ese
+        # archivo (JWT_SECRET_KEY, la base). Se resuelve la ruta real y se exige
+        # que caiga DENTRO de dist; cualquier intento de salida cae al SPA.
+        candidato = os.path.realpath(os.path.join(_frontend_dist, full_path))
+        dentro = candidato == _frontend_dist or candidato.startswith(_frontend_dist + os.sep)
+        if dentro and os.path.isfile(candidato):
+            return FileResponse(candidato)
+        return FileResponse(_index_html)
