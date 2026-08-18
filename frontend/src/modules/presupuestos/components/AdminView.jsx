@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createCreator, updateCreator, createBrand, updateBrand, fetchCreatorCycles } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
@@ -162,31 +162,10 @@ export default function AdminView({ creators, brands, onChange }) {
       // clipboard API may fail silently (non-HTTPS, permission denied, etc.)
     }
   };
-
-  // Auto-copy when temp password first appears
-  useEffect(() => {
-    if (!tempPassword) return;
-    const password = tempPassword.password;
-    let cancelled = false;
-    (async () => {
-      try {
-        await navigator.clipboard.writeText(password);
-        if (!cancelled) {
-          setCopied(true);
-          copiedTimeout.current = setTimeout(() => setCopied(false), 2500);
-        }
-      } catch {
-        // clipboard unavailable — user can still Ctrl+C
-      }
-    })();
-    return () => {
-      cancelled = true;
-      if (copiedTimeout.current) {
-        clearTimeout(copiedTimeout.current);
-        copiedTimeout.current = null;
-      }
-    };
-  }, [tempPassword]);
+  // NOTA: sin auto-copia al montar el modal. Escribir la contraseña temporal al
+  // portapapeles sin un gesto explícito del usuario la deja viva en el
+  // portapapeles del sistema (máquinas compartidas: el siguiente Ctrl+V la
+  // vierte) — se copia SOLO con el botón (auditoría de seguridad 2026-08-18).
 
   /* ── Submit handlers ─────────────────────────────────────────────────── */
 

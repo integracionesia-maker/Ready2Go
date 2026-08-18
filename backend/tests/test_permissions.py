@@ -1,7 +1,11 @@
 """Matriz de permisos endpoint x rol: 401 sin token, 403 con rol incorrecto,
 200/201 con el rol correcto. Incluye el filtrado por rol de creador (scoping)."""
 
+from datetime import date
+
 import pytest
+
+from app import crud
 
 from .conftest import make_ticket
 
@@ -55,7 +59,41 @@ def test_health_is_public(client):
 
 
 def test_uploads_static_mount_removed(client):
-    assert client.get("/uploads/tickets/algo.png").status_code == 404
+    """El montaje estático de /uploads ya no existe: la ruta jamás sirve el
+    archivo sin autenticación. Con el fallback SPA activo (frontend/dist
+    presente) las rutas desconocidas devuelven el index del SPA (200
+    text/html); sin él, 404. En ningún caso el contenido del upload."""
+    resp = client.get("/uploads/tickets/algo.png")
+    assert resp.status_code in (200, 404)
+    if resp.status_code == 200:
+        assert "text/html" in resp.headers.get("content-type", "")
+
+
+def test_spa_fallback_does_not_serve_outside_dist(client, tmp_path, monkeypatch):
+    """Regresión del path traversal del fallback SPA (hotfix 2026-08-18): una
+    ruta con `..` nunca debe servir un archivo fuera de frontend/dist. Si el
+    fallback no está registrado (sin frontend/dist en este entorno), no hay
+    ruta que probar."""
+    import app.main as main_module
+
+    rutas = [r for r in main_module.app.routes if getattr(r, "path", "") == "/{full_path:path}"]
+    if not rutas:
+        pytest.skip("fallback SPA no registrado: frontend/dist no existe en este entorno")
+
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_bytes(b"<html>SPA</html>")
+    secreto = tmp_path / "secreto.txt"
+    secreto.write_text("JWT_SECRET_KEY=supersecreto", encoding="utf-8")
+
+    monkeypatch.setattr(main_module, "_frontend_dist", str(dist))
+    monkeypatch.setattr(main_module, "_index_html", str(dist / "index.html"))
+
+    for payload in ("/%2e%2e/secreto.txt", "/..%2fsecreto.txt", "/%2e%2e%2fsecreto.txt"):
+        resp = client.get(payload)
+        assert resp.status_code == 200
+        assert b"supersecreto" not in resp.content
+        assert b"SPA" in resp.content
 
 
 class TestCreatorsPermissions:
@@ -88,9 +126,17 @@ class TestCreatorsPermissions:
         assert len(resp.json()) == 2
 
     def test_admin_can_create_and_update_creator(self, logged_in_admin):
+        # El schema exige username/email: cada creador recibe su cuenta de login
+        # vinculada (feature "creador vinculado", agosto 2026).
         resp = logged_in_admin.post(
             "/api/creators/",
-            json={"name": "Nuevo", "cycle_budget_amount": 500, "cycle_period": "mensual"},
+            json={
+                "name": "Nuevo",
+                "cycle_budget_amount": 500,
+                "cycle_period": "mensual",
+                "username": "nuevo_creador",
+                "email": "nuevo@example.com",
+            },
         )
         assert resp.status_code == 201
         assert resp.json()["cycle_amount"] == 500
@@ -194,6 +240,51 @@ class TestTicketsPermissionsAndIDOR:
 
     def test_admin_can_see_brand_spend(self, logged_in_admin):
         assert logged_in_admin.get("/api/tickets/brand-spend").status_code == 200
+
+
+class TestRolesSinAccesoPresupuestos:
+    """usuario y colaborador_mkt no tienen permisos de presupuestos en el
+    catálogo: no deben listar tickets y sus tickets deben nacer PENDIENTES —
+    nunca auto-aprobados con descuento inmediato del ciclo (regresión de la
+    auditoría de seguridad 2026-08-18)."""
+
+    def test_usuario_no_puede_listar_tickets(self, logged_in_usuario, db, creator_a, brand_a):
+        make_ticket(db, creator=creator_a, brand=brand_a, amount=75)
+        assert logged_in_usuario.get("/api/tickets/").status_code == 403
+
+    def test_colaborador_mkt_no_puede_listar_tickets(self, logged_in_colaborador_mkt, db, creator_a, brand_a):
+        make_ticket(db, creator=creator_a, brand=brand_a, amount=75)
+        assert logged_in_colaborador_mkt.get("/api/tickets/").status_code == 403
+
+    def test_usuario_ticket_nace_pendiente_y_no_descuenta_ciclo(self, logged_in_usuario, db, creator_a, brand_a):
+        resp = logged_in_usuario.post(
+            "/api/tickets/",
+            data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "500"},
+            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+        )
+        assert resp.status_code == 201
+        assert resp.json()["status"] == "pendiente"
+        # Un pendiente nunca descuenta: el ciclo del creador queda sin gasto.
+        ciclo = crud.get_or_create_cycle_for_date(db, creator_a, date.today())
+        assert ciclo.spent == 0
+
+    def test_colaborador_mkt_ticket_nace_pendiente(self, logged_in_colaborador_mkt, creator_a, brand_a):
+        resp = logged_in_colaborador_mkt.post(
+            "/api/tickets/",
+            data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "500"},
+            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+        )
+        assert resp.status_code == 201
+        assert resp.json()["status"] == "pendiente"
+
+    def test_admin_ticket_sigue_auto_aprobado(self, logged_in_admin, creator_a, brand_a):
+        resp = logged_in_admin.post(
+            "/api/tickets/",
+            data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
+            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+        )
+        assert resp.status_code == 201
+        assert resp.json()["status"] == "aprobado"
 
 
 class TestDashboardPermissions:
