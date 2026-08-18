@@ -22,7 +22,7 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 - **README.md raíz** (GitHub ya no muestra página vacía), `.editorconfig`, `.nvmrc` (Node 24), Prettier (`npm run format`, adopción gradual), `package.json` saneado (nombre actualizado, description, engines).
 - **Versión visible en la UI** ("GOCreate v1.1.0" en el menú de perfil; `version` de package.json inyectada por vite) + meta description, `theme-color` y `apple-touch-icon` 180×180.
 - **ScrollToTop** en cambio de ruta (`behavior: instant` — el smooth global se sentía como bug).
-- **Hint de Ctrl+K en el header** para descubrir la paleta de comandos.
+- **Paleta de comandos (Ctrl+K)**: se hizo descubrible con un hint en el header, se detectó que nunca se conectó a nada (cero comandos registrados, siempre "Sin resultados") y, por decisión de producto en la prueba manual, **se eliminó por completo** (infraestructura + hint + atajo).
 - **Formateador de moneda compartido** `formatMXN` (`design/formatos.js`) — elimina 11 copias idénticas del Intl es-MX; salida byte-idéntica.
 - **Acentos consistentes** en mensajes visibles al usuario del backend (5 rezagados).
 
