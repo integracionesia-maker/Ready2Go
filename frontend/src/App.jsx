@@ -4,7 +4,7 @@ import ProtectedRoute from "./modules/presupuestos/components/ProtectedRoute";
 import PresupuestosLayout from "./modules/presupuestos/PresupuestosLayout";
 import AppShell from "./shell/AppShell";
 import EquiposLayout from "./modules/equipos/EquiposLayout";
-import { SkeletonShimmer } from "@/design";
+import { NotFoundPage, SkeletonShimmer } from "@/design";
 
 const LoginPage = lazy(() => import("./modules/presupuestos/pages/LoginPage"));
 const InicioPage = lazy(() => import("./modules/equipos/pages/InicioPage"));
@@ -77,6 +77,7 @@ export default function App() {
             <Route path="aprobaciones" element={<AprobacionesPage />} />
             <Route path="historial" element={<HistorialPage />} />
             <Route path="prestamo/:folio" element={<FichaPrestamoPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
           <Route path="/*" element={<PresupuestosLayout />} />
         </Route>

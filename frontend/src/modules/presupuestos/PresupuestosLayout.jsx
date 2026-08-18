@@ -1,11 +1,11 @@
 import { lazy, Suspense, useState, useEffect, useCallback } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import UploadTicketModal from "./components/UploadTicketModal";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoadingScreen from "./components/LoadingScreen";
-import { SkeletonShimmer } from "@/design";
+import { NotFoundPage, SkeletonShimmer } from "@/design";
 import { useAuth } from "@/context/AuthContext";
 import { fetchCreators, fetchCreatorsKpi, fetchBrands, fetchTickets, isNetworkError } from "@/api";
 import { ADMIN_ROLES, PRESUPUESTOS_ROLES, SUPERADMIN_ONLY, TICKETS_ROLES } from "./roles";
@@ -262,7 +262,7 @@ export default function PresupuestosLayout() {
             />
             <Route path="/perfil" element={<ProfilePage />} />
             <Route path="/403" element={<ForbiddenPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
           </Suspense>
         </div>
