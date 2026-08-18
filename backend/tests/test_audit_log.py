@@ -318,20 +318,27 @@ def test_change_password_no_persiste_el_body(client, logged_in_superadmin, db):
 
 def test_login_con_trailing_slash_no_persiste_password(client, db):
     """POST /api/auth/login/ (con barra final) no debe dejar la contraseña en la
-    auditoría. Con el catch-all del SPA registrado (frontend/dist presente), la
-    ruta responde 405; sin dist, 404 — en ambos casos el middleware captura el
-    body ANTES de esa respuesta: la ruta debe quedar excluida tras normalizar
-    la barra final."""
+    auditoría, en NINGUNA fila. El status de la respuesta depende del entorno
+    (405 con el catch-all SPA registrado; 401 si el cliente sigue el 307 de
+    Starlette hasta el login real), así que la propiedad se verifica contra
+    TODAS las filas de auditoría de la familia /api/auth/login*: ninguna puede
+    contener la contraseña — el middleware excluye la ruta tras normalizar la
+    barra final."""
     resp = client.post(
         "/api/auth/login/",
         json={"identificador": "nadie", "password": "ClaveMuySecreta123!"},
     )
-    assert resp.status_code in (404, 405)
+    assert resp.status_code in (401, 404, 405)
     _flush()
 
-    fila = _ultima_fila(db, "/api/auth/login/")
-    assert fila is not None
-    assert fila.request_body_summary is None
+    filas = (
+        db.query(models.AuditLog)
+        .filter(models.AuditLog.endpoint_path.like("/api/auth/login%"))
+        .all()
+    )
+    assert len(filas) >= 1
+    for fila in filas:
+        assert "ClaveMuySecreta123!" not in (fila.request_body_summary or "")
 
 
 def test_alta_de_usuario_redacta_password(client, logged_in_superadmin, db):
