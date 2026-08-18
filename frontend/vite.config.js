@@ -3,12 +3,20 @@ import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+import pkg from "./package.json";
+
 // Permite apuntar a un backend en otro puerto (usado por la suite E2E de Playwright)
 // sin tocar el valor por defecto de desarrollo (127.0.0.1:8000).
 const backendPort = process.env.VITE_BACKEND_PORT || "8000";
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // Versión de la app visible en la UI (menú de perfil): se mantiene en
+    // package.json y el build la inyecta como constante (lote de calidad
+    // 2026-08-18). Bumpear `version` en package.json al hacer release.
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   resolve: {
     // Alias de rutas del proyecto. NUNCA agregar aquí `react` ni `react-dom`:
     // ese alias manual causó el bug de "Invalid hook call" (resuelto 2026-07-15).

@@ -173,6 +173,17 @@ export default function ProfilePopover({ onBeforeToggle }) {
               </svg>
               Cerrar sesión
             </button>
+            {/* Versión de la app (lote de calidad 2026-08-18): para soporte
+                interno — "¿qué versión ves en el menú de perfil?".
+                __APP_VERSION__ la inyecta vite.config.js desde package.json. */}
+            <div
+              className="relative z-10 border-t px-4 py-2 text-center"
+              style={{ borderColor: "var(--go-border)" }}
+            >
+              <p className="font-mono text-[11px]" style={{ color: "var(--go-text-muted)" }}>
+                GOCreate v{__APP_VERSION__}
+              </p>
+            </div>
           </div>
       )}
     </div>
