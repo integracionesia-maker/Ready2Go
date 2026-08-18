@@ -15,7 +15,6 @@ export { default as NotFoundPage } from "./NotFoundPage";
 export { default as ErrorBoundary } from "./ErrorBoundary";
 export { default as RoleBadge } from "./RoleBadge";
 export { ToastProvider, useToast } from "./Toast";
-export { CommandPaletteProvider, useCommandPalette, useRegisterCommand } from "./CommandPalette";
 export { default as RowActions } from "./RowActions";
 export { useMobile } from "./useMobile";
 export { default as usePageTitle } from "./usePageTitle";

@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom";
 import GlassFilterDefs from "@/design/GlassFilterDefs";
-import { CommandPaletteProvider } from "@/design/CommandPalette";
 import ModuleTabs from "./ModuleTabs";
 
 /**
@@ -10,13 +9,13 @@ import ModuleTabs from "./ModuleTabs";
  */
 export default function AppShell() {
   return (
-    <CommandPaletteProvider>
+    <>
       <GlassFilterDefs />
       <Outlet />
       {/* Mobile: floating module switch pinned to bottom */}
       <div className="fixed bottom-3 left-2 right-2 z-50 flex justify-center sm:hidden">
         <ModuleTabs />
       </div>
-    </CommandPaletteProvider>
+    </>
   );
 }
