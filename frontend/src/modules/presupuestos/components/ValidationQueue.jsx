@@ -5,7 +5,7 @@ import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import MediaViewerModal from "./MediaViewerModal";
 import Modal from "./Modal";
-import { GlassPanel, RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS, usePageTitle } from "@/design";
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("es-MX", {
@@ -27,6 +27,7 @@ function formatDate(iso) {
 const UNDO_SECONDS = 5;
 
 export default function ValidationQueue({ onChange }) {
+  usePageTitle("Validación");
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

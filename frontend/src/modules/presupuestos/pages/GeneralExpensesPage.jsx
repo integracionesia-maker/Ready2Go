@@ -3,7 +3,7 @@ import DateRangeFilter from "../components/DateRangeFilter";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import GeneralExpenseModal from "../components/GeneralExpenseModal";
 import GeneralExpensesExportModal from "../components/GeneralExpensesExportModal";
-import { GlassPanel, RowActions, ICONS, MediaViewer } from "@/design";
+import { GlassPanel, RowActions, ICONS, MediaViewer, usePageTitle } from "@/design";
 import { fetchGeneralExpenses, softDeleteGeneralExpense, hardDeleteGeneralExpense, generalExpenseFileUrl } from "@/api";
 
 function formatCurrency(amount) {
@@ -44,6 +44,7 @@ function today() {
 }
 
 export default function GeneralExpensesPage({ brands = [] }) {
+  usePageTitle("Gastos Generales");
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import usePageTitle from "./usePageTitle";
 
 /**
  * Página 404 compartida de ambos módulos. Antes, una ruta inexistente
@@ -9,6 +10,7 @@ import { Link } from "react-router-dom";
  * así que el usuario puede seguir navegando sin perder contexto.
  */
 export default function NotFoundPage() {
+  usePageTitle("Página no encontrada");
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="glass w-full max-w-md">

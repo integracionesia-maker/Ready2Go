@@ -1,4 +1,4 @@
-import { GlassPanel } from "@/design";
+import { GlassPanel, usePageTitle } from "@/design";
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("es-MX", {
@@ -84,6 +84,7 @@ function BudgetBar({ spent, total }) {
 }
 
 export default function CreatorList({ creators }) {
+  usePageTitle("Creadores");
   // Esta vista es el panel del ciclo vigente, y un creador inactivo no tiene
   // ciclo en curso: su tarjeta solo mostraba ceros y desalineaba el conteo del
   // encabezado con el KPI del dashboard, que sí cuenta solo activos

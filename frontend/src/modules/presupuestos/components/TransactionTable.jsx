@@ -3,7 +3,7 @@ import { fetchTickets, softDeleteTicket, hardDeleteTicket } from "@/api";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import MediaViewerModal from "./MediaViewerModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import { GlassPanel, RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS, usePageTitle } from "@/design";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
 import { useAuth } from "@/context/AuthContext";
@@ -46,6 +46,7 @@ function formatDate(iso) {
 }
 
 export default function TransactionTable({ creators, brands, onChange }) {
+  usePageTitle("Transacciones");
   const { user } = useAuth();
   const canDelete = user?.role === "admin" || user?.role === "superadmin";
 

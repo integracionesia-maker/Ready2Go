@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { fetchTickets } from "@/api";
-import { GlassPanel, SectionCard } from "@/design";
+import { GlassPanel, SectionCard, usePageTitle } from "@/design";
 import { PRESUPUESTOS_ROLES } from "../roles";
 
 // `roles: null` = visible para cualquier sesión, igual que en Sidebar.jsx.
@@ -218,6 +218,7 @@ function CreatorHome({ creator, onNewTicket }) {
 }
 
 export default function HomePage({ creators = [], onNewTicket }) {
+  usePageTitle("Inicio");
   const { user } = useAuth();
   const isCreator = user?.role === "creador";
   const myCreator = isCreator

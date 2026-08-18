@@ -5,7 +5,7 @@ import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import Modal from "./Modal";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
-import { GlassPanel, RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS, usePageTitle } from "@/design";
 
 const CREATOR_COLUMNS = [
   { key: "name", label: "Nombre", type: "string" },
@@ -30,6 +30,7 @@ const SECTIONS = [
 ];
 
 export default function AdminView({ creators, brands, onChange }) {
+  usePageTitle("Administración");
   const { user } = useAuth();
   const visibleSections = SECTIONS.filter((s) => !s.roles || s.roles.includes(user.role));
 

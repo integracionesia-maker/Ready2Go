@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { EmptyState, GlassPanel, SkeletonShimmer, useToast } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, useToast, usePageTitle } from "@/design";
 import { esCodigo, fetchBrands } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -25,6 +25,7 @@ function itemListo(item) {
 }
 
 export default function NuevoPrestamoPage() {
+  usePageTitle("Nuevo Préstamo");
   const { user, logout } = useAuth();
   const { push } = useToast();
   const navigate = useNavigate();

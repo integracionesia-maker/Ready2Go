@@ -3,7 +3,10 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import BrandLogo from "../components/BrandLogo";
 
+import { usePageTitle } from "@/design";
+
 export default function LoginPage() {
+  usePageTitle("Iniciar sesión");
   const { user, loading, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

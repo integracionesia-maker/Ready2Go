@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { changePassword, fetchCreators, updateMe } from "@/api";
-import { GlassPanel } from "@/design";
+import { GlassPanel, usePageTitle } from "@/design";
 
 const ROLE_LABELS = {
   superadmin: "Superadministrador",
@@ -41,6 +41,7 @@ function Banner({ type, children }) {
 }
 
 export default function ProfilePage() {
+  usePageTitle("Perfil");
   const { user, refreshUser } = useAuth();
 
   const [fullName, setFullName] = useState(user?.full_name || "");

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { GlassPanel, KpiTile } from "@/design";
+import { GlassPanel, KpiTile, usePageTitle } from "@/design";
 import DateRangeFilter from "./DateRangeFilter";
 import MonthlySpendChart from "./charts/MonthlySpendChart";
 import CreatorUsageChart from "./charts/CreatorUsageChart";
@@ -43,6 +43,7 @@ function fmtDateParam(d) {
 }
 
 export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
+  usePageTitle("Dashboard");
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
   const [monthly, setMonthly] = useState([]);
