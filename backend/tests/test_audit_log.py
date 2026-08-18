@@ -318,14 +318,15 @@ def test_change_password_no_persiste_el_body(client, logged_in_superadmin, db):
 
 def test_login_con_trailing_slash_no_persiste_password(client, db):
     """POST /api/auth/login/ (con barra final) no debe dejar la contraseña en la
-    auditoría. El catch-all del SPA (`GET /{full_path:path}`) captura la ruta y
-    responde 405 (no hay redirect), pero el middleware captura el body ANTES de
-    esa respuesta: la ruta debe quedar excluida tras normalizar la barra final."""
+    auditoría. Con el catch-all del SPA registrado (frontend/dist presente), la
+    ruta responde 405; sin dist, 404 — en ambos casos el middleware captura el
+    body ANTES de esa respuesta: la ruta debe quedar excluida tras normalizar
+    la barra final."""
     resp = client.post(
         "/api/auth/login/",
         json={"identificador": "nadie", "password": "ClaveMuySecreta123!"},
     )
-    assert resp.status_code == 405
+    assert resp.status_code in (404, 405)
     _flush()
 
     fila = _ultima_fila(db, "/api/auth/login/")
