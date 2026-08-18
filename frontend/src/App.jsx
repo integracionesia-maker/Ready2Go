@@ -4,7 +4,7 @@ import ProtectedRoute from "./modules/presupuestos/components/ProtectedRoute";
 import PresupuestosLayout from "./modules/presupuestos/PresupuestosLayout";
 import AppShell from "./shell/AppShell";
 import EquiposLayout from "./modules/equipos/EquiposLayout";
-import { NotFoundPage, SkeletonShimmer } from "@/design";
+import { NotFoundPage, ScrollToTop, SkeletonShimmer } from "@/design";
 
 const LoginPage = lazy(() => import("./modules/presupuestos/pages/LoginPage"));
 const InicioPage = lazy(() => import("./modules/equipos/pages/InicioPage"));
@@ -30,7 +30,9 @@ const PermisosDemo = import.meta.env.DEV ? lazy(() => import("./modules/equipos/
 // src/modules/presupuestos/PresupuestosLayout.jsx.
 export default function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       <Route
         path="/login"
         element={
@@ -83,5 +85,6 @@ export default function App() {
         </Route>
       </Route>
     </Routes>
+    </>
   );
 }
