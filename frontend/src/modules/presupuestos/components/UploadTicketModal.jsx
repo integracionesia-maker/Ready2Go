@@ -26,13 +26,7 @@ function extensionDe(nombre) {
   return partes.length > 1 ? `.${partes.pop().toLowerCase()}` : "";
 }
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatMXN } from "@/design";
 
 export default function UploadTicketModal({
   creators,
@@ -221,7 +215,7 @@ export default function UploadTicketModal({
               {!isCreador && <option value="">Seleccionar creador...</option>}
               {activeCreators.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} — Restante del ciclo: {formatCurrency(c.cycle_remaining ?? 0)}
+                  {c.name} — Restante del ciclo: {formatMXN(c.cycle_remaining ?? 0)}
                 </option>
               ))}
             </select>
@@ -277,8 +271,8 @@ export default function UploadTicketModal({
                 }}
               >
                 {Number(amount) > (selectedCreator.cycle_remaining ?? 0)
-                  ? `Atención: el monto excede el restante del ciclo (${formatCurrency(selectedCreator.cycle_remaining ?? 0)}). Se puede registrar igual.`
-                  : `Restante del ciclo después del ticket: ${formatCurrency(
+                  ? `Atención: el monto excede el restante del ciclo (${formatMXN(selectedCreator.cycle_remaining ?? 0)}). Se puede registrar igual.`
+                  : `Restante del ciclo después del ticket: ${formatMXN(
                       (selectedCreator.cycle_remaining ?? 0) - Number(amount)
                     )}`}
               </p>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../components/Modal";
 import DateRangeFilter from "../components/DateRangeFilter";
-import { GlassPanel, ICONS } from "@/design";
+import { GlassPanel, ICONS, usePageTitle } from "@/design";
 import { fetchAuditLogs, fetchUsers } from "@/api";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
@@ -71,6 +71,7 @@ function emptyFilters() {
  * concesión de roles, etc. — con `action`/`target_type` curados).
  */
 export default function AuditLogPage() {
+  usePageTitle("Auditoría");
   const [users, setUsers] = useState([]);
   const [filters, setFilters] = useState(emptyFilters());
   const [searchInput, setSearchInput] = useState("");

@@ -38,7 +38,7 @@ TIPO_VENCIMIENTO = "vencimiento"
 PIE = (
     "\n\n--\n"
     "Mensaje automatico de GOCreate — Control de Equipos.\n"
-    "No respondas a esta direccion."
+    "No respondas a esta dirección."
 )
 
 # Rutas de la interfaz. El contrato solo define rutas de /api/*, asi que estas

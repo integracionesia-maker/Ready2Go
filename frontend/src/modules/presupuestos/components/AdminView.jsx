@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createCreator, updateCreator, createBrand, updateBrand, fetchCreatorCycles } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import Modal from "./Modal";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
-import { GlassPanel, RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS, usePageTitle } from "@/design";
 
 const CREATOR_COLUMNS = [
   { key: "name", label: "Nombre", type: "string" },
@@ -16,13 +16,7 @@ const CREATOR_COLUMNS = [
 
 const BRAND_COLUMNS = [{ key: "name", label: "Nombre", type: "string" }];
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatMXN } from "@/design";
 
 const SECTIONS = [
   { key: "creators", label: "Creadores" },
@@ -30,6 +24,7 @@ const SECTIONS = [
 ];
 
 export default function AdminView({ creators, brands, onChange }) {
+  usePageTitle("Administración");
   const { user } = useAuth();
   const visibleSections = SECTIONS.filter((s) => !s.roles || s.roles.includes(user.role));
 
@@ -162,31 +157,10 @@ export default function AdminView({ creators, brands, onChange }) {
       // clipboard API may fail silently (non-HTTPS, permission denied, etc.)
     }
   };
-
-  // Auto-copy when temp password first appears
-  useEffect(() => {
-    if (!tempPassword) return;
-    const password = tempPassword.password;
-    let cancelled = false;
-    (async () => {
-      try {
-        await navigator.clipboard.writeText(password);
-        if (!cancelled) {
-          setCopied(true);
-          copiedTimeout.current = setTimeout(() => setCopied(false), 2500);
-        }
-      } catch {
-        // clipboard unavailable — user can still Ctrl+C
-      }
-    })();
-    return () => {
-      cancelled = true;
-      if (copiedTimeout.current) {
-        clearTimeout(copiedTimeout.current);
-        copiedTimeout.current = null;
-      }
-    };
-  }, [tempPassword]);
+  // NOTA: sin auto-copia al montar el modal. Escribir la contraseña temporal al
+  // portapapeles sin un gesto explícito del usuario la deja viva en el
+  // portapapeles del sistema (máquinas compartidas: el siguiente Ctrl+V la
+  // vierte) — se copia SOLO con el botón (auditoría de seguridad 2026-08-18).
 
   /* ── Submit handlers ─────────────────────────────────────────────────── */
 
@@ -464,9 +438,9 @@ export default function AdminView({ creators, brands, onChange }) {
                           {c.cycle_period === "semanal" ? "Semanal" : "Mensual"}
                         </span>
                       </td>
-                      <td className="num text-right">{formatCurrency(c.cycle_amount ?? 0)}</td>
+                      <td className="num text-right">{formatMXN(c.cycle_amount ?? 0)}</td>
                       <td className="num text-right" style={{ color: "var(--go-warning)" }}>
-                        {formatCurrency(c.cycle_spent ?? 0)}
+                        {formatMXN(c.cycle_spent ?? 0)}
                       </td>
                       <td
                         className="num text-right font-semibold"
@@ -474,7 +448,7 @@ export default function AdminView({ creators, brands, onChange }) {
                           color: (c.cycle_remaining ?? 0) <= 0 ? "var(--go-error)" : "var(--go-success)",
                         }}
                       >
-                        {formatCurrency(c.cycle_remaining ?? 0)}
+                        {formatMXN(c.cycle_remaining ?? 0)}
                       </td>
                       <td className="text-center">
                         <span className={`go-badge ${c.is_active ? "go-badge-success" : "go-badge-error"}`}>
@@ -915,15 +889,15 @@ export default function AdminView({ creators, brands, onChange }) {
                       {cycleHistory.map((cy) => (
                         <tr key={cy.id}>
                           <td>{cy.start_date} — {cy.end_date}</td>
-                          <td className="num text-right">{formatCurrency(cy.amount)}</td>
+                          <td className="num text-right">{formatMXN(cy.amount)}</td>
                           <td className="num text-right" style={{ color: "var(--go-warning)" }}>
-                            {formatCurrency(cy.spent)}
+                            {formatMXN(cy.spent)}
                           </td>
                           <td
                             className="num text-right font-semibold"
                             style={{ color: cy.remaining <= 0 ? "var(--go-error)" : "var(--go-success)" }}
                           >
-                            {formatCurrency(cy.remaining)}
+                            {formatMXN(cy.remaining)}
                           </td>
                         </tr>
                       ))}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { EmptyState, GlassPanel, SkeletonShimmer, Timeline, MediaViewer } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, Timeline, MediaViewer, usePageTitle } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchLoanByFolio, mediaUrl, loanResponsivaUrl } from "../api";
 
@@ -81,6 +81,7 @@ function Miniatura({ mediaId, label, onExpand }) {
 }
 
 export default function FichaPrestamoPage() {
+  usePageTitle("Ficha de Préstamo");
   const { folio } = useParams();
   const [loan, setLoan] = useState(null);
   const [loading, setLoading] = useState(true);

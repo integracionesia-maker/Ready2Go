@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { EmptyState, GlassPanel, SkeletonShimmer, RowActions, ICONS } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, RowActions, ICONS, usePageTitle } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchEquipmentList } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -45,6 +45,7 @@ function useUrlFilters() {
 }
 
 export default function InventarioPage() {
+  usePageTitle("Inventario");
   const { puede } = usePermisos();
   const { filtros, set } = useUrlFilters();
 

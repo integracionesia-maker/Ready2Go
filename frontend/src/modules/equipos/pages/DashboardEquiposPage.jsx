@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchEquipmentDashboard, fetchLoans } from "../api";
 import { esCodigo } from "@/api";
 import { useAuth } from "@/context/AuthContext";
-import { GlassPanel, KpiTile, StatusDonut, EmptyState, SkeletonShimmer } from "@/design";
+import { GlassPanel, KpiTile, StatusDonut, EmptyState, SkeletonShimmer, usePageTitle } from "@/design";
 import DateRangeFilter from "@/modules/presupuestos/components/DateRangeFilter";
 import LoansByMonthChart from "../components/charts/LoansByMonthChart";
 import TopEquipmentChart from "../components/charts/TopEquipmentChart";
@@ -65,6 +65,7 @@ function fmtDateParam(d) {
  * (C2): eso se queda solo con las cards de acceso rápido.
  */
 export default function DashboardEquiposPage() {
+  usePageTitle("Dashboard de Equipos");
   const { user } = useAuth();
 
   const [dashboard, setDashboard] = useState(null);

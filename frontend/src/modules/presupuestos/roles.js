@@ -30,6 +30,15 @@ export const PRESUPUESTOS_ROLES = [
 ];
 
 /**
+ * Transacciones (listado de tickets): los 4 roles de Presupuestos más
+ * `creador` (ve solo los suyos) y `marketing_basico` (ve solo lo que subió).
+ * Espejo de `ROLES_CON_TICKETS` en `backend/app/routers/tickets.py` — roles sin
+ * acceso a Presupuestos (usuario, colaborador_mkt) no deben abrir la pantalla
+ * ni por URL directa.
+ */
+export const TICKETS_ROLES = [...PRESUPUESTOS_ROLES, "creador", "marketing_basico"];
+
+/**
  * Administración (creadores/marcas del sistema) y Validación de tickets.
  * Exclusivas de admin/superadmin: los dos roles de marketing quedan
  * deliberadamente fuera de las dos.

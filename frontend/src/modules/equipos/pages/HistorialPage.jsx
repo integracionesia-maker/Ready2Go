@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { EmptyState, GlassPanel, SkeletonShimmer, useToast } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, useToast, usePageTitle } from "@/design";
 import { esCodigo, ApiError } from "@/api";
 import { fetchLoans, fetchLoansExport } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -23,6 +23,7 @@ const ESTADO_BADGE = {
 };
 
 export default function HistorialPage() {
+  usePageTitle("Historial");
   const { puede } = usePermisos();
   const { push } = useToast();
 

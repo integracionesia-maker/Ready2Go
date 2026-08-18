@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { EmptyState, GlassPanel, SkeletonShimmer, useToast } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, useToast, usePageTitle } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchLoans, fetchLoanById, authorizeDelivery } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -18,6 +18,7 @@ function ColaVacia({ mensaje }) {
 }
 
 export default function AprobacionesPage() {
+  usePageTitle("Aprobaciones");
   const { puede } = usePermisos();
   const { push } = useToast();
 

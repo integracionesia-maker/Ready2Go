@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { EmptyState, GlassPanel, SkeletonShimmer, useToast, RowActions, ICONS } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, useToast, RowActions, ICONS, usePageTitle } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchLoans, fetchLoanById, loanResponsivaUrl } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -20,6 +20,7 @@ const ESTADO_BADGE = {
 };
 
 export default function ActivosPage() {
+  usePageTitle("Préstamos Activos");
   const { puede } = usePermisos();
   const navigate = useNavigate();
   const { push } = useToast();

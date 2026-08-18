@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { changePassword, fetchCreators, updateMe } from "@/api";
-import { GlassPanel } from "@/design";
+import { GlassPanel, usePageTitle } from "@/design";
 
 const ROLE_LABELS = {
   superadmin: "Superadministrador",
@@ -15,13 +15,7 @@ const ROLE_LABELS = {
   usuario: "Usuario",
 };
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatMXN } from "@/design";
 
 function Banner({ type, children }) {
   if (!children) return null;
@@ -41,6 +35,7 @@ function Banner({ type, children }) {
 }
 
 export default function ProfilePage() {
+  usePageTitle("Perfil");
   const { user, refreshUser } = useAuth();
 
   const [fullName, setFullName] = useState(user?.full_name || "");
@@ -148,7 +143,7 @@ export default function ProfilePage() {
                 Monto del ciclo
               </p>
               <p className="num font-display text-base font-bold" style={{ color: "var(--go-text-primary)" }}>
-                {formatCurrency(ownBudget.cycle_amount ?? 0)}
+                {formatMXN(ownBudget.cycle_amount ?? 0)}
               </p>
             </div>
             <div>
@@ -156,7 +151,7 @@ export default function ProfilePage() {
                 Gastado
               </p>
               <p className="num font-display text-base font-bold" style={{ color: "var(--go-warning)" }}>
-                {formatCurrency(ownBudget.cycle_spent ?? 0)}
+                {formatMXN(ownBudget.cycle_spent ?? 0)}
               </p>
             </div>
             <div>
@@ -169,7 +164,7 @@ export default function ProfilePage() {
                   color: (ownBudget.cycle_remaining ?? 0) <= 0 ? "var(--go-error)" : "var(--go-success)",
                 }}
               >
-                {formatCurrency(ownBudget.cycle_remaining ?? 0)}
+                {formatMXN(ownBudget.cycle_remaining ?? 0)}
               </p>
             </div>
           </div>

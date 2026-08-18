@@ -3,16 +3,10 @@ import DateRangeFilter from "../components/DateRangeFilter";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import GeneralExpenseModal from "../components/GeneralExpenseModal";
 import GeneralExpensesExportModal from "../components/GeneralExpensesExportModal";
-import { GlassPanel, RowActions, ICONS, MediaViewer } from "@/design";
+import { GlassPanel, RowActions, ICONS, MediaViewer, usePageTitle } from "@/design";
 import { fetchGeneralExpenses, softDeleteGeneralExpense, hardDeleteGeneralExpense, generalExpenseFileUrl } from "@/api";
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatMXN } from "@/design";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -44,6 +38,7 @@ function today() {
 }
 
 export default function GeneralExpensesPage({ brands = [] }) {
+  usePageTitle("Gastos Generales");
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -219,7 +214,7 @@ export default function GeneralExpensesPage({ brands = [] }) {
                       {expense.description}
                     </td>
                     <td className="num text-right font-semibold" style={{ color: "var(--go-warning)" }}>
-                      {formatCurrency(expense.amount)}
+                      {formatMXN(expense.amount)}
                     </td>
                     <td className="text-center">
                       <RowActions
@@ -271,7 +266,7 @@ export default function GeneralExpensesPage({ brands = [] }) {
 
       {deleteTarget && (
         <DeleteConfirmModal
-          itemLabel={`"${deleteTarget.description}" (${formatCurrency(deleteTarget.amount)})`}
+          itemLabel={`"${deleteTarget.description}" (${formatMXN(deleteTarget.amount)})`}
           onClose={() => setDeleteTarget(null)}
           onSoftDelete={async () => {
             await softDeleteGeneralExpense(deleteTarget.id);

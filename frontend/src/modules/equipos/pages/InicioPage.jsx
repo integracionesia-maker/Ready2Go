@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchEquipmentDashboard } from "../api";
 import { esCodigo } from "@/api";
-import { GlassPanel, EmptyState, SkeletonShimmer, SectionCard } from "@/design";
+import { GlassPanel, EmptyState, SkeletonShimmer, SectionCard, usePageTitle } from "@/design";
 
 // Mismos paths SVG que EquiposSidebar.jsx NAV_ITEMS — una sola fuente de
 // verdad visual para "a dónde puedo ir en Equipos", solo que aquí sin
@@ -54,6 +54,7 @@ const EQUIPOS_SECTIONS = [
  * operacional (acción pendiente), no analítico.
  */
 export default function InicioPage() {
+  usePageTitle("Equipos");
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [permisosNoDisponibles, setPermisosNoDisponibles] = useState(false);

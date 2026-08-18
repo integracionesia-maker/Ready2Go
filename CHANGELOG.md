@@ -4,6 +4,38 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 
 ---
 
+## 2026-08-18 — Diagnóstico de seguridad + lote de calidad (pulido UX/a11y/repo)
+
+### Corregido (seguridad)
+
+- **CRÍTICA: contraseñas en texto plano en `audit_log`.** El middleware de auditoría capturaba el body JSON de todo `/api/*` salvo login: cada cambio de contraseña y cada alta de usuario persistía la credencial en claro (con bypass vía `POST /api/auth/login/`). Ahora: redacción por campo (password/current_password/new_password/token/secret/authorization) + exclusión de change-password/refresh + comparación de rutas sin trailing slash.
+- **CRÍTICA: auto-aprobación de tickets por cualquier rol no-creador.** `usuario`/`colaborador_mkt`/`marketing_*` podían crear tickets auto-aprobados que descontaban presupuesto de cualquier creador. Ahora solo `admin`/`superadmin` auto-aprueban; todo rol nuevo nace `pendiente`.
+- **ALTA: `GET /api/tickets/` listaba todo a cualquier sesión** (montos, notas, `file_path` de disco). Ahora 403 para roles sin Presupuestos (`ROLES_CON_TICKETS`, misma allowlist que `download_file`).
+- Test de regresión de path traversal del fallback SPA (el hotfix del 18/08 no tenía test) + 2 tests obsoletos corregidos + fixtures nuevos (`usuario`, `colaborador_mkt`).
+
+### Agregado (calidad)
+
+- **Página 404 personalizada** en ambos módulos (antes: redirección silenciosa a `/` o área vacía) — `design/NotFoundPage.jsx` + spec e2e.
+- **ErrorBoundary global** con pantalla de recuperación (el crash de ApexCharts del 15/07 dejó pantalla en blanco; no volverá a pasar).
+- **Título del documento por ruta** ("Dashboard · GOCreate") en las 21 pantallas — hook `usePageTitle`.
+- **Anillo de foco visible** (`:focus-visible` global, naranja de marca) para navegación por teclado.
+- **README.md raíz** (GitHub ya no muestra página vacía), `.editorconfig`, `.nvmrc` (Node 24), Prettier (`npm run format`, adopción gradual), `package.json` saneado (nombre actualizado, description, engines).
+- **Versión visible en la UI** ("GOCreate v1.1.0" en el menú de perfil; `version` de package.json inyectada por vite) + meta description, `theme-color` y `apple-touch-icon` 180×180.
+- **ScrollToTop** en cambio de ruta (`behavior: instant` — el smooth global se sentía como bug).
+- **Paleta de comandos (Ctrl+K)**: se hizo descubrible con un hint en el header, se detectó que nunca se conectó a nada (cero comandos registrados, siempre "Sin resultados") y, por decisión de producto en la prueba manual, **se eliminó por completo** (infraestructura + hint + atajo).
+- **Formateador de moneda compartido** `formatMXN` (`design/formatos.js`) — elimina 11 copias idénticas del Intl es-MX; salida byte-idéntica.
+- **Acentos consistentes** en mensajes visibles al usuario del backend (5 rezagados).
+
+### Estado de pruebas
+
+Suite backend: **680 passed, 1 skipped** (era 669/2-failed antes del diagnóstico). Build frontend: verde. `pip-audit`: 0 vulnerabilidades; `npm audit`: 2 moderadas en react-router (fix disponible en v7.18.2, requiere migración major — planificado).
+
+### Documentación
+
+- `docs/seguridad/diagnostico-seguridad-2026-08-18.md` — informe completo: 2 críticas / 3 altas / 10 medias / 13 bajas, con plan de remediación priorizado.
+
+---
+
 ## 2026-08-04 — Renombre a GOCreate
 
 ### Actualizado

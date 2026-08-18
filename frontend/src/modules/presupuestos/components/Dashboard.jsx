@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { GlassPanel, KpiTile } from "@/design";
+import { GlassPanel, KpiTile, usePageTitle } from "@/design";
 import DateRangeFilter from "./DateRangeFilter";
 import MonthlySpendChart from "./charts/MonthlySpendChart";
 import CreatorUsageChart from "./charts/CreatorUsageChart";
@@ -17,13 +17,7 @@ import {
   fetchGeneralExpensesMonthly,
 } from "@/api";
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatMXN } from "@/design";
 
 // Mismos 4 acentos que tenía KpiCard, ahora como color sólido (coincide con
 // GO_CHART_COLORS de apexTheme.js) para el borde de KpiTile.
@@ -43,6 +37,7 @@ function fmtDateParam(d) {
 }
 
 export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
+  usePageTitle("Dashboard");
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
   const [monthly, setMonthly] = useState([]);
@@ -222,7 +217,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
             <KpiTile
               label="Presupuesto Total"
               value={kpi ? kpi.total_budget : "—"}
-              format={formatCurrency}
+              format={formatMXN}
               hint={`${kpi?.active_creators ?? 0} creadores activos`}
               accentColor={ACCENTS.orange}
               glass
@@ -230,7 +225,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
             <KpiTile
               label="Total Gastado"
               value={kpi ? kpi.total_spent : "—"}
-              format={formatCurrency}
+              format={formatMXN}
               hint={`${spentPct.toFixed(1)}% ejecutado`}
               accentColor={ACCENTS.turquoise}
               glass
@@ -238,7 +233,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
             <KpiTile
               label="Total Disponible"
               value={kpi ? kpi.total_remaining : "—"}
-              format={formatCurrency}
+              format={formatMXN}
               hint={`${remainingPct.toFixed(1)}% restante`}
               accentColor={ACCENTS.sky}
               glass
@@ -257,7 +252,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
             <KpiTile
               label="Gastado en el Período"
               value={summary ? summary.total_spent : "—"}
-              format={formatCurrency}
+              format={formatMXN}
               hint="según filtro de fechas"
               accentColor={ACCENTS.orange}
               glass
@@ -265,7 +260,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
             <KpiTile
               label="Tickets"
               value={summary?.ticket_count ?? "—"}
-              hint={`Promedio ${summary ? formatCurrency(summary.avg_ticket) : "—"} por ticket`}
+              hint={`Promedio ${summary ? formatMXN(summary.avg_ticket) : "—"} por ticket`}
               accentColor={ACCENTS.turquoise}
               glass
             />
@@ -279,7 +274,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
             <KpiTile
               label="Gastos Generales"
               value={generalExpensesTotal}
-              format={formatCurrency}
+              format={formatMXN}
               hint={`${generalExpensesCount} ${generalExpensesCount === 1 ? "gasto" : "gastos"} en el periodo`}
               accentColor={ACCENTS.orange}
               glass

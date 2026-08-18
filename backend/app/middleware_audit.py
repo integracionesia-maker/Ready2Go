@@ -18,6 +18,7 @@ fallo se imprime a consola, no se propaga.
 
 from __future__ import annotations
 
+import re
 import time
 from datetime import datetime, timezone
 
@@ -28,9 +29,39 @@ from . import security
 from . import audit_queue
 
 RUTAS_EXCLUIDAS = ("/api/audit-logs", "/api/health")
-# No se captura el cuerpo de login: contendria la contraseña en texto plano.
-RUTAS_SIN_CUERPO = ("/api/auth/login",)
+# No se captura el cuerpo de estas rutas: contienen credenciales en texto plano.
+# La redacción por campo (_redactar_campos) es la segunda línea de defensa para
+# cualquier otra ruta que algún día reciba un campo sensible.
+RUTAS_SIN_CUERPO = (
+    "/api/auth/login",
+    "/api/auth/change-password",
+    "/api/auth/refresh",
+)
 MAX_RESUMEN_BODY = 500
+
+# Campos sensibles redactados del resumen JSON ANTES de persistir: sin esto, un
+# cambio de contraseña o un alta de usuario dejaría la credencial en claro en
+# audit_log para siempre (hallazgo de la auditoría de seguridad 2026-08-18).
+_CAMPOS_SENSIBLES = (
+    "password",
+    "current_password",
+    "new_password",
+    "confirm_password",
+    "refresh_token",
+    "token",
+    "secret",
+    "authorization",
+    "api_key",
+)
+_PATRON_SENSIBLE = re.compile(
+    r'("(?:' + "|".join(_CAMPOS_SENSIBLES) + r')"\s*:\s*")[^"]*(")',
+    re.IGNORECASE,
+)
+
+
+def _redactar_campos(texto: str) -> str:
+    """Sustituye el valor de cualquier campo sensible por `***`."""
+    return _PATRON_SENSIBLE.sub(r"\1***\2", texto)
 
 
 def _actor_id_desde_cookie(request: Request) -> int | None:
@@ -63,7 +94,7 @@ async def _resumen_body(request: Request) -> str | None:
     texto = crudo.decode("utf-8", errors="replace")
     if len(texto) > MAX_RESUMEN_BODY:
         texto = texto[:MAX_RESUMEN_BODY] + "…"
-    return texto
+    return _redactar_campos(texto)
 
 
 class AuditMiddleware(BaseHTTPMiddleware):
@@ -78,7 +109,11 @@ class AuditMiddleware(BaseHTTPMiddleware):
 
         inicio = time.monotonic()
         actor_user_id = _actor_id_desde_cookie(request)
-        body_resumen = None if path in RUTAS_SIN_CUERPO else await _resumen_body(request)
+        # Comparar sin trailing slash: un POST a /api/auth/login/ (con barra
+        # final) no matchea la ruta exacta y Starlette lo redirige 307, pero el
+        # body con la contraseña ya habría sido capturado y persistido.
+        path_normalizado = path.rstrip("/") if path != "/" else path
+        body_resumen = None if path_normalizado in RUTAS_SIN_CUERPO else await _resumen_body(request)
 
         response = await call_next(request)
 

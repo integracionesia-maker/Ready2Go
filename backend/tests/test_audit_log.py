@@ -287,3 +287,75 @@ def test_standard_fields_en_mutacion(client, logged_in_superadmin, db):
     sf = json.loads(fila.standard_fields)
     assert sf["endpoint"]["type"] == "post"
     assert sf["api"]["metod"] == "POST"
+
+
+# ── Redacción de cuerpos sensibles (auditoría de seguridad 2026-08-18) ────────
+
+
+def _ultima_fila(db, path):
+    return (
+        db.query(models.AuditLog)
+        .filter(models.AuditLog.endpoint_path == path)
+        .order_by(models.AuditLog.id.desc())
+        .first()
+    )
+
+
+def test_change_password_no_persiste_el_body(client, logged_in_superadmin, db):
+    """POST /api/auth/change-password lleva contraseñas en el body: la fila de
+    auditoría debe quedar sin request_body_summary."""
+    resp = logged_in_superadmin.post(
+        "/api/auth/change-password",
+        json={"current_password": "SuperClaveTest123!", "new_password": "OtraClaveNueva2026!"},
+    )
+    assert resp.status_code == 200
+    _flush()
+
+    fila = _ultima_fila(db, "/api/auth/change-password")
+    assert fila is not None
+    assert fila.request_body_summary is None
+
+
+def test_login_con_trailing_slash_no_persiste_password(client, db):
+    """POST /api/auth/login/ (con barra final) no debe dejar la contraseña en la
+    auditoría. El catch-all del SPA (`GET /{full_path:path}`) captura la ruta y
+    responde 405 (no hay redirect), pero el middleware captura el body ANTES de
+    esa respuesta: la ruta debe quedar excluida tras normalizar la barra final."""
+    resp = client.post(
+        "/api/auth/login/",
+        json={"identificador": "nadie", "password": "ClaveMuySecreta123!"},
+    )
+    assert resp.status_code == 405
+    _flush()
+
+    fila = _ultima_fila(db, "/api/auth/login/")
+    assert fila is not None
+    assert fila.request_body_summary is None
+
+
+def test_alta_de_usuario_redacta_password(client, logged_in_superadmin, db):
+    """POST /api/users con password explícito: la fila de auditoría debe tener
+    el campo redactado (***), nunca el valor en claro."""
+    resp = logged_in_superadmin.post(
+        "/api/users/",
+        json={
+            "username": "nuevo.empleado",
+            "email": "nuevo@test.com",
+            "full_name": "Nuevo Empleado",
+            "role": "usuario",
+            "password": "ClaveMuySecreta123!",
+        },
+    )
+    assert resp.status_code == 201
+    _flush()
+
+    fila = (
+        db.query(models.AuditLog)
+        .filter(models.AuditLog.endpoint_path.like("/api/users%"))
+        .order_by(models.AuditLog.id.desc())
+        .first()
+    )
+    assert fila is not None
+    body = fila.request_body_summary or ""
+    assert "ClaveMuySecreta123!" not in body
+    assert '"password":"***"' in body

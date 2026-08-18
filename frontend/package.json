@@ -1,12 +1,13 @@
 {
-  "name": "presupuesto-creadores-frontend",
+  "name": "go-create-frontend",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "prettier --write src/ e2e/"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
@@ -26,7 +27,12 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
+    "prettier": "^3.9.6",
     "tailwindcss": "^3.4.17",
     "vite": "^6.0.5"
+  },
+  "description": "Frontend de GOCreate — plataforma de marketing de Grupo Ortiz (Presupuestos + Control de Equipos)",
+  "engines": {
+    "node": ">=20"
   }
 }

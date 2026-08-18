@@ -88,7 +88,7 @@ def aprobadores(db: Session) -> list[User]:
     if not encontrados:
         log.warning(
             "0 usuarios con equipos_aprobacion:autorizar_entrega (RBAC_MODO=%s). "
-            "Ningun aviso de autorizacion va a salir.",
+            "Ningún aviso de autorización va a salir.",
             rbac.modo_rbac(),
         )
     return encontrados

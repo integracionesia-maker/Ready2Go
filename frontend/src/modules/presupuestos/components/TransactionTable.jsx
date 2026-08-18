@@ -3,7 +3,7 @@ import { fetchTickets, softDeleteTicket, hardDeleteTicket } from "@/api";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import MediaViewerModal from "./MediaViewerModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import { GlassPanel, RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS, usePageTitle } from "@/design";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
 import { useAuth } from "@/context/AuthContext";
@@ -25,13 +25,7 @@ const SORTABLE_COLUMNS = [
   { key: "amount", label: "Monto", align: "right", type: "number" },
 ];
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+import { formatMXN } from "@/design";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -46,6 +40,7 @@ function formatDate(iso) {
 }
 
 export default function TransactionTable({ creators, brands, onChange }) {
+  usePageTitle("Transacciones");
   const { user } = useAuth();
   const canDelete = user?.role === "admin" || user?.role === "superadmin";
 
@@ -336,7 +331,7 @@ export default function TransactionTable({ creators, brands, onChange }) {
                     </div>
                   </td>
                   <td className="num text-right font-semibold" style={{ color: "var(--go-warning)" }}>
-                    {formatCurrency(t.amount)}
+                    {formatMXN(t.amount)}
                   </td>
                   <td className="text-center">
                     <span
@@ -440,7 +435,7 @@ export default function TransactionTable({ creators, brands, onChange }) {
 
       {deleteTarget && (
         <DeleteConfirmModal
-          itemLabel={`el ticket de ${deleteTarget.creator_name || `ID ${deleteTarget.creator_id}`} por ${formatCurrency(deleteTarget.amount)}`}
+          itemLabel={`el ticket de ${deleteTarget.creator_name || `ID ${deleteTarget.creator_id}`} por ${formatMXN(deleteTarget.amount)}`}
           onClose={() => setDeleteTarget(null)}
           onSoftDelete={async () => {
             await softDeleteTicket(deleteTarget.id);

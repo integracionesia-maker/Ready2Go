@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { fetchTickets } from "@/api";
-import { GlassPanel, SectionCard } from "@/design";
+import { GlassPanel, SectionCard, usePageTitle } from "@/design";
 import { PRESUPUESTOS_ROLES } from "../roles";
 
 // `roles: null` = visible para cualquier sesión, igual que en Sidebar.jsx.
@@ -45,13 +45,7 @@ const ADMIN_SECTIONS = [
 const TICKET_ICON =
   "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z";
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount || 0);
-}
+import { formatMXN } from "@/design";
 
 function formatDateShort(iso) {
   if (!iso) return "—";
@@ -134,7 +128,7 @@ function CreatorHome({ creator, onNewTicket }) {
                   Asignado
                 </p>
                 <p className="font-mono text-xl font-semibold" style={{ color: "var(--go-text-primary)" }}>
-                  {formatCurrency(amount)}
+                  {formatMXN(amount)}
                 </p>
               </div>
               <div>
@@ -142,7 +136,7 @@ function CreatorHome({ creator, onNewTicket }) {
                   Gastado
                 </p>
                 <p className="font-mono text-xl font-semibold" style={{ color: "var(--go-warning)" }}>
-                  {formatCurrency(spent)}
+                  {formatMXN(spent)}
                 </p>
               </div>
               <div>
@@ -153,7 +147,7 @@ function CreatorHome({ creator, onNewTicket }) {
                   className="font-mono text-xl font-semibold"
                   style={{ color: remaining <= 0 ? "var(--go-error)" : "var(--go-success)" }}
                 >
-                  {formatCurrency(remaining)}
+                  {formatMXN(remaining)}
                 </p>
               </div>
             </div>
@@ -218,6 +212,7 @@ function CreatorHome({ creator, onNewTicket }) {
 }
 
 export default function HomePage({ creators = [], onNewTicket }) {
+  usePageTitle("Inicio");
   const { user } = useAuth();
   const isCreator = user?.role === "creador";
   const myCreator = isCreator

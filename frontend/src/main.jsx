@@ -4,7 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { MotionConfig } from "motion/react";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { ToastProvider } from "./design";
+import { ErrorBoundary, ToastProvider } from "./design";
 import App from "./App";
 import "./index.css";
 
@@ -17,7 +17,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
-              <App />
+              {/* Boundary GLOBAL: cualquier crash de render cae aquí y muestra
+                  la pantalla de recuperación en vez de una página en blanco. */}
+              <ErrorBoundary>
+                <App />
+              </ErrorBoundary>
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>

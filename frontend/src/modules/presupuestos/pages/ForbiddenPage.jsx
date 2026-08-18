@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
 
+import { usePageTitle } from "@/design";
+
 export default function ForbiddenPage() {
+  usePageTitle("Acceso denegado");
   return (
     <div className="mx-auto max-w-md pt-16 text-center">
       <div

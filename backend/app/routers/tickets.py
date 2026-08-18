@@ -16,6 +16,17 @@ router = APIRouter(prefix="/api/tickets", tags=["tickets"])
 
 VALID_STATUSES = {s.value for s in models.TicketStatus}
 
+# Roles que pueden LISTAR tickets y DESCARGAR comprobantes. Roles sin acceso a
+# Presupuestos (colaborador_mkt, usuario, paquetes solo-equipos) reciben 403:
+# sin esto el listado global (montos, notas, rutas de disco) quedaba abierto a
+# cualquier sesión autenticada (hallazgo de la auditoría de seguridad
+# 2026-08-18). El scoping fino (creador ve lo suyo, marketing_basico lo que
+# subió) se aplica aparte, igual que en download_file.
+ROLES_CON_TICKETS = (
+    "superadmin", "admin", "marketing_presupuestos", "marketing_admin",
+    "creador", "marketing_basico",
+)
+
 
 def _ticket_to_response(t: models.Ticket) -> schemas.TicketResponse:
     cycle = t.budget_cycle
@@ -56,6 +67,9 @@ def list_tickets(
 ):
     if status is not None and status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail=f"Estado inválido: '{status}'.")
+
+    if current_user.role not in ROLES_CON_TICKETS:
+        raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
 
     # `limit`/`offset` opcionales (sin cambio de contrato: sin ellos se
     # comporta exactamente igual que antes). El filtro por creador/usuario
@@ -107,10 +121,7 @@ def download_file(
     # completo), creador (dueño del ticket) y marketing_basico (solo lo que el
     # mismo subio) pueden descargar comprobantes. Roles sin acceso a Presupuestos
     # (colaborador_mkt, usuario) reciben 403 (hallazgo #2 auditoría).
-    roles_con_acceso = (
-        "superadmin", "admin", "marketing_presupuestos", "marketing_admin", "creador", "marketing_basico",
-    )
-    if current_user.role not in roles_con_acceso:
+    if current_user.role not in ROLES_CON_TICKETS:
         raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
     if current_user.role == "creador" and ticket.creator_id != current_user.creator_id:
         raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
@@ -139,7 +150,7 @@ def create_ticket(
         if not creator:
             raise HTTPException(status_code=404, detail="Creador no encontrado.")
         if not creator.is_active:
-            raise HTTPException(status_code=400, detail="El creador esta inactivo.")
+            raise HTTPException(status_code=400, detail="El creador está inactivo.")
 
         brand = crud.get_brand(db, brand_id)
         if not brand:
@@ -148,12 +159,17 @@ def create_ticket(
             raise HTTPException(status_code=400, detail="La marca esta inactiva.")
 
         # R10: tickets de creador nacen pendientes (no descuentan); admin/superadmin
-        # se auto-aprueban de inmediato (flujo actual). Ninguno de los dos valida
-        # fondos — los ciclos pueden quedar en negativo a propósito (ver R7 §0.B).
+        # se auto-aprueban de inmediato (flujo actual). TODO rol nuevo (marketing_*,
+        # colaborador_mkt, usuario) también nace pendiente y pasa por validación:
+        # antes, "cualquiera que no fuera creador" se auto-aprobaba y descontaba
+        # presupuesto de cualquier creador sin revisión (auditoría 2026-08-18).
+        # Ningún flujo valida fondos — los ciclos pueden quedar en negativo a
+        # propósito (ver R7 §0.B).
+        auto_aprobado = current_user.role in ("admin", "superadmin")
         status = (
-            models.TicketStatus.PENDIENTE.value
-            if current_user.role == "creador"
-            else models.TicketStatus.APROBADO.value
+            models.TicketStatus.APROBADO.value
+            if auto_aprobado
+            else models.TicketStatus.PENDIENTE.value
         )
 
         file_name, file_path_on_disk, mime_type = save_upload(file)

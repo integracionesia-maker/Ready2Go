@@ -126,6 +126,8 @@ PASSWORD_CREADOR = "CreadorClaveTest123!"
 PASSWORD_MARKETING_PRESUPUESTOS = "MktPresuClaveTest123!"
 PASSWORD_MARKETING_ADMIN = "MktAdminClaveTest123!"
 PASSWORD_MARKETING_BASICO = "MktBasicoClaveTest123!"
+PASSWORD_USUARIO = "UsuarioClaveTest123!"
+PASSWORD_COLABORADOR_MKT = "ColaboradorClaveTest123!"
 
 
 @pytest.fixture
@@ -171,6 +173,18 @@ def marketing_basico_user(db):
 
 
 @pytest.fixture
+def usuario_user(db):
+    return make_user(db, username="usuario.generico", password=PASSWORD_USUARIO, role="usuario")
+
+
+@pytest.fixture
+def colaborador_mkt_user(db):
+    return make_user(
+        db, username="colab.mkt", password=PASSWORD_COLABORADOR_MKT, role="colaborador_mkt"
+    )
+
+
+@pytest.fixture
 def creador_user(db, creator_a):
     return make_user(db, username="creador.a", password=PASSWORD_CREADOR, role="creador", creator_id=creator_a.id)
 
@@ -212,6 +226,16 @@ def logged_in_marketing_admin(marketing_admin_user):
 @pytest.fixture
 def logged_in_marketing_basico(marketing_basico_user):
     return _independent_client("mkt.basico", PASSWORD_MARKETING_BASICO)
+
+
+@pytest.fixture
+def logged_in_usuario(usuario_user):
+    return _independent_client("usuario.generico", PASSWORD_USUARIO)
+
+
+@pytest.fixture
+def logged_in_colaborador_mkt(colaborador_mkt_user):
+    return _independent_client("colab.mkt", PASSWORD_COLABORADOR_MKT)
 
 
 @pytest.fixture

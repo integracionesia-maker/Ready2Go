@@ -15,7 +15,10 @@ const TABS = [
  * PresupuestosLayout). Separada de /administracion (Creadores/Marcas, que
  * admin tambien ve): gestion de usuarios y RBAC es SOLO de superadmin (R4).
  */
+import { usePageTitle } from "@/design";
+
 export default function SystemAdminPage({ creators }) {
+  usePageTitle("Administración del Sistema");
   const [tab, setTab] = useState("usuarios");
 
   const [users, setUsers] = useState([]);

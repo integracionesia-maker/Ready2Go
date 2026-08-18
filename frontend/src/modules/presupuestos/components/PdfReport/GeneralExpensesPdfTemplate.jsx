@@ -1,12 +1,6 @@
 import isotipoNaranja from "@/assets/logos/isotipo-go-naranja.png";
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount || 0);
-}
+import { formatMXN } from "@/design";
 
 function formatDateShort(iso) {
   if (!iso) return "—";
@@ -112,7 +106,7 @@ export default function GeneralExpensesPdfTemplate({ months, items, total, gener
                     <td>{formatDateShort(item.upload_date)}</td>
                     <td>{item.brand_name || `ID ${item.brand_id}`}</td>
                     <td>{item.description}</td>
-                    <td className="num" style={{ textAlign: "right" }}>{formatCurrency(item.amount)}</td>
+                    <td className="num" style={{ textAlign: "right" }}>{formatMXN(item.amount)}</td>
                     <td>{item.file_name}</td>
                   </tr>
                 ))}
@@ -132,7 +126,7 @@ export default function GeneralExpensesPdfTemplate({ months, items, total, gener
               }}
             >
               <span>Total General:</span>
-              <span className="num">{formatCurrency(total)}</span>
+              <span className="num">{formatMXN(total)}</span>
             </div>
           </>
         )}
