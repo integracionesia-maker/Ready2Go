@@ -46,6 +46,15 @@
   ::-webkit-scrollbar-thumb:hover {
     background: var(--go-text-muted);
   }
+
+  /* Foco visible para navegación por teclado (lote de calidad 2026-08-18).
+     Los inputs/selects ya tenían su :focus propio (go-input/go-select);
+     esto cubre botones, enlaces y todo elemento interactivo: sin él, quien
+     navega con Tab no ve dónde está parado. */
+  :focus-visible {
+    outline: 2px solid var(--go-orange);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
