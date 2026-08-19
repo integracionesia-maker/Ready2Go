@@ -40,6 +40,7 @@ NO_TOKEN_ENDPOINTS = [
     ("get", "/api/users/1"),
     ("put", "/api/users/1"),
     ("post", "/api/users/1/reset-password"),
+    ("post", "/api/users/1/reset-password-superadmin"),
     ("patch", "/api/users/1/estado"),
     ("get", "/api/auth/me"),
     ("put", "/api/auth/me"),

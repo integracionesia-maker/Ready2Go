@@ -128,6 +128,7 @@ PASSWORD_MARKETING_ADMIN = "MktAdminClaveTest123!"
 PASSWORD_MARKETING_BASICO = "MktBasicoClaveTest123!"
 PASSWORD_USUARIO = "UsuarioClaveTest123!"
 PASSWORD_COLABORADOR_MKT = "ColaboradorClaveTest123!"
+PASSWORD_SUPERADMIN_B = "SuperClaveBTest123!"
 
 
 @pytest.fixture
@@ -148,6 +149,11 @@ def brand_a(db):
 @pytest.fixture
 def superadmin_user(db):
     return make_user(db, username="superadmin", password=PASSWORD_SUPERADMIN, role="superadmin")
+
+
+@pytest.fixture
+def superadmin_user_b(db):
+    return make_user(db, username="superadmin2", password=PASSWORD_SUPERADMIN_B, role="superadmin")
 
 
 @pytest.fixture
