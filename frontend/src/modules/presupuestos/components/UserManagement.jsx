@@ -338,118 +338,6 @@ export default function UserManagement({ creators }) {
         </button>
       </div>
 
-      {/* ── Superadministradores: tabla separada (2026-08-19) ────────────────
-          Rol y estado son inmutables por API; la única gestión entre pares es
-          el reset de contraseña. Confirmación fuerte en modal: exige teclear
-          el username del objetivo. */}
-      <div className="rounded-go-lg border p-4" style={{ borderColor: "var(--go-border)" }}>
-        <div className="flex items-center justify-between">
-          <span className="go-eyebrow">Superadministradores</span>
-          <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
-            {superAdmins.length} cuenta{superAdmins.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-
-        {superAdminLoading ? (
-          <p className="py-3 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
-            Cargando...
-          </p>
-        ) : superAdmins.length === 0 ? (
-          <p className="py-3 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
-            Sin superadministradores registrados.
-          </p>
-        ) : (
-          <div className="go-table-scroll-wrapper mt-2">
-            <div className="go-table-scroll overflow-x-auto">
-              <table className="go-table w-full table-fixed">
-                <colgroup>
-                  <col className="w-[120px]" />
-                  <col className="w-[150px]" />
-                  <col className="w-[190px]" />
-                  <col className="w-[120px]" />
-                  <col className="w-[110px]" />
-                  <col className="w-[75px]" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Usuario</th>
-                    <th>Nombre</th>
-                    <th>Correo</th>
-                    <th>Contraseña</th>
-                    <th>Último acceso</th>
-                    <th className="text-right" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {superAdmins.map((u) => {
-                    const isSelf = u.id === currentUser.id;
-                    return (
-                      <tr
-                        key={u.id}
-                        onClick={() => setDetalleUser(u)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setDetalleUser(u);
-                          }
-                        }}
-                        tabIndex={0}
-                        title="Ver detalle"
-                        className="cursor-pointer"
-                      >
-                        <td className="truncate font-mono text-xs" title={u.username}>
-                          {u.username}
-                          {isSelf && <span className="go-badge go-badge-warning ml-1 flex-shrink-0">Tú</span>}
-                        </td>
-                        <td
-                          className="block truncate font-display text-sm font-semibold"
-                          style={{ color: "var(--go-text-primary)" }}
-                          title={u.full_name}
-                        >
-                          {u.full_name}
-                        </td>
-                        <td
-                          className="truncate font-body text-xs"
-                          style={{ color: "var(--go-text-secondary)" }}
-                          title={u.email}
-                        >
-                          {u.email}
-                        </td>
-                        <td className="whitespace-nowrap font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
-                          {u.must_change_password ? "Debe cambiarla" : "Definitiva"}
-                        </td>
-                        <td className="whitespace-nowrap font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
-                          {formatLastLogin(u.last_login)}
-                        </td>
-                        {/* stopPropagation: la acción no debe abrir el modal
-                            informativo de la fila. */}
-                        <td onClick={(e) => e.stopPropagation()}>
-                          {/* El backend 400a el reset sobre uno mismo: la UI ni
-                              siquiera ofrece la acción. */}
-                          {!isSelf && (
-                            <RowActions
-                              actions={[
-                                {
-                                  key: "reset-sa",
-                                  label: "Resetear contraseña",
-                                  icon: ICONS.resetear,
-                                  variant: "danger",
-                                  onClick: () => openResetSa(u),
-                                },
-                              ]}
-                            />
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-[200px] flex-1">
           <label className="go-eyebrow mb-1.5 block">Buscar</label>
@@ -660,6 +548,119 @@ export default function UserManagement({ creators }) {
         )}
         </>
       )}
+
+      {/* ── Superadministradores: tabla separada (2026-08-19), al FONDO de la
+          sección (decisión de producto): rol y estado son inmutables por API;
+          la única gestión entre pares es el reset de contraseña con
+          confirmación fuerte — el botón solo se habilita tecleando el
+          username exacto del objetivo. */}
+      <div className="rounded-go-lg border p-4" style={{ borderColor: "var(--go-border)" }}>
+        <div className="flex items-center justify-between">
+          <span className="go-eyebrow">Superadministradores</span>
+          <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+            {superAdmins.length} cuenta{superAdmins.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        {superAdminLoading ? (
+          <p className="py-3 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
+            Cargando...
+          </p>
+        ) : superAdmins.length === 0 ? (
+          <p className="py-3 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
+            Sin superadministradores registrados.
+          </p>
+        ) : (
+          <div className="go-table-scroll-wrapper mt-2">
+            <div className="go-table-scroll overflow-x-auto">
+              <table className="go-table w-full table-fixed">
+                <colgroup>
+                  <col className="w-[120px]" />
+                  <col className="w-[150px]" />
+                  <col className="w-[190px]" />
+                  <col className="w-[120px]" />
+                  <col className="w-[110px]" />
+                  <col className="w-[75px]" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Contraseña</th>
+                    <th>Último acceso</th>
+                    <th className="text-right" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {superAdmins.map((u) => {
+                    const isSelf = u.id === currentUser.id;
+                    return (
+                      <tr
+                        key={u.id}
+                        onClick={() => setDetalleUser(u)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setDetalleUser(u);
+                          }
+                        }}
+                        tabIndex={0}
+                        title="Ver detalle"
+                        className="cursor-pointer"
+                      >
+                        <td className="truncate font-mono text-xs" title={u.username}>
+                          {u.username}
+                          {isSelf && <span className="go-badge go-badge-warning ml-1 flex-shrink-0">Tú</span>}
+                        </td>
+                        <td
+                          className="block truncate font-display text-sm font-semibold"
+                          style={{ color: "var(--go-text-primary)" }}
+                          title={u.full_name}
+                        >
+                          {u.full_name}
+                        </td>
+                        <td
+                          className="truncate font-body text-xs"
+                          style={{ color: "var(--go-text-secondary)" }}
+                          title={u.email}
+                        >
+                          {u.email}
+                        </td>
+                        <td className="whitespace-nowrap font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                          {u.must_change_password ? "Debe cambiarla" : "Definitiva"}
+                        </td>
+                        <td className="whitespace-nowrap font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                          {formatLastLogin(u.last_login)}
+                        </td>
+                        {/* stopPropagation: la acción no debe abrir el modal
+                            informativo de la fila. */}
+                        <td onClick={(e) => e.stopPropagation()}>
+                          {/* El backend 400a el reset sobre uno mismo: la UI ni
+                              siquiera ofrece la acción. */}
+                          {!isSelf && (
+                            <RowActions
+                              actions={[
+                                {
+                                  key: "reset-sa",
+                                  label: "Resetear contraseña",
+                                  icon: ICONS.resetear,
+                                  variant: "danger",
+                                  onClick: () => openResetSa(u),
+                                },
+                              ]}
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
 
     </GlassPanel>
 
