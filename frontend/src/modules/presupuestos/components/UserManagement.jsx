@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
-import { createUser, fetchUserRoles, fetchUsers, resetUserPassword, setUserActive, updateUser } from "@/api";
+import {
+  createUser,
+  fetchUserRoles,
+  fetchUsers,
+  resetSuperadminPassword,
+  resetUserPassword,
+  setUserActive,
+  updateUser,
+} from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import Modal from "./Modal";
-import { GlassPanel, RowActions, ICONS } from "@/design";
+import PasswordTemporal from "./PasswordTemporal";
+import { GlassPanel, RowActions, ICONS, useToast } from "@/design";
 import { SortableHeaderCell } from "./SortableHeader";
 import { useSortable } from "../hooks/useSortable";
 
@@ -49,44 +58,6 @@ function emptyForm() {
 // modal de edición (no como acción de fila ni como segundo modal), así que la
 // contraseña temporal aparece en el mismo lugar donde se pidió.
 const RESET_INICIAL = { fase: "idle", password: null, error: null };
-
-/**
- * Contraseña temporal recién generada, dentro del modal de edición.
- * Se muestra una sola vez: el backend solo devuelve el texto plano en la
- * respuesta del reset (users.py:reset_password), después ya es un hash.
- */
-function PasswordTemporal({ username, password }) {
-  const [copiado, setCopiado] = useState(false);
-
-  const copiar = async () => {
-    try {
-      await navigator.clipboard.writeText(password);
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 2000);
-    } catch {
-      // Sin portapapeles (contexto no seguro o permiso denegado): el campo
-      // sigue siendo select-all, así que se puede copiar a mano.
-    }
-  };
-
-  return (
-    <div
-      className="space-y-2 rounded-go border p-3"
-      style={{ background: "rgba(52,168,83,0.08)", borderColor: "rgba(52,168,83,0.25)" }}
-    >
-      <p className="font-body text-xs" style={{ color: "var(--go-text-primary)" }}>
-        Contraseña temporal de <strong>{username}</strong>. Solo se muestra una vez — cópiala antes
-        de cerrar. Sus sesiones activas se cerraron y deberá cambiarla al entrar.
-      </p>
-      <div className="flex items-center gap-2">
-        <code className="go-input select-all flex-1 font-mono text-sm">{password}</code>
-        <button type="button" onClick={copiar} className="btn-go-ghost whitespace-nowrap text-xs">
-          {copiado ? "Copiado" : "Copiar"}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 /** Renglón etiqueta/valor del modal informativo. */
 function DetalleFila({ label, children }) {
@@ -148,6 +119,17 @@ export default function UserManagement({ creators }) {
 
   const [reset, setReset] = useState(RESET_INICIAL);
 
+  // ── Superadministradores: tabla separada + reset entre pares (2026-08-19) ──
+  // Los superadmin no se editan ni desactivan por API; su única gestión es el
+  // reset de contraseña ENTRE pares. Viven fuera de la tabla principal (que
+  // los excluye vía exclude_role) con confirmación fuerte en modal propio.
+  const toast = useToast();
+  const [superAdmins, setSuperAdmins] = useState([]);
+  const [superAdminLoading, setSuperAdminLoading] = useState(true);
+  const [resetSaTarget, setResetSaTarget] = useState(null);
+  const [saConfirmInput, setSaConfirmInput] = useState("");
+  const [saReset, setSaReset] = useState({ fase: "confirmando", password: null, error: null });
+
   const { sortedItems: sortedUsers, sortKey, sortDir, cycleSort } = useSortable(users, USER_COLUMNS);
 
   // Debounce de 300ms para la búsqueda
@@ -164,6 +146,9 @@ export default function UserManagement({ creators }) {
     setError(null);
     try {
       const params = { page, page_size: pageSize };
+      // Los superadmin viven en su propia tabla: excluidos del listado
+      // principal y de su paginación (filtro server-side, 2026-08-19).
+      params.exclude_role = "superadmin";
       if (filters.search) params.search = filters.search;
       if (filters.role) params.role = filters.role;
       if (filters.is_active) params.is_active = filters.is_active === "1";
@@ -180,6 +165,38 @@ export default function UserManagement({ creators }) {
     }
   };
 
+  const loadSuperAdmins = async () => {
+    try {
+      const data = await fetchUsers({ role: "superadmin", page_size: 200 });
+      setSuperAdmins(data.items);
+    } catch {
+      setSuperAdmins([]);
+    } finally {
+      setSuperAdminLoading(false);
+    }
+  };
+
+  const openResetSa = (u) => {
+    setResetSaTarget(u);
+    setSaConfirmInput("");
+    setSaReset({ fase: "confirmando", password: null, error: null });
+  };
+
+  const handleResetSa = async () => {
+    if (!resetSaTarget) return;
+    setSaReset({ fase: "enviando", password: null, error: null });
+    try {
+      const result = await resetSuperadminPassword(resetSaTarget.id);
+      setSaReset({ fase: "listo", password: result.temporary_password, error: null });
+      setSuperAdmins((prev) =>
+        prev.map((x) => (x.id === resetSaTarget.id ? { ...x, must_change_password: true } : x))
+      );
+      toast.push({ tone: "success", title: `Contraseña de ${resetSaTarget.username} reseteada` });
+    } catch (err) {
+      setSaReset({ fase: "confirmando", password: null, error: err.message });
+    }
+  };
+
   const loadRolesPorUsuario = async (usersToLoad) => {
     const entries = await mapWithConcurrencyLimit(usersToLoad, ROLES_FETCH_CONCURRENCY, async (u) => {
       try {
@@ -193,6 +210,8 @@ export default function UserManagement({ creators }) {
   };
 
   useEffect(() => { load(); }, [page, pageSize, filters]);
+
+  useEffect(() => { loadSuperAdmins(); }, []);
 
   const openCreateForm = () => {
     setEditingUser(null);
@@ -530,6 +549,119 @@ export default function UserManagement({ creators }) {
         </>
       )}
 
+      {/* ── Superadministradores: tabla separada (2026-08-19), al FONDO de la
+          sección (decisión de producto): rol y estado son inmutables por API;
+          la única gestión entre pares es el reset de contraseña con
+          confirmación fuerte — el botón solo se habilita tecleando el
+          username exacto del objetivo. */}
+      <div className="rounded-go-lg border p-4" style={{ borderColor: "var(--go-border)" }}>
+        <div className="flex items-center justify-between">
+          <span className="go-eyebrow">Superadministradores</span>
+          <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+            {superAdmins.length} cuenta{superAdmins.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        {superAdminLoading ? (
+          <p className="py-3 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
+            Cargando...
+          </p>
+        ) : superAdmins.length === 0 ? (
+          <p className="py-3 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
+            Sin superadministradores registrados.
+          </p>
+        ) : (
+          <div className="go-table-scroll-wrapper mt-2">
+            <div className="go-table-scroll overflow-x-auto">
+              <table className="go-table w-full table-fixed">
+                <colgroup>
+                  <col className="w-[120px]" />
+                  <col className="w-[150px]" />
+                  <col className="w-[190px]" />
+                  <col className="w-[120px]" />
+                  <col className="w-[110px]" />
+                  <col className="w-[75px]" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Contraseña</th>
+                    <th>Último acceso</th>
+                    <th className="text-right" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {superAdmins.map((u) => {
+                    const isSelf = u.id === currentUser.id;
+                    return (
+                      <tr
+                        key={u.id}
+                        onClick={() => setDetalleUser(u)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setDetalleUser(u);
+                          }
+                        }}
+                        tabIndex={0}
+                        title="Ver detalle"
+                        className="cursor-pointer"
+                      >
+                        <td className="truncate font-mono text-xs" title={u.username}>
+                          {u.username}
+                          {isSelf && <span className="go-badge go-badge-warning ml-1 flex-shrink-0">Tú</span>}
+                        </td>
+                        <td
+                          className="block truncate font-display text-sm font-semibold"
+                          style={{ color: "var(--go-text-primary)" }}
+                          title={u.full_name}
+                        >
+                          {u.full_name}
+                        </td>
+                        <td
+                          className="truncate font-body text-xs"
+                          style={{ color: "var(--go-text-secondary)" }}
+                          title={u.email}
+                        >
+                          {u.email}
+                        </td>
+                        <td className="whitespace-nowrap font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                          {u.must_change_password ? "Debe cambiarla" : "Definitiva"}
+                        </td>
+                        <td className="whitespace-nowrap font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                          {formatLastLogin(u.last_login)}
+                        </td>
+                        {/* stopPropagation: la acción no debe abrir el modal
+                            informativo de la fila. */}
+                        <td onClick={(e) => e.stopPropagation()}>
+                          {/* El backend 400a el reset sobre uno mismo: la UI ni
+                              siquiera ofrece la acción. */}
+                          {!isSelf && (
+                            <RowActions
+                              actions={[
+                                {
+                                  key: "reset-sa",
+                                  label: "Resetear contraseña",
+                                  icon: ICONS.resetear,
+                                  variant: "danger",
+                                  onClick: () => openResetSa(u),
+                                },
+                              ]}
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
     </GlassPanel>
 
     {formOpen && (
@@ -794,6 +926,86 @@ export default function UserManagement({ creators }) {
               Cerrar
             </button>
           </div>
+        </div>
+      </Modal>
+    )}
+
+    {/* Reset de contraseña ENTRE superadmins: confirmación fuerte — el botón
+        solo se habilita tecleando el username exacto del objetivo. */}
+    {resetSaTarget && (
+      <Modal
+        title="Resetear contraseña de superadministrador"
+        onClose={() => setResetSaTarget(null)}
+        submitting={saReset.fase === "enviando"}
+      >
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 sm:px-6 py-5">
+          {saReset.fase !== "listo" ? (
+            <>
+              <div
+                className="space-y-3 rounded-go border p-3"
+                style={{ background: "rgba(245,158,11,0.08)", borderColor: "rgba(245,158,11,0.25)" }}
+              >
+                <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
+                  Vas a resetear la contraseña de <strong>{resetSaTarget.username}</strong>{" "}
+                  ({resetSaTarget.full_name}).
+                </p>
+                <ul className="list-disc space-y-1 pl-5 font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                  <li>Su contraseña actual dejará de funcionar de inmediato.</li>
+                  <li>Se cerrarán todas sus sesiones activas.</li>
+                  <li>Recibirá una contraseña temporal y deberá cambiarla en su primer acceso.</li>
+                  <li>Si estaba bloqueada por intentos fallidos, quedará desbloqueada.</li>
+                </ul>
+              </div>
+
+              <div>
+                <label className="go-eyebrow mb-1.5 block">
+                  Escribe <span className="font-mono">{resetSaTarget.username}</span> para confirmar
+                </label>
+                <input
+                  type="text"
+                  value={saConfirmInput}
+                  onChange={(e) => setSaConfirmInput(e.target.value)}
+                  className="go-input font-mono"
+                  placeholder={resetSaTarget.username}
+                  autoComplete="off"
+                />
+              </div>
+
+              {saReset.error && (
+                <p className="font-body text-xs" style={{ color: "var(--go-error)" }}>
+                  {saReset.error}
+                </p>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setResetSaTarget(null)}
+                  disabled={saReset.fase === "enviando"}
+                  className="btn-go-ghost"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetSa}
+                  disabled={saReset.fase === "enviando" || saConfirmInput.trim() !== resetSaTarget.username}
+                  className="btn-go"
+                >
+                  {saReset.fase === "enviando" ? "Reseteando..." : "Resetear contraseña"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <PasswordTemporal username={resetSaTarget.username} password={saReset.password} />
+              <div className="flex justify-end pt-2">
+                <button type="button" onClick={() => setResetSaTarget(null)} className="btn-go">
+                  Cerrar
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
     )}

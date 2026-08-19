@@ -2,7 +2,9 @@
 
 Cambio R4 (doc/prompt-mejoras-integrales.md): antes un admin podía gestionar
 usuarios de rol 'creador'; ahora TODA la gestión de usuarios es exclusiva del
-superadmin. El rol/estado del propio superadmin sigue siendo inmutable por API.
+superadmin. El rol/estado del propio superadmin sigue siendo inmutable por API;
+su CONTRASEÑA solo puede resetearla otro superadmin
+(POST /{user_id}/reset-password-superadmin, 2026-08-19).
 """
 
 from typing import Optional
@@ -44,6 +46,10 @@ def _get_target_or_404(db: Session, user_id: int) -> models.User:
 @router.get("/", response_model=schemas.UserListResponse)
 def list_users(
     role: Optional[str] = Query(None),
+    exclude_role: Optional[str] = Query(
+        None,
+        description="Excluir este rol del listado (p.ej. superadmin en la tabla principal)",
+    ),
     search: Optional[str] = Query(None, description="Buscar en username, email o nombre"),
     is_active: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
@@ -56,6 +62,7 @@ def list_users(
     filas, total = crud.list_users(
         db,
         role=role,
+        exclude_role=exclude_role,
         search=search,
         is_active=is_active,
         page=page,
@@ -193,6 +200,54 @@ def reset_password(
         db,
         actor_user_id=current_user.id,
         action="password.reset_by_admin",
+        target_type="user",
+        target_id=target.id,
+    )
+    return schemas.ResetPasswordResponse(temporary_password=temp_password)
+
+
+@router.post("/{user_id}/reset-password-superadmin", response_model=schemas.ResetPasswordResponse)
+def reset_password_superadmin(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
+):
+    """Reset de contraseña ENTRE superadmins (2026-08-19): la única operación
+    permitida sobre la cuenta superadmin por API. Rol y estado siguen siendo
+    inmutables; esto resuelve "un superadmin perdió su contraseña" sin acceso
+    al servidor. backend/reset_superadmin_password.py queda como emergencia
+    de último recurso (cuando no hay otro superadmin disponible).
+
+    Diferencias a propósito con el script de servidor: este endpoint NO
+    reactiva un superadmin desactivado (cambiar su estado sigue prohibido) y
+    nunca aplica sobre uno mismo."""
+    target = _get_target_or_404(db, user_id)
+
+    if target.role != models.UserRole.SUPERADMIN.value:
+        raise HTTPException(
+            status_code=400, detail="El usuario destino no es superadministrador."
+        )
+    if target.id == current_user.id:
+        raise HTTPException(
+            status_code=400,
+            detail="Para tu propia contraseña usa /api/auth/change-password.",
+        )
+
+    # Desbloquea el target si estaba bloqueado por intentos fallidos (igual que
+    # el script de servidor): un reset entre pares debe poder rescatar a un
+    # superadmin bloqueado por un ataque de login. Un solo commit al final
+    # (set_user_password commitea).
+    target.failed_login_attempts = 0
+    target.locked_until = None
+
+    temp_password = security.generate_temp_password()
+    crud.set_user_password(db, target, security.hash_password(temp_password), must_change_password=True)
+    crud.revoke_all_refresh_tokens_for_user(db, target.id)
+
+    crud.log_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="password.reset_superadmin",
         target_type="user",
         target_id=target.id,
     )

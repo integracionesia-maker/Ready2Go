@@ -649,6 +649,7 @@ def list_users(
     db: Session,
     *,
     role: Optional[str] = None,
+    exclude_role: Optional[str] = None,
     search: Optional[str] = None,
     is_active: Optional[bool] = None,
     page: int = 1,
@@ -659,6 +660,10 @@ def list_users(
     q = db.query(models.User)
     if role:
         q = q.filter(models.User.role == role)
+    if exclude_role:
+        # ANTES del count(): el total de paginación debe respetar la exclusión
+        # (la tabla principal de Usuarios excluye superadmins, 2026-08-19).
+        q = q.filter(models.User.role != exclude_role)
     if is_active is not None:
         q = q.filter(models.User.is_active == is_active)
     if search:

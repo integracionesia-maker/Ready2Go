@@ -68,6 +68,12 @@ export function resetUserPassword(id) {
   return request(`/users/${id}/reset-password`, { method: "POST" });
 }
 
+// Reset de contraseña ENTRE superadmins (2026-08-19): la única operación
+// permitida sobre la cuenta superadmin; nunca aplica sobre uno mismo.
+export function resetSuperadminPassword(id) {
+  return request(`/users/${id}/reset-password-superadmin`, { method: "POST" });
+}
+
 export function setUserActive(id, isActive) {
   return request(`/users/${id}/estado`, {
     method: "PATCH",
