@@ -1,5 +1,7 @@
+import { useRef } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { LiquidGlow } from "@/design";
 import { ADMIN_ROLES, PRESUPUESTOS_ROLES } from "../roles";
 
 const NAV_ITEMS = [
@@ -62,6 +64,7 @@ const PROFILE_ITEM = {
  */
 export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount = 0, mobileOpen, onCloseMobile }) {
   const { user } = useAuth();
+  const asideRef = useRef(null);
 
   const labelClass = collapsed ? "md:hidden" : "";
 
@@ -81,6 +84,7 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
       )}
 
       <aside
+        ref={asideRef}
         className={`glass fixed left-2 md:left-3 bottom-2 md:bottom-3 top-[72px] md:top-[76px] z-40 flex h-[calc(100%-80px)] md:h-[calc(100%-88px)] w-60 flex-col transition-all duration-300 ${
           mobileOpen ? "translate-x-0" : "-translate-x-[calc(100%+0.5rem)]"
         } md:translate-x-0 ${collapsed ? "md:w-16" : "md:w-60"}`}
@@ -89,7 +93,9 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
           background: "color-mix(in srgb, var(--veil-bg) 68%, transparent)",
         }}
       >
-        {/* Brillo liquid crystal estático */}
+        {/* Brillo liquid crystal: degradado base + resplandor que sigue al
+            cursor dentro del sidebar (2026-08-19). Colapsado, el brillo solo
+            se mueve en vertical (pinX). */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -102,6 +108,7 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
                 "linear-gradient(0deg, rgba(251,103,11,0.10) 0%, rgba(251,103,11,0.05) 30%, transparent 60%, rgba(251,103,11,0.03) 100%)",
             }}
           />
+          <LiquidGlow containerRef={asideRef} pinX={collapsed} size={240} />
         </div>
 
         {/* ── Navigation ────────────────────────────────────────────────── */}

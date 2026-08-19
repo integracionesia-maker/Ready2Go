@@ -13,6 +13,7 @@ export { comprimirImagen } from "./imagen";
 export { default as EmptyState } from "./EmptyState";
 export { default as NotFoundPage } from "./NotFoundPage";
 export { default as ErrorBoundary } from "./ErrorBoundary";
+export { default as LiquidGlow } from "./LiquidGlow";
 export { default as RoleBadge } from "./RoleBadge";
 export { ToastProvider, useToast } from "./Toast";
 export { default as RowActions } from "./RowActions";
