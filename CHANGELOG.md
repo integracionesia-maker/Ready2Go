@@ -4,6 +4,21 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 
 ---
 
+## 2026-08-19 — Reset de contraseña entre superadmins (R4.1)
+
+### Agregado
+- **`POST /api/users/{id}/reset-password-superadmin`** — un superadmin puede resetear la contraseña de OTRO superadmin desde la app (antes solo con el script de servidor): contraseña temporal + `must_change_password`, revoca sesiones, desbloquea si estaba bloqueada, audita con `action="password.reset_superadmin"`. Nunca sobre uno mismo; rol y estado siguen inmutables; no reactiva cuentas desactivadas (divergencia deliberada del script de emergencia).
+- **`exclude_role` en `GET /api/users/`** — filtro server-side para que la tabla principal excluya superadmins sin romper la paginación.
+- **`backend/crear_superadmin_extra.py`** — siembra un segundo superadmin local (la API no puede crearlos por diseño; `seed_auth` solo crea si no existe ninguno).
+- **UI**: tabla separada "Superadministradores" en la gestión de usuarios (los superadmin no tienen opción de editar) con botón dedicado "Resetear contraseña" y **confirmación fuerte** — el botón solo se habilita tecleando el username exacto del objetivo. `PasswordTemporal` extraído a componente propio.
+- Tests: +8 casos (200 con segundo superadmin verificando temp/must_change/token_version/lockout/revocación/audit, login con la temporal, 400 self, 400 destino no-superadmin, 404, 403 admin, 401 sin token, `exclude_role`).
+
+### Actualizado
+- CLAUDE.md: regla de inmutabilidad enmendada (rol/estado inmutables; contraseña reseteable por otro superadmin) y conteo de pruebas.
+- `docs/presupuestos/auth/auth-arquitectura.md`: sección R4.1, fila de la matriz y notas.
+
+---
+
 ## 2026-08-18 — Diagnóstico de seguridad + lote de calidad (pulido UX/a11y/repo)
 
 ### Corregido (seguridad)
