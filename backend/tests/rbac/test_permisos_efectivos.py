@@ -95,6 +95,7 @@ BASE = {
             "cancelar",
             "exportar",
         },
+        "gastos_operativos": {"ver", "crear", "borrar", "exportar", "gestionar_rubros"},
     },
     "marketing_basico": {
         "presupuestos": {"ver_propio", "subir_ticket"},

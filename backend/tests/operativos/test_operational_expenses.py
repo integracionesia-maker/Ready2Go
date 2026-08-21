@@ -33,9 +33,16 @@ def test_rubro_nombre_duplicado_da_409(logged_in_admin):
     assert logged_in_admin.post("/api/rubros/", json={"nombre": "IA"}).status_code == 409
 
 
-def test_marketing_no_gestiona_rubros(logged_in_marketing_admin):
-    assert logged_in_marketing_admin.post("/api/rubros/", json={"nombre": "X"}).status_code == 403
-    assert logged_in_marketing_admin.get("/api/rubros/").status_code == 403
+def test_marketing_admin_si_accede(logged_in_marketing_admin):
+    # marketing_admin tiene acceso completo al módulo (igual que admin).
+    assert logged_in_marketing_admin.get("/api/rubros/").status_code == 200
+    assert logged_in_marketing_admin.post("/api/rubros/", json={"nombre": "X"}).status_code == 201
+
+
+def test_marketing_basico_no_accede(logged_in_marketing_basico):
+    # Los demás roles de marketing siguen fuera del módulo.
+    assert logged_in_marketing_basico.get("/api/rubros/").status_code == 403
+    assert logged_in_marketing_basico.get("/api/operational-expenses/").status_code == 403
 
 
 def test_active_only_oculta_desactivados_pero_conserva_historial(logged_in_admin):
@@ -131,19 +138,21 @@ def test_no_existe_borrado_fisico(cli_operativo):
 # ── Descarga del comprobante ─────────────────────────────────────────────────
 
 
-def test_descarga_comprobante_permisos(cli_operativo, logged_in_marketing_admin, client):
+def test_descarga_comprobante_permisos(cli_operativo, logged_in_creador, client):
     rid = _crear_rubro(cli_operativo)
     gid = _crear_gasto(cli_operativo, rid).json()["id"]
     assert cli_operativo.get(f"/api/operational-expenses/{gid}/file").status_code == 200
-    assert logged_in_marketing_admin.get(f"/api/operational-expenses/{gid}/file").status_code == 403
+    # Un rol sin el módulo (creador) no puede descargar el comprobante.
+    assert logged_in_creador.get(f"/api/operational-expenses/{gid}/file").status_code == 403
     assert client.get(f"/api/operational-expenses/{gid}/file").status_code == 401  # sin sesión
 
 
 # ── Permisos y aislamiento ───────────────────────────────────────────────────
 
 
-def test_marketing_y_creador_no_ven_el_modulo(logged_in_marketing_admin, logged_in_creador):
-    for cli in (logged_in_marketing_admin, logged_in_creador):
+def test_roles_sin_el_modulo_no_lo_ven(logged_in_marketing_basico, logged_in_creador):
+    # marketing_admin SÍ accede (ver test_marketing_admin_si_accede); estos no.
+    for cli in (logged_in_marketing_basico, logged_in_creador):
         assert cli.get("/api/operational-expenses/").status_code == 403
         assert cli.get("/api/operational-expenses/dashboard").status_code == 403
 

@@ -15,9 +15,9 @@ aparecen en los dashboards ni exportaciones de Presupuestos.
 
 | Rol | Acceso |
 |---|---|
-| `superadmin`, `admin` | Todo el módulo, incluida la gestión de rubros |
+| `superadmin`, `admin`, `marketing_admin` | Todo el módulo, incluida la gestión de rubros |
 | `operativo` (rol nuevo) | Todo el módulo (registrar, ver, borrar, exportar, gestionar rubros). **No** ve Presupuestos ni Equipos |
-| Roles de marketing, `creador` | Sin acceso — no ven el módulo ni su switch |
+| Resto de marketing (`marketing_presupuestos`/`marketing_equipos`/`marketing_basico`), `creador` | Sin acceso — no ven el módulo ni su switch |
 
 El switch de módulos (arriba en escritorio, abajo en móvil) solo muestra
 "Gastos Operativos" a quien tiene permiso; si es tu único módulo, no verás

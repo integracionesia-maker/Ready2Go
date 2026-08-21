@@ -8,7 +8,7 @@ import LoadingScreen from "./components/LoadingScreen";
 import { NotFoundPage, SkeletonShimmer } from "@/design";
 import { useAuth } from "@/context/AuthContext";
 import { fetchCreators, fetchCreatorsKpi, fetchBrands, fetchTickets, isNetworkError } from "@/api";
-import { ADMIN_ROLES, PRESUPUESTOS_ROLES, SUPERADMIN_ONLY, TICKETS_ROLES } from "./roles";
+import { ADMIN_ROLES, ADMINISTRACION_ROLES, PRESUPUESTOS_ROLES, SUPERADMIN_ONLY, TICKETS_ROLES } from "./roles";
 
 // React.lazy por ruta (B-I03, I1 commit 4): el dashboard y sus 5 gráficos
 // ApexCharts salen del chunk inicial. LoadingScreen sigue siendo el estado
@@ -211,7 +211,7 @@ export default function PresupuestosLayout() {
             <Route
               path="/administracion"
               element={
-                <ProtectedRoute roles={ADMIN_ROLES}>
+                <ProtectedRoute roles={ADMINISTRACION_ROLES}>
                   {loading || networkError ? (
                     <LoadingScreen isOffline={networkError} onRetry={loadData} />
                   ) : (
