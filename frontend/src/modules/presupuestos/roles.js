@@ -39,14 +39,17 @@ export const PRESUPUESTOS_ROLES = [
 export const TICKETS_ROLES = [...PRESUPUESTOS_ROLES, "creador", "marketing_basico"];
 
 /**
- * Administración (creadores/marcas del sistema) y Validación de tickets.
- * Exclusivas de admin/superadmin: los dos roles de marketing quedan
- * deliberadamente fuera de las dos.
- *
- * Validación coincide con el backend (aprobar/rechazar/borrar en `tickets.py`
- * son admin/superadmin). Administración es **más estricta que el backend** a
- * propósito: `creators.py` y `brands.py` sí dejarían crear/editar a los roles
- * de marketing, pero la vista no se les ofrece por decisión de producto.
+ * Administración: gestión de creadores y marcas (pantalla /administracion).
+ * admin, superadmin y `marketing_admin`. El backend (`creators.py`/`brands.py`)
+ * ya acepta a marketing_admin en el CRUD, así que esto solo abre la vista que
+ * lo refleja. `marketing_presupuestos` NO se incluye (decisión: solo el rol
+ * administrador de marketing gestiona el catálogo).
+ */
+export const ADMINISTRACION_ROLES = ["admin", "superadmin", "marketing_admin"];
+
+/**
+ * Validación de tickets (y borrado): exclusiva de admin/superadmin. Espejo de
+ * aprobar/rechazar/borrar en `tickets.py`, que son admin/superadmin.
  */
 export const ADMIN_ROLES = ["admin", "superadmin"];
 
