@@ -46,6 +46,22 @@ function isSystemPath(pathname) {
   return SYSTEM_PATHS.some((p) => pathname.startsWith(p));
 }
 
+/**
+ * Ruta de inicio del usuario según sus permisos: la primera pantalla a la que
+ * SÍ puede entrar. Se usa al iniciar sesión para no aterrizar a alguien en un
+ * módulo que no puede ver (ej. un rol `operativo` cayendo en Presupuestos).
+ * Prioridad: Presupuestos (default histórico y de admins) → Equipos → Gastos
+ * Operativos → perfil (piso: siempre accesible, último recurso).
+ */
+export function rutaInicioDe(permisos = {}) {
+  if ((permisos.presupuestos || []).length > 0) return "/";
+  if (Object.keys(permisos).some((m) => m.startsWith("equipos_") && permisos[m].length > 0)) {
+    return "/equipos";
+  }
+  if ((permisos.gastos_operativos || []).length > 0) return "/gastos-operativos";
+  return "/perfil";
+}
+
 export const MODULE_NAV_ITEMS = [
   {
     to: "/",
