@@ -57,15 +57,22 @@ export default function DeleteConfirmModal({ itemLabel, onClose, onSoftDelete, o
             </p>
             {errorBanner}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setStep("hard")}
-                disabled={submitting}
-                className="font-body text-xs underline"
-                style={{ color: "var(--go-text-secondary)" }}
-              >
-                Prefiero eliminarlo permanentemente
-              </button>
+              {/* La escalación a borrado físico solo se ofrece si el llamador
+                  provee onHardDelete. Módulos con solo borrado lógico (ej.
+                  Gastos Operativos) lo omiten y aquí no aparece el enlace. */}
+              {onHardDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setStep("hard")}
+                  disabled={submitting}
+                  className="font-body text-xs underline"
+                  style={{ color: "var(--go-text-secondary)" }}
+                >
+                  Prefiero eliminarlo permanentemente
+                </button>
+              ) : (
+                <span />
+              )}
               <div className="flex items-center gap-3">
                 <button type="button" onClick={onClose} disabled={submitting} className="btn-go-ghost">
                   Cancelar

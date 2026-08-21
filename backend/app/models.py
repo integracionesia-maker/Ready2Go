@@ -40,6 +40,10 @@ class UserRole(str, enum.Enum):
     # Empleado general sin acceso por defecto a ningun modulo (solo el piso:
     # inicio + perfil propio). Todo acceso se concede via paquetes aditivos.
     USUARIO = "usuario"
+    # Gastos Operativos: acumulador de gastos por rubro, contabilidad separada
+    # de marketing. Cero acceso a Presupuestos ni Equipos. Ver
+    # docs/gastos-operativos/plan-implementacion.md.
+    OPERATIVO = "operativo"
 
 
 class CyclePeriod(str, enum.Enum):
@@ -289,3 +293,4 @@ class AuditLog(Base):
 # Importarlos aqui es lo que registra sus tablas en Base.metadata.
 from .models_rbac import *  # noqa: E402,F401,F403
 from .models_equipos import *  # noqa: E402,F401,F403
+from .models_operativos import *  # noqa: E402,F401,F403

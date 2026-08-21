@@ -7,13 +7,14 @@
     "equipos_inventario": ["ver","crear","editar","auditar_condicion","dar_de_baja"],
     "equipos_prestamos": ["solicitar","ver_propios","ver_global","registrar_devolucion","cancelar","exportar"],
     "equipos_aprobacion": ["autorizar_entrega","confirmar_devolucion","cerrar_incidencia"],
+    "gastos_operativos": ["ver","crear","borrar","exportar","gestionar_rubros"],
     "usuarios": ["gestionar","gestionar_roles"],
     "auditoria": ["ver"]
   },
   "paquetes": {
     "_PISO":            {"kind":"piso",   "permisos":{"inicio":["ver"],"perfil":["ver","editar_propio"]}},
     "superadmin":       {"kind":"base",   "permisos":"*"},
-    "admin":            {"kind":"base",   "permisos":{"presupuestos":["ver_global","ver_propio","subir_ticket","validar_ticket","borrar_ticket","gestionar_ciclos","gastos_generales","exportar"],"equipos_inventario":["ver","crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["solicitar","ver_propios","ver_global","registrar_devolucion","cancelar","exportar"],"equipos_aprobacion":["autorizar_entrega","confirmar_devolucion","cerrar_incidencia"]}},
+    "admin":            {"kind":"base",   "permisos":{"presupuestos":["ver_global","ver_propio","subir_ticket","validar_ticket","borrar_ticket","gestionar_ciclos","gastos_generales","exportar"],"equipos_inventario":["ver","crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["solicitar","ver_propios","ver_global","registrar_devolucion","cancelar","exportar"],"equipos_aprobacion":["autorizar_entrega","confirmar_devolucion","cerrar_incidencia"],"gastos_operativos":["ver","crear","borrar","exportar","gestionar_rubros"]}},
     "creador":          {"kind":"base",   "permisos":{"presupuestos":["ver_propio","subir_ticket"]}},
     "marketing_presupuestos": {"kind":"base","permisos":{"presupuestos":["ver_global","ver_propio","subir_ticket","validar_ticket","borrar_ticket","gestionar_ciclos","gastos_generales","exportar"]}},
     "marketing_equipos":{"kind":"base",   "permisos":{"equipos_inventario":["ver","crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["solicitar","ver_propios","ver_global","registrar_devolucion","cancelar","exportar"]}},
@@ -21,6 +22,7 @@
     "marketing_basico": {"kind":"base",   "permisos":{"presupuestos":["ver_propio","subir_ticket"],"equipos_prestamos":["solicitar","ver_propios"]}},
     "colaborador_mkt":  {"kind":"base",   "permisos":{"equipos_inventario":["ver"],"equipos_prestamos":["solicitar","ver_propios","registrar_devolucion"]}},
     "usuario":          {"kind":"base",   "permisos":{}},
+    "operativo":        {"kind":"base",   "permisos":{"gastos_operativos":["ver","crear","borrar","exportar","gestionar_rubros"]}},
     "APROBADOR_EQUIPO": {"kind":"aditivo","permisos":{"equipos_aprobacion":["autorizar_entrega","confirmar_devolucion","cerrar_incidencia"],"equipos_prestamos":["ver_global"]}},
     "CUSTODIO_EQUIPO":  {"kind":"aditivo","permisos":{"equipos_inventario":["crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["ver_global"]}},
     "AUDITOR":          {"kind":"aditivo","permisos":{"presupuestos":["ver_global"],"equipos_inventario":["ver"],"equipos_prestamos":["ver_global"]}}

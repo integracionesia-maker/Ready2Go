@@ -45,6 +45,8 @@ MODULOS: dict[str, tuple[str, ...]] = {
         "exportar",
     ),
     "equipos_aprobacion": ("autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"),
+    # Gastos Operativos: acumulador de gastos por rubro, aislado de marketing.
+    "gastos_operativos": ("ver", "crear", "borrar", "exportar", "gestionar_rubros"),
     "usuarios": ("gestionar", "gestionar_roles"),
     "auditoria": ("ver",),
 }
@@ -96,6 +98,7 @@ PAQUETES: dict[str, dict] = {
                 "exportar",
             ),
             "equipos_aprobacion": ("autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"),
+            "gastos_operativos": ("ver", "crear", "borrar", "exportar", "gestionar_rubros"),
         },
     },
     "creador": {
@@ -188,6 +191,14 @@ PAQUETES: dict[str, dict] = {
         "permisos": {
             # Solo piso -- sin acceso a presupuestos ni equipos por defecto.
             # Los modulos se abren con paquetes aditivos.
+        },
+    },
+    "operativo": {
+        "kind": KIND_BASE,
+        "descripcion": "Gastos Operativos: registra gastos por rubro y gestiona su catalogo. "
+        "Contabilidad separada de marketing; cero acceso a Presupuestos ni Equipos.",
+        "permisos": {
+            "gastos_operativos": ("ver", "crear", "borrar", "exportar", "gestionar_rubros"),
         },
     },
     "APROBADOR_EQUIPO": {

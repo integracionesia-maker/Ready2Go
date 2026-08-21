@@ -4,6 +4,18 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 
 ---
 
+## 2026-08-21 — Módulo Gastos Operativos
+
+### Agregado
+- **Nuevo módulo Gastos Operativos**, hermano de Presupuestos y Equipos: acumulador de gastos por **rubro** (catálogo propio editable), **aislado de marketing** (tablas, dashboard y exportación propios; sus totales no entran en ningún reporte de marketing). Sin ciclo, sin validación, sin límite.
+  - Backend: tablas `expense_rubros` y `operational_expenses` (`models_operativos.py`); dos fechas (`fecha_gasto` manual define el mes, `upload_date` automática); comprobante obligatorio; **solo borrado lógico**. Endpoints `/api/rubros` (catálogo) y `/api/operational-expenses` (alta multipart, listado con filtros, descarga de comprobante autenticada, borrado lógico, `dashboard`, `export`). `crud_operativos.py`, `schemas_operativos.py`, seed idempotente `seed_gastos_operativos.py`.
+  - RBAC: módulo `gastos_operativos` (`ver`/`crear`/`borrar`/`exportar`/`gestionar_rubros`) y rol base nuevo `operativo` (solo este módulo). Acceso: `admin`, `superadmin`, `operativo`; marketing sin acceso. Reflejado en el contrato congelado `permisos_catalogo.json`.
+  - Frontend: módulo `modules/gastos-operativos/` (Layout + sidebar + Registro/Dashboard/Rubros), tercer tab en el switch de módulos (gateado por permiso), con cámara en móvil para el comprobante y visor de imágenes compartido.
+  - Pruebas: `tests/operativos/` (16) + RBAC y migración/seeds actualizados; `DeleteConfirmModal` ahora oculta el borrado físico cuando el llamador no lo provee.
+- Documentación: `docs/gastos-operativos/plan-implementacion.md` y `docs/gastos-operativos/manual-usuario.md`; regla crítica en `CLAUDE.md`; índice en `docs/README.md`.
+
+---
+
 ## 2026-08-19 — Reset de contraseña entre superadmins (R4.1)
 
 ### Agregado

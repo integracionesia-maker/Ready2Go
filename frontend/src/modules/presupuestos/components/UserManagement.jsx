@@ -25,6 +25,7 @@ const ROLE_LABELS = {
   marketing_basico: "Marketing (Básico)",
   colaborador_mkt: "Marketing",
   usuario: "Usuario",
+  operativo: "Gastos Operativos",
 };
 
 const ROLE_OPTIONS = [
@@ -36,6 +37,7 @@ const ROLE_OPTIONS = [
   { value: "marketing_basico", label: "Marketing (Básico)" },
   { value: "colaborador_mkt", label: "Marketing (legacy)" },
   { value: "usuario", label: "Usuario" },
+  { value: "operativo", label: "Gastos Operativos" },
 ];
 
 const USER_COLUMNS = [

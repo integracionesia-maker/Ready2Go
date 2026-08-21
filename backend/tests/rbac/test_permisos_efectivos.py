@@ -44,9 +44,13 @@ BASE = {
             "exportar",
         },
         "equipos_aprobacion": {"autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"},
+        "gastos_operativos": {"ver", "crear", "borrar", "exportar", "gestionar_rubros"},
     },
     "creador": {
         "presupuestos": {"ver_propio", "subir_ticket"},
+    },
+    "operativo": {
+        "gastos_operativos": {"ver", "crear", "borrar", "exportar", "gestionar_rubros"},
     },
     "marketing_presupuestos": {
         "presupuestos": {
@@ -141,6 +145,7 @@ TODO_EL_CATALOGO = {
         "exportar",
     },
     "equipos_aprobacion": {"autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"},
+    "gastos_operativos": {"ver", "crear", "borrar", "exportar", "gestionar_rubros"},
     "usuarios": {"gestionar", "gestionar_roles"},
     "auditoria": {"ver"},
 }
@@ -174,6 +179,7 @@ COMBINACIONES = [
         "marketing_admin",
         "marketing_basico",
         "colaborador_mkt",
+        "operativo",
     )
     for aditivos in subconjuntos_de_aditivos()
 ]
@@ -181,7 +187,7 @@ COMBINACIONES = [
 
 @pytest.mark.parametrize("role_base,aditivos", COMBINACIONES)
 def test_set_efectivo_de_cada_combinacion(db, catalogo, role_base, aditivos):
-    """8 roles base x 8 subconjuntos de aditivos = 64 combinaciones, una por una."""
+    """9 roles base x 8 subconjuntos de aditivos = 72 combinaciones, una por una."""
     nombre = f"u.{role_base}." + ("-".join(a.lower() for a in aditivos) or "solo")
     user = usuario_con(db, username=nombre, role=role_base, aditivos=aditivos)
 

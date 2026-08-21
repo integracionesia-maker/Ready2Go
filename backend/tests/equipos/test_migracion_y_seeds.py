@@ -351,7 +351,9 @@ def test_la_secuencia_completa_corre_dos_veces_seguidas(tmp_path):
         assert conn.execute(text("SELECT COUNT(*) FROM empresa")).scalar() == 3
         assert conn.execute(text("SELECT COUNT(*) FROM loan")).scalar() == 1
         assert conn.execute(text("SELECT COUNT(*) FROM media_asset")).scalar() == 4
-        assert conn.execute(text("SELECT COUNT(*) FROM role_permissions")).scalar() == 113
+        # 128 = 113 previos + 15 del módulo Gastos Operativos (5 acciones ×
+        # superadmin[*] + admin + el rol nuevo `operativo`).
+        assert conn.execute(text("SELECT COUNT(*) FROM role_permissions")).scalar() == 128
     motor.dispose()
 
 
