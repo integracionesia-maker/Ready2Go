@@ -1,9 +1,9 @@
 """Estructura de la carta responsiva: convierte datos ya resueltos en flowables.
 
-El texto legal es **literal de la maqueta**, no una reescritura. El plan §6 lo
-pide asi: "el texto legal completo de Situaciones extraordinarias ... tal como
-esta redactado en la maqueta". Reescribir un parrafo de responsabilidad civil
-para que "suene mejor" cambia lo que la persona firma.
+El texto legal parte de la maqueta (plan §6). El área aprobó ajustes puntuales
+(ver los comentarios en SITUACIONES_EXTRAORDINARIAS y PARRAFO_RECEPCION); fuera
+de esos, no se reescribe: cambiar un parrafo de responsabilidad civil para que
+"suene mejor" cambia lo que la persona firma.
 
 Este modulo no toca la base de datos: recibe un diccionario y devuelve flowables.
 Asi se puede probar el documento sin sembrar nada, y `responsiva.py` es el unico
@@ -65,15 +65,22 @@ SIN_NOMBRE = "(equipo)"
 
 TITULO = "CARTA RESPONSIVA DE EQUIPO"
 
+# El empleador es fijo por decisión del área (2026-08-20): antes salía de
+# {empresa}. Ese valor —la Marca elegida en el wizard— ahora acompaña al área.
 PARRAFO_RECEPCION = (
     "Por medio de la presente, hago constar que recibí el siguiente equipo para uso "
     "del desempeño de mis funciones y actividades asignadas en el área de "
-    "<b>{area}</b>, empleado de la empresa <b>{empresa}</b>."
+    "<b>{area}</b> de <b>{empresa}</b>, empleado de la empresa "
+    # El punto de "S.C." cierra la oración: no se agrega otro (evita "S.C..").
+    "<b>SERVICIOS CORPORATIVOS QUANTUM DE OCCIDENTE, S.C.</b>"
 )
 
 SUBTITULO_LEGAL = "Situaciones extraordinarias"
 
-# Literal de la maqueta, punto por punto. No se resume ni se reordena.
+# Texto de la maqueta con dos ajustes pedidos por el área (2026-08-20): en la
+# "Nota" se quitó "ya sea por cambio o terminación de contrato laboral con la
+# empresa", y se eliminó el punto de "opción de compra al término del contrato".
+# Fuera de esos cambios acordados, no se resume ni se reordena.
 SITUACIONES_EXTRAORDINARIAS = [
     (
         "Daño:",
@@ -94,19 +101,11 @@ SITUACIONES_EXTRAORDINARIAS = [
     ),
     (
         "Nota:",
-        "Al momento de entregar el equipo, ya sea por cambio o terminación de "
-        "contrato laboral con la empresa, éste deberá entregarse en óptimas "
+        "Al momento de entregar el equipo, éste deberá entregarse en óptimas "
         "condiciones físicas y bajo ninguna circunstancia el trabajador podrá "
         "eliminar la copia de seguridad de la información que se genere en el mismo; "
         "de lo contrario se aplicará el uso del pagaré correspondiente para cubrir "
         "los daños generados.",
-    ),
-    (
-        None,  # este punto va sin etiqueta en negritas
-        "Al término del contrato del equipo celular corporativo, el colaborador "
-        "tendrá la opción de adquirir el equipo pagando el valor de mercado vigente "
-        "al momento de la finalización del contrato, monto que será determinado por "
-        "la empresa conforme a una valoración comercial.",
     ),
 ]
 

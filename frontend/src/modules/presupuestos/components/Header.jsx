@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { useReducedMotion } from "motion/react";
 import ProfilePopover from "./ProfilePopover";
 import ThemeToggle from "./ThemeToggle";
@@ -25,6 +26,16 @@ const SOPORTA_HOVER_FINO =
 export default function Header({ onToggleMobileMenu, mobileMenuOpen = false, subtitle = "GOCreate" }) {
   const headerRef = useRef(null);
   const reduceMotion = useReducedMotion();
+
+  // Logo consciente del módulo: lleva al inicio del módulo donde estás, no
+  // siempre a Presupuestos. Rutas del sistema (/perfil, /auditoria, ...) caen
+  // al inicio de Presupuestos, que es el default de la app.
+  const { pathname } = useLocation();
+  const inicioModulo = pathname.startsWith("/equipos")
+    ? "/equipos"
+    : pathname.startsWith("/gastos-operativos")
+    ? "/gastos-operativos"
+    : "/";
   const interactive = SOPORTA_HOVER_FINO && !reduceMotion;
   const [glow, setGlow] = useState({ x: 0.5, visible: false });
 
@@ -117,18 +128,27 @@ export default function Header({ onToggleMobileMenu, mobileMenuOpen = false, sub
           </svg>
         </button>
 
-        <BrandLogo variant="isotipo" className="h-8 w-auto flex-shrink-0" />
-        {/* El texto se oculta en movil (<640px) y lleva max-width progresivo para
-             no chocar con el switch Presupuestos/Equipos centrado en el header.
-             Subtitulo visible solo desde md (768px) porque es lo que mas empuja. */}
-        <div className="hidden min-w-0 sm:block max-w-[100px] md:max-w-[180px] lg:max-w-none">
-          <h1 className="truncate font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
-            Grupo Ortiz
-          </h1>
-          <p className="truncate font-body text-[10px] tracking-wide hidden md:block" style={{ color: "var(--go-text-secondary)" }}>
-            {subtitle}
-          </p>
-        </div>
+        {/* Logo + marca navegan al inicio del módulo actual (inicioModulo). La
+            hamburguesa queda fuera del Link: es otra acción (abrir el drawer). */}
+        <Link
+          to={inicioModulo}
+          className="flex items-center gap-3 rounded-go transition-opacity hover:opacity-80"
+          title="Ir al inicio"
+          aria-label="Ir al inicio del módulo"
+        >
+          <BrandLogo variant="isotipo" className="h-8 w-auto flex-shrink-0" />
+          {/* El texto se oculta en movil (<640px) y lleva max-width progresivo para
+               no chocar con el switch Presupuestos/Equipos centrado en el header.
+               Subtitulo visible solo desde md (768px) porque es lo que mas empuja. */}
+          <div className="hidden min-w-0 sm:block max-w-[100px] md:max-w-[180px] lg:max-w-none">
+            <h1 className="truncate font-display text-sm font-bold uppercase tracking-[0.08em]" style={{ color: "var(--go-text-primary)" }}>
+              Grupo Ortiz
+            </h1>
+            <p className="truncate font-body text-[10px] tracking-wide hidden md:block" style={{ color: "var(--go-text-secondary)" }}>
+              {subtitle}
+            </p>
+          </div>
+        </Link>
       </div>
 
       {/* ── Module switch (center, desktop) ─────────────────────────── */}

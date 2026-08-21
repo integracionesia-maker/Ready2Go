@@ -98,6 +98,9 @@ export function createApexOptions(overrides = {}, theme = "dark") {
   if (overrides.fill) options.fill = overrides.fill;
   if (overrides.plotOptions) options.plotOptions = overrides.plotOptions;
   if (overrides.responsive) options.responsive = overrides.responsive;
+  // `labels` es el arreglo de etiquetas de los charts pie/donut/radar (no las
+  // de eje). Sin este passthrough ApexCharts cae a "series-1, series-2".
+  if (overrides.labels) options.labels = overrides.labels;
 
   return options;
 }

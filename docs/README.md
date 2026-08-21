@@ -71,6 +71,17 @@ Módulo de préstamo de equipo de grabación. **Plan aprobado, en construcción 
 
 ---
 
+## Gastos Operativos
+
+Módulo hermano de Presupuestos/Equipos: acumulador de gastos por **rubro**, **aislado de marketing**. Tablas propias, rol `operativo`, dashboard y exportación propios.
+
+| Documento | Contenido |
+|-----------|-----------|
+| [`gastos-operativos/plan-implementacion.md`](gastos-operativos/plan-implementacion.md) | Plan completo: planeación, diseño (datos, RBAC, API), implementación por WP, testeo y documentación. |
+| [`gastos-operativos/manual-usuario.md`](gastos-operativos/manual-usuario.md) | Manual por rol: registrar gastos, rubros, dashboard, exportación y reglas clave. |
+
+---
+
 ## Histórico
 
 Registros de lo que pasó durante el desarrollo. Organizados por carril (interfaz/servidor).

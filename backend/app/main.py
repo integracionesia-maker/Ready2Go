@@ -19,6 +19,7 @@ from .routers import auth, creators, brands, tickets, dashboard, users, general_
 from .routers import roles, user_roles, empresas, equipos_dashboard, equipment
 from .routers import loans, approvals, media, responsivas, notifications
 from .routers import audit_logs
+from .routers import rubros, operational_expenses
 
 Base.metadata.create_all(bind=engine)
 
@@ -89,6 +90,9 @@ app.include_router(media.router)
 # protegido con `usuarios:gestionar`, que hoy solo tiene el superadmin.
 app.include_router(notifications.router)
 app.include_router(audit_logs.router)
+# Gastos Operativos (modulo aislado de marketing)
+app.include_router(rubros.router)
+app.include_router(operational_expenses.router)
 
 # Fuerza la construccion de todos los schemas de OpenAPI (incluidos los
 # TypeAdapter de Pydantic para cada query param, ej. `Optional[date]`) en el

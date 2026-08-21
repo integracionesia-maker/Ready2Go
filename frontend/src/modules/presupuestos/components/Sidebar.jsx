@@ -179,7 +179,10 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
         </nav>
 
         {/* ── Nuevo Ticket ──────────────────────────────────────────────── */}
-        <div className="relative z-10 px-2.5 pb-3">
+        {/* pb-20 solo <640px: deja que el botón libere el switch de módulos,
+            que flota fijo abajo (AppShell, sm:hidden) y si no lo taparía. A
+            partir de sm el switch desaparece y vuelve el padding normal. */}
+        <div className="relative z-10 px-2.5 pb-20 sm:pb-3">
           <button
             onClick={onNewTicket}
             title="Nuevo Ticket"

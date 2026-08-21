@@ -129,7 +129,12 @@ def test_la_razon_social_emisora_sale_de_la_tabla(inventario, ana, db):
 
     assert "OTRA RAZON SOCIAL SA DE CV" in texto
     assert "XAXX010101000" in texto
-    assert "QUANTUM DE OCCIDENTE" not in texto
+    # Canario por RFC, no por nombre: el RFC de la emisora sembrada por defecto
+    # (SCQ1212149P0) desaparece al cambiar la fila -> el bloque emisor sale de la
+    # tabla. No se usa "QUANTUM DE OCCIDENTE" como canario porque desde
+    # 2026-08-20 ese nombre es el empleador FIJO del cuerpo de la carta y aparece
+    # siempre, sea cual sea la emisora.
+    assert "SCQ1212149P0" not in texto
 
 
 def test_sin_emisora_configurada_no_se_confirma(db, catalogo):
@@ -155,10 +160,11 @@ def test_el_texto_legal_es_literal(inventario, ana, db):
         assert " ".join(cuerpo.split()) in texto, (etiqueta, cuerpo[:40])
 
 
-def test_estan_los_cinco_puntos_de_situaciones_extraordinarias():
-    """Dano, robo, perdida, entrega al termino de contrato y opcion de compra."""
+def test_estan_los_cuatro_puntos_de_situaciones_extraordinarias():
+    """Daño, robo, pérdida y la Nota de entrega. El quinto punto (opción de
+    compra al término del contrato) se eliminó por decisión del área (2026-08-20)."""
     etiquetas = [e for e, _ in plantilla.SITUACIONES_EXTRAORDINARIAS]
-    assert etiquetas == ["Daño:", "Robo:", "Pérdida:", "Nota:", None]
+    assert etiquetas == ["Daño:", "Robo:", "Pérdida:", "Nota:"]
 
 
 def test_los_pies_de_firma_son_los_de_la_maqueta():

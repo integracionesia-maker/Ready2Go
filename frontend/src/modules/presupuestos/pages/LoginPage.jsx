@@ -2,8 +2,19 @@ import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import BrandLogo from "../components/BrandLogo";
+import { rutaInicioDe } from "@/shell/navItems";
 
 import { usePageTitle } from "@/design";
+
+/**
+ * A dónde mandar tras iniciar sesión: si hay un destino previo real (deep link
+ * que rebotó a /login), se respeta; si no (login normal, `from` = "/"), se cae
+ * a la ruta de inicio que corresponde al rol, no siempre a Presupuestos.
+ */
+function destinoLogin(fromPath, permisos) {
+  if (fromPath && fromPath !== "/" && fromPath !== "/login") return fromPath;
+  return rutaInicioDe(permisos);
+}
 
 export default function LoginPage() {
   usePageTitle("Iniciar sesión");
@@ -18,8 +29,7 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
 
   if (!loading && user) {
-    const from = location.state?.from?.pathname || "/";
-    return <Navigate to={from} replace />;
+    return <Navigate to={destinoLogin(location.state?.from?.pathname, user.permisos)} replace />;
   }
 
   const handleSubmit = async (e) => {
@@ -27,9 +37,8 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(identificador, password);
-      const from = location.state?.from?.pathname || "/";
-      navigate(from, { replace: true });
+      const me = await login(identificador, password);
+      navigate(destinoLogin(location.state?.from?.pathname, me.permisos), { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
