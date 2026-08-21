@@ -25,7 +25,12 @@ switch — entras directo.
 
 ## Pantallas
 
-### 1. Registro
+### Inicio
+Portada del módulo: accesos rápidos a Registro, Dashboard y Rubros, y el total
+gastado en el mes en curso. Es a donde lleva el logo de Grupo Ortiz cuando estás
+dentro del módulo.
+
+### Registro
 Lista de gastos del periodo seleccionado, con su **total**. Filtra por rango de
 fechas y por rubro. Botón **Nuevo Gasto** abre el formulario:
 
@@ -42,7 +47,7 @@ En cada fila: **Ver comprobante** (visor con zoom) y **Eliminar** (borrado
 lógico — el gasto deja de contar pero se conserva para auditoría; **no** hay
 borrado permanente en este módulo).
 
-### 2. Dashboard
+### Dashboard
 Total gastado, número de gastos y rubros con gasto, más:
 - **Distribución por rubro** (dona).
 - **Gasto por mes** (barras), calculado por la fecha del gasto.
@@ -50,7 +55,7 @@ Total gastado, número de gastos y rubros con gasto, más:
 
 Todo respeta el rango de fechas elegido.
 
-### 3. Rubros
+### Rubros
 Catálogo de clasificaciones. Crear, renombrar y **activar/desactivar**.
 Desactivar un rubro lo oculta de los formularios de alta pero conserva los
 gastos históricos que ya lo usaban. Un nombre de rubro no se puede repetir.

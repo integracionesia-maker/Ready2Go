@@ -4,6 +4,7 @@ import Header from "@/modules/presupuestos/components/Header";
 import { NotFoundPage } from "@/design";
 import { useAuth } from "@/context/AuthContext";
 import OperativosSidebar from "./components/OperativosSidebar";
+import InicioPage from "./pages/InicioPage";
 import RegistroPage from "./pages/RegistroPage";
 import DashboardOperativoPage from "./pages/DashboardOperativoPage";
 import RubrosPage from "./pages/RubrosPage";
@@ -56,7 +57,8 @@ export default function GastosOperativosLayout() {
       >
         <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <Routes>
-            <Route index element={<RegistroPage />} />
+            <Route index element={<InicioPage />} />
+            <Route path="registro" element={<RegistroPage />} />
             <Route path="dashboard" element={<DashboardOperativoPage />} />
             <Route
               path="rubros"
