@@ -18,7 +18,7 @@
     "creador":          {"kind":"base",   "permisos":{"presupuestos":["ver_propio","subir_ticket"]}},
     "marketing_presupuestos": {"kind":"base","permisos":{"presupuestos":["ver_global","ver_propio","subir_ticket","validar_ticket","borrar_ticket","gestionar_ciclos","gastos_generales","exportar"]}},
     "marketing_equipos":{"kind":"base",   "permisos":{"equipos_inventario":["ver","crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["solicitar","ver_propios","ver_global","registrar_devolucion","cancelar","exportar"]}},
-    "marketing_admin":  {"kind":"base",   "permisos":{"presupuestos":["ver_global","ver_propio","subir_ticket","validar_ticket","borrar_ticket","gestionar_ciclos","gastos_generales","exportar"],"equipos_inventario":["ver","crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["solicitar","ver_propios","ver_global","registrar_devolucion","cancelar","exportar"]}},
+    "marketing_admin":  {"kind":"base",   "permisos":{"presupuestos":["ver_global","ver_propio","subir_ticket","validar_ticket","borrar_ticket","gestionar_ciclos","gastos_generales","exportar"],"equipos_inventario":["ver","crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["solicitar","ver_propios","ver_global","registrar_devolucion","cancelar","exportar"],"gastos_operativos":["ver","crear","borrar","exportar","gestionar_rubros"]}},
     "marketing_basico": {"kind":"base",   "permisos":{"presupuestos":["ver_propio","subir_ticket"],"equipos_prestamos":["solicitar","ver_propios"]}},
     "colaborador_mkt":  {"kind":"base",   "permisos":{"equipos_inventario":["ver"],"equipos_prestamos":["solicitar","ver_propios","registrar_devolucion"]}},
     "usuario":          {"kind":"base",   "permisos":{}},

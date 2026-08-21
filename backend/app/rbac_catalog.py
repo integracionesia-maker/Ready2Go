@@ -164,6 +164,7 @@ PAQUETES: dict[str, dict] = {
                 "cancelar",
                 "exportar",
             ),
+            "gastos_operativos": ("ver", "crear", "borrar", "exportar", "gestionar_rubros"),
         },
     },
     "marketing_basico": {
