@@ -5,7 +5,7 @@ from datetime import date
 
 import pytest
 
-from app import crud
+from app import crud, models
 
 from .conftest import make_ticket
 
@@ -143,6 +143,77 @@ class TestCreatorsPermissions:
         assert resp.json()["cycle_amount"] == 500
         cid = resp.json()["id"]
         assert logged_in_admin.put(f"/api/creators/{cid}", json={"is_active": False}).status_code == 200
+
+    def test_admin_can_create_creator_without_cycle_config(self, logged_in_admin, db):
+        # Creador nuevo sin monto ni periodicidad (persona recién ingresada):
+        # la configuración queda NULL y se materializa un ciclo mensual de $0.
+        resp = logged_in_admin.post(
+            "/api/creators/",
+            json={
+                "name": "Sin Ciclo",
+                "username": "sin_ciclo",
+                "email": "sin_ciclo@example.com",
+            },
+        )
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["cycle_amount"] == 0
+        assert body["cycle_period"] == "mensual"
+        assert body["temporary_password"]
+        creator = db.query(models.Creator).filter(models.Creator.id == body["id"]).first()
+        assert creator.cycle_budget_amount is None
+        assert creator.cycle_period is None
+        assert logged_in_admin.get(f"/api/creators/{creator.id}/ciclos").status_code == 200
+
+    def test_admin_can_create_creator_with_explicit_null_cycle(self, logged_in_admin, db):
+        resp = logged_in_admin.post(
+            "/api/creators/",
+            json={
+                "name": "Null Explicito",
+                "cycle_budget_amount": None,
+                "cycle_period": None,
+                "username": "null_ciclo",
+                "email": "null_ciclo@example.com",
+            },
+        )
+        assert resp.status_code == 201
+        creator = db.query(models.Creator).filter(models.Creator.id == resp.json()["id"]).first()
+        assert creator.cycle_budget_amount is None
+        assert creator.cycle_period is None
+
+    def test_creator_cycle_period_empty_string_rejected(self, logged_in_admin):
+        resp = logged_in_admin.post(
+            "/api/creators/",
+            json={
+                "name": "Period Vacio",
+                "cycle_budget_amount": 500,
+                "cycle_period": "",
+                "username": "period_vacio",
+                "email": "period_vacio@example.com",
+            },
+        )
+        assert resp.status_code == 400
+
+    def test_admin_can_clear_cycle_config(self, logged_in_admin, db):
+        resp = logged_in_admin.post(
+            "/api/creators/",
+            json={
+                "name": "Con Config",
+                "cycle_budget_amount": 500,
+                "cycle_period": "semanal",
+                "username": "con_config",
+                "email": "con_config@example.com",
+            },
+        )
+        cid = resp.json()["id"]
+        upd = logged_in_admin.put(
+            f"/api/creators/{cid}",
+            json={"cycle_budget_amount": None, "cycle_period": None},
+        )
+        assert upd.status_code == 200
+        creator = db.query(models.Creator).filter(models.Creator.id == cid).first()
+        assert creator.cycle_budget_amount is None
+        assert creator.cycle_period is None
 
     def test_superadmin_can_see_kpi(self, logged_in_superadmin, creator_a):
         assert logged_in_superadmin.get("/api/creators/kpi").status_code == 200

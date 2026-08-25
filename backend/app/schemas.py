@@ -8,8 +8,11 @@ from pydantic import BaseModel, EmailStr, Field
 
 class CreatorCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
-    cycle_budget_amount: float = Field(..., gt=0, description="Monto del ciclo (semanal/mensual)")
-    cycle_period: str = Field(..., description="'semanal' o 'mensual'")
+    # Configuración de ciclo OPCIONAL: un creador nuevo puede entrar sin monto
+    # ni periodicidad definidos (ej. persona recién ingresada) y configurarse
+    # después vía PUT con los mismos campos.
+    cycle_budget_amount: Optional[float] = Field(None, gt=0, description="Monto del ciclo (semanal/mensual). Opcional")
+    cycle_period: Optional[str] = Field(None, description="'semanal' o 'mensual'. Opcional")
     initial_budget: float = Field(0.0, ge=0, description="Histórico acumulado, opcional")
     # Datos para crear el usuario vinculado (rol "creador")
     # El full_name del usuario se toma del name del creador automáticamente

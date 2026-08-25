@@ -88,7 +88,9 @@ export default function AdminView({ creators, brands, onChange }) {
     setCopied(false);
     setEditingCreator(creator);
     setFormName(creator ? creator.name : "");
-    setFormBudget(creator ? String(creator.cycle_amount ?? "") : "");
+    // Creador sin configuración de ciclo: ciclo materializado es $0; abrir el
+    // formulario con monto vacío (no "0") para que guardar sea un no-op.
+    setFormBudget(creator && creator.cycle_amount ? String(creator.cycle_amount) : "");
     setFormCyclePeriod(creator ? creator.cycle_period || "mensual" : "mensual");
     setFormUsername("");
     setFormUserEmail("");
@@ -171,7 +173,8 @@ export default function AdminView({ creators, brands, onChange }) {
     const name = formName.trim();
     if (!name) { setError("El nombre es obligatorio."); return; }
     if (name.length > 100) { setError("El nombre no puede exceder 100 caracteres."); return; }
-    if (!formBudget || Number(formBudget) <= 0) { setError("El monto del ciclo debe ser mayor a $0."); return; }
+    // Monto opcional: vacío = creador sin configuración de ciclo todavía.
+    if (formBudget !== "" && Number(formBudget) <= 0) { setError("El monto del ciclo debe ser mayor a $0."); return; }
 
     // Validar campos del usuario vinculado (solo al crear)
     if (!editingCreator) {
@@ -190,16 +193,16 @@ export default function AdminView({ creators, brands, onChange }) {
       if (editingCreator) {
         await updateCreator(editingCreator.id, {
           name,
-          cycle_budget_amount: Number(formBudget),
-          cycle_period: formCyclePeriod,
+          cycle_budget_amount: hasBudget ? Number(formBudget) : null,
+          cycle_period: hasBudget ? formCyclePeriod : null,
         });
         setSuccessMsg("Creador actualizado.");
         setTimeout(() => { closeCreatorForm(); onChange(); }, 800);
       } else {
         const result = await createCreator({
           name,
-          cycle_budget_amount: Number(formBudget),
-          cycle_period: formCyclePeriod,
+          cycle_budget_amount: hasBudget ? Number(formBudget) : null,
+          cycle_period: hasBudget ? formCyclePeriod : null,
           username: formUsername.trim(),
           email: formUserEmail.trim(),
         });
@@ -271,9 +274,11 @@ export default function AdminView({ creators, brands, onChange }) {
 
   /* ── Derived ─────────────────────────────────────────────────────────── */
 
+  const hasBudget = formBudget !== "" && Number(formBudget) > 0;
+
   const budgetWarning =
     editingCreator &&
-    formBudget !== "" &&
+    hasBudget &&
     Number(formBudget) < (editingCreator.cycle_spent ?? 0);
 
   const toggleText = confirmToggle
@@ -602,7 +607,12 @@ export default function AdminView({ creators, brands, onChange }) {
               </div>
 
               <div>
-                <label className="go-eyebrow mb-1 block">Monto del ciclo</label>
+                <label className="go-eyebrow mb-1 block">
+                  Monto del ciclo{" "}
+                  <span className="font-normal" style={{ color: "var(--go-text-muted)" }}>
+                    (Opcional)
+                  </span>
+                </label>
                 <div className="relative">
                   <span
                     className="absolute left-3.5 top-[10px] font-mono text-sm"
@@ -616,11 +626,13 @@ export default function AdminView({ creators, brands, onChange }) {
                     min="0.01"
                     value={formBudget}
                     onChange={(e) => setFormBudget(e.target.value)}
-                    placeholder="0.00"
+                    placeholder="Sin definir"
                     className="go-input pl-7 font-mono"
-                    required
                   />
                 </div>
+                <p className="mt-1 font-body text-[10px]" style={{ color: "var(--go-text-muted)" }}>
+                  Déjalo vacío si aún no tiene monto definido; podrás configurarlo después.
+                </p>
               </div>
             </div>
 
@@ -630,10 +642,16 @@ export default function AdminView({ creators, brands, onChange }) {
                 value={formCyclePeriod}
                 onChange={(e) => setFormCyclePeriod(e.target.value)}
                 className="go-select"
+                disabled={!hasBudget}
               >
                 <option value="mensual">Mensual</option>
                 <option value="semanal">Semanal</option>
               </select>
+              {!hasBudget && (
+                <p className="mt-1 font-body text-[10px]" style={{ color: "var(--go-text-muted)" }}>
+                  Se define junto con el monto del ciclo.
+                </p>
+              )}
             </div>
 
             {/* ── Cuenta de acceso (solo al crear) ──────────────────────── */}
