@@ -17,7 +17,7 @@ const TABS = [
  */
 import { usePageTitle } from "@/design";
 
-export default function SystemAdminPage({ creators }) {
+export default function SystemAdminPage({ creators, onCreatorsChange }) {
   usePageTitle("Administración del Sistema");
   const [tab, setTab] = useState("usuarios");
 
@@ -74,7 +74,9 @@ export default function SystemAdminPage({ creators }) {
         </nav>
       </div>
 
-      {tab === "usuarios" && <UserManagement creators={creators} />}
+      {tab === "usuarios" && (
+        <UserManagement creators={creators} onCreatorsChange={onCreatorsChange} />
+      )}
       {tab === "roles" && <RoleManagement />}
       {tab === "asignaciones" &&
         (usersError ? (

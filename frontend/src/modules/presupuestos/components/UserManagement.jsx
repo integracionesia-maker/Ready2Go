@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  createCreator,
   createUser,
   fetchUserRoles,
   fetchUsers,
@@ -53,7 +54,19 @@ function formatLastLogin(iso) {
 }
 
 function emptyForm() {
-  return { username: "", email: "", full_name: "", role: "creador", creator_id: "", password: "" };
+  return {
+    username: "",
+    email: "",
+    full_name: "",
+    role: "creador",
+    creator_id: "",
+    password: "",
+    // Solo aplica al crear un usuario rol "creador": vincular a un creador
+    // existente o crear el creador nuevo en el momento (con su ciclo opcional).
+    link_mode: "existente",
+    cycle_budget_amount: "",
+    cycle_period: "mensual",
+  };
 }
 
 // Reseteo de contraseña: idle → confirmando → enviando → listo. Vive dentro del
@@ -93,7 +106,7 @@ async function mapWithConcurrencyLimit(items, limit, fn) {
   return results;
 }
 
-export default function UserManagement({ creators }) {
+export default function UserManagement({ creators, onCreatorsChange }) {
   const { user: currentUser } = useAuth();
 
   const [users, setUsers] = useState([]);
@@ -113,6 +126,8 @@ export default function UserManagement({ creators }) {
   const [formData, setFormData] = useState(emptyForm());
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
+  // Contraseña temporal del creador recién creado (modo "crear nuevo creador").
+  const [createdPassword, setCreatedPassword] = useState(null);
 
   const [confirmToggle, setConfirmToggle] = useState(null);
 
@@ -219,6 +234,7 @@ export default function UserManagement({ creators }) {
     setEditingUser(null);
     setFormData(emptyForm());
     setFormError(null);
+    setCreatedPassword(null);
     setReset(RESET_INICIAL);
     setFormOpen(true);
   };
@@ -242,6 +258,7 @@ export default function UserManagement({ creators }) {
     setFormOpen(false);
     setEditingUser(null);
     setFormError(null);
+    setCreatedPassword(null);
     setReset(RESET_INICIAL);
   };
 
@@ -250,6 +267,27 @@ export default function UserManagement({ creators }) {
     setFormError(null);
     setSubmitting(true);
     try {
+      // Modo "crear nuevo creador": delega a POST /api/creators, que crea el
+      // creator y su usuario vinculado (contraseña temporal) en una sola
+      // llamada. El modal se queda abierto mostrando la contraseña.
+      if (!editingUser && formData.role === "creador" && formData.link_mode === "nuevo") {
+        const hasBudget =
+          formData.cycle_budget_amount !== "" && Number(formData.cycle_budget_amount) > 0;
+        const result = await createCreator({
+          name: formData.full_name.trim(),
+          username: formData.username,
+          email: formData.email,
+          cycle_budget_amount: hasBudget ? Number(formData.cycle_budget_amount) : null,
+          cycle_period: hasBudget ? formData.cycle_period : null,
+        });
+        if (result.temporary_password) {
+          setCreatedPassword({ username: formData.username, password: result.temporary_password });
+        }
+        load();
+        onCreatorsChange?.();
+        return;
+      }
+
       const creatorId = formData.role === "creador" ? Number(formData.creator_id) || null : null;
       if (editingUser) {
         await updateUser(editingUser.id, {
@@ -687,7 +725,11 @@ export default function UserManagement({ creators }) {
             </div>
           )}
           <div>
-            <label className="go-eyebrow mb-1.5 block">Nombre completo</label>
+            <label className="go-eyebrow mb-1.5 block">
+              {!editingUser && formData.role === "creador" && formData.link_mode === "nuevo"
+                ? "Nombre completo del creador"
+                : "Nombre completo"}
+            </label>
             <input
               type="text"
               value={formData.full_name}
@@ -696,6 +738,11 @@ export default function UserManagement({ creators }) {
               maxLength={150}
               required
             />
+            {!editingUser && formData.role === "creador" && formData.link_mode === "nuevo" && (
+              <p className="mt-1 font-body text-[10px]" style={{ color: "var(--go-text-muted)" }}>
+                Será el nombre del creador y de su cuenta de usuario.
+              </p>
+            )}
           </div>
           <div>
             <label className="go-eyebrow mb-1.5 block">Correo</label>
@@ -721,7 +768,57 @@ export default function UserManagement({ creators }) {
               ))}
             </select>
           </div>
-          {formData.role === "creador" && (
+          {!editingUser && formData.role === "creador" && (
+            <div>
+              <label className="go-eyebrow mb-1.5 block">Creador</label>
+              {/* Radios a propósito (no select): los e2e indexan selects por
+                  posición (select.nth(1) = creador vinculado) y un select nuevo
+                  los desplazaría. Default "existente" conserva el flujo actual. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label
+                  className="flex cursor-pointer items-center gap-2 rounded-go border px-3 py-2"
+                  style={{
+                    borderColor:
+                      formData.link_mode === "existente" ? "var(--go-orange)" : "var(--go-border)",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="link_mode"
+                    value="existente"
+                    checked={formData.link_mode === "existente"}
+                    onChange={(e) =>
+                      setFormData({ ...formData, link_mode: e.target.value, creator_id: "" })
+                    }
+                  />
+                  <span className="font-body text-xs" style={{ color: "var(--go-text-primary)" }}>
+                    Vincular a uno existente
+                  </span>
+                </label>
+                <label
+                  className="flex cursor-pointer items-center gap-2 rounded-go border px-3 py-2"
+                  style={{
+                    borderColor:
+                      formData.link_mode === "nuevo" ? "var(--go-orange)" : "var(--go-border)",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="link_mode"
+                    value="nuevo"
+                    checked={formData.link_mode === "nuevo"}
+                    onChange={(e) =>
+                      setFormData({ ...formData, link_mode: e.target.value, creator_id: "" })
+                    }
+                  />
+                  <span className="font-body text-xs" style={{ color: "var(--go-text-primary)" }}>
+                    Crear creador nuevo
+                  </span>
+                </label>
+              </div>
+            </div>
+          )}
+          {formData.role === "creador" && formData.link_mode === "existente" && (
             <div>
               <label className="go-eyebrow mb-1.5 block">Creador vinculado</label>
               <select
@@ -739,7 +836,45 @@ export default function UserManagement({ creators }) {
               </select>
             </div>
           )}
-          {!editingUser && (
+          {!editingUser && formData.role === "creador" && formData.link_mode === "nuevo" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="go-eyebrow mb-1.5 block">
+                  Monto del ciclo{" "}
+                  <span style={{ color: "var(--go-text-muted)" }}>(Opcional)</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.cycle_budget_amount}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cycle_budget_amount: e.target.value })
+                  }
+                  placeholder="Sin definir"
+                  className="go-input font-mono"
+                />
+                <p className="mt-1 font-body text-[10px]" style={{ color: "var(--go-text-muted)" }}>
+                  Déjalo vacío si aún no tiene monto definido.
+                </p>
+              </div>
+              <div>
+                <label className="go-eyebrow mb-1.5 block">Periodicidad</label>
+                <select
+                  value={formData.cycle_period}
+                  onChange={(e) => setFormData({ ...formData, cycle_period: e.target.value })}
+                  className="go-select"
+                  disabled={
+                    formData.cycle_budget_amount === "" || Number(formData.cycle_budget_amount) <= 0
+                  }
+                >
+                  <option value="mensual">Mensual</option>
+                  <option value="semanal">Semanal</option>
+                </select>
+              </div>
+            </div>
+          )}
+          {!editingUser && !(formData.role === "creador" && formData.link_mode === "nuevo") && (
             <div>
               <label className="go-eyebrow mb-1.5 block">Contraseña (opcional)</label>
               <input
@@ -833,13 +968,23 @@ export default function UserManagement({ creators }) {
             </div>
           )}
 
+          {createdPassword && (
+            <PasswordTemporal
+              username={createdPassword.username}
+              password={createdPassword.password}
+              variant="create"
+            />
+          )}
+
           <div className="flex items-center justify-end gap-3 pt-2">
             <button type="button" onClick={closeForm} disabled={submitting} className="btn-go-ghost">
-              Cancelar
+              {createdPassword ? "Cerrar" : "Cancelar"}
             </button>
-            <button type="submit" disabled={submitting} className="btn-go">
-              {submitting ? "Guardando..." : editingUser ? "Guardar" : "Crear"}
-            </button>
+            {!createdPassword && (
+              <button type="submit" disabled={submitting} className="btn-go">
+                {submitting ? "Guardando..." : editingUser ? "Guardar" : "Crear"}
+              </button>
+            )}
           </div>
         </form>
       </Modal>
