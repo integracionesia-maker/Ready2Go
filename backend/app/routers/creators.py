@@ -79,7 +79,8 @@ def create_creator(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
-    _validate_period(data.cycle_period)
+    if data.cycle_period is not None:
+        _validate_period(data.cycle_period)
     creator = crud.create_creator(db, data)
 
     # Crear usuario vinculado con rol "creador"

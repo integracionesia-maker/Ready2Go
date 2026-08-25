@@ -8,7 +8,7 @@ import { useState } from "react";
  * Compartido entre el modal de edición de usuarios y el reset entre
  * superadmins (2026-08-19).
  */
-export default function PasswordTemporal({ username, password }) {
+export default function PasswordTemporal({ username, password, variant = "reset" }) {
   const [copiado, setCopiado] = useState(false);
 
   const copiar = async () => {
@@ -29,7 +29,10 @@ export default function PasswordTemporal({ username, password }) {
     >
       <p className="font-body text-xs" style={{ color: "var(--go-text-primary)" }}>
         Contraseña temporal de <strong>{username}</strong>. Solo se muestra una vez — cópiala antes
-        de cerrar. Sus sesiones activas se cerraron y deberá cambiarla al entrar.
+        de cerrar.{" "}
+        {variant === "create"
+          ? "Deberá cambiarla en su primer inicio de sesión."
+          : "Sus sesiones activas se cerraron y deberá cambiarla al entrar."}
       </p>
       <div className="flex items-center gap-2">
         <code className="go-input select-all flex-1 font-mono text-sm">{password}</code>

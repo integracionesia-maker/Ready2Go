@@ -247,7 +247,10 @@ export default function PresupuestosLayout() {
                   {loading || networkError ? (
                     <LoadingScreen isOffline={networkError} onRetry={loadData} />
                   ) : (
-                    <SystemAdminPage creators={creators} />
+                    <SystemAdminPage
+                      creators={creators}
+                      onCreatorsChange={() => loadData({ silent: true })}
+                    />
                   )}
                 </ProtectedRoute>
               }
