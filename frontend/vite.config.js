@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { fileURLToPath, URL } from "node:url";
 
 import { defineConfig } from "vite";
@@ -9,14 +10,40 @@ import pkg from "./package.json";
 // sin tocar el valor por defecto de desarrollo (127.0.0.1:8000).
 const backendPort = process.env.VITE_BACKEND_PORT || "8000";
 
+// Hash del commit desplegado. Lo consume el panel "acerca de" (design/AboutPanel.jsx)
+// y sirve para soporte: la versión de package.json solo cambia en release, así que
+// entre releases el hash es lo único que distingue un build de otro.
+// Con fallback: un build desde un tarball sin `.git` (o sin git instalado) no debe
+// romperse — degrada a "sin-git" en vez de tumbar el `vite build`.
+function commitHash() {
+  try {
+    return execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+  } catch {
+    return "sin-git";
+  }
+}
+
+// Identidad del build, visible en la UI (menú de perfil y panel "acerca de").
+// Va por `process.env.VITE_*` y NO por `define`: el plugin `vite:define` de Vite
+// sale temprano cuando el consumidor es el cliente y no es build, así que en el
+// dev server no sustituye nada y el identificador llega crudo al navegador
+// (ReferenceError al renderizar). Vite copia a `import.meta.env` toda variable
+// de process.env con prefijo VITE_, y eso sí funciona en dev y en build.
+// Se leen desde `src/design/buildInfo.js`.
+// Bumpear `version` en package.json al hacer release.
+process.env.VITE_APP_VERSION = pkg.version;
+process.env.VITE_COMMIT_HASH = commitHash();
+// Fecha en formato local corto (es-MX): se muestra a personas, no se parsea.
+process.env.VITE_BUILD_DATE = new Date().toLocaleDateString("es-MX", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
 export default defineConfig({
   plugins: [react()],
-  define: {
-    // Versión de la app visible en la UI (menú de perfil): se mantiene en
-    // package.json y el build la inyecta como constante (lote de calidad
-    // 2026-08-18). Bumpear `version` en package.json al hacer release.
-    __APP_VERSION__: JSON.stringify(pkg.version),
-  },
   resolve: {
     // Alias de rutas del proyecto. NUNCA agregar aquí `react` ni `react-dom`:
     // ese alias manual causó el bug de "Invalid hook call" (resuelto 2026-07-15).
