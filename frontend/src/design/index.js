@@ -2,6 +2,8 @@ export { default as GlassPanel } from "./GlassPanel";
 export { default as SectionCard } from "./SectionCard";
 export { default as GlassNav } from "./GlassNav";
 export { default as GlassModal } from "./GlassModal";
+export { default as AboutPanel } from "./AboutPanel";
+export { APP_VERSION, BUILD_DATE, COMMIT_HASH, entornoActual } from "./buildInfo";
 export { default as GlassFilterDefs } from "./GlassFilterDefs";
 export { default as KpiTile } from "./KpiTile";
 export { default as StatusDonut } from "./StatusDonut";

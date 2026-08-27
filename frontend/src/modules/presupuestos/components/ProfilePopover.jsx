@@ -1,7 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { ICONS } from "@/design";
+import { AboutPanel, APP_VERSION, ICONS } from "@/design";
+
+/** Clics sobre la versión que abren el panel "acerca de" (design/AboutPanel.jsx). */
+const TAPS_PARA_ABRIR = 7;
+/** Sin clics durante este tiempo, el contador vuelve a cero: así los clics
+ *  sueltos de toda una sesión no se acumulan hasta disparar el panel solos. */
+const MS_PARA_OLVIDAR = 2000;
 
 const ROLE_LABELS = {
   superadmin: "Superadministrador",
@@ -33,6 +39,31 @@ export default function ProfilePopover({ onBeforeToggle }) {
   const containerRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Easter egg: 7 clics sobre la versión abren el panel "acerca de".
+  const [taps, setTaps] = useState(0);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const tapTimer = useRef(null);
+
+  // El temporizador vive fuera de React, así que hay que limpiarlo a mano al
+  // desmontar; si no, dispara un setState sobre un componente que ya no está.
+  useEffect(() => () => clearTimeout(tapTimer.current), []);
+
+  const registrarTap = useCallback(() => {
+    clearTimeout(tapTimer.current);
+    setTaps((previos) => {
+      const siguiente = previos + 1;
+      if (siguiente >= TAPS_PARA_ABRIR) {
+        // El popover se cierra: el panel es un modal a pantalla completa y
+        // dejar el menú abierto detrás se ve como un bug.
+        setOpen(false);
+        setAboutOpen(true);
+        return 0;
+      }
+      tapTimer.current = setTimeout(() => setTaps(0), MS_PARA_OLVIDAR);
+      return siguiente;
+    });
+  }, []);
 
   useEffect(() => {
     setOpen(false);
@@ -175,17 +206,39 @@ export default function ProfilePopover({ onBeforeToggle }) {
             </button>
             {/* Versión de la app (lote de calidad 2026-08-18): para soporte
                 interno — "¿qué versión ves en el menú de perfil?".
-                __APP_VERSION__ la inyecta vite.config.js desde package.json. */}
+                La versión sale de `design/buildInfo.js` (ver ahí por qué va por
+                import.meta.env y no por `define`).
+
+                Y desde 2026-08-27, el disparador del panel "acerca de": 7 clics
+                aquí lo abren. Sin `cursor-pointer` a propósito — es un easter
+                egg, no debe anunciarse como botón. `select-none` evita que los
+                clics rápidos seleccionen el texto. */}
             <div
               className="relative z-10 border-t px-4 py-2 text-center"
               style={{ borderColor: "var(--go-border)" }}
             >
-              <p className="font-mono text-[11px]" style={{ color: "var(--go-text-muted)" }}>
-                GOCreate v{__APP_VERSION__}
+              <p
+                onClick={registrarTap}
+                className="select-none font-mono text-[11px]"
+                style={{ color: "var(--go-text-muted)" }}
+              >
+                GOCreate v{APP_VERSION}
+                {/* A partir del quinto clic se muestra cuántos faltan: sin esta
+                    pista, quien va llegando abandona en el sexto y nunca sabe
+                    que había algo. */}
+                {taps >= 5 && (
+                  <span style={{ color: "var(--go-orange)" }}> · {TAPS_PARA_ABRIR - taps}</span>
+                )}
               </p>
             </div>
           </div>
       )}
+
+      {/* Fuera del bloque del popover: al abrirse el panel el menú se cierra, y
+          si viviera dentro se desmontaría con él. Se renderiza con portal a
+          document.body (ver el comentario de AboutPanel.jsx sobre el
+          backdrop-filter del header). */}
+      <AboutPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 }
