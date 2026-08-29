@@ -29,10 +29,12 @@ docs/
 │   ├── prompt-*.md                    ← Prompts históricos ya ejecutados
 │   ├── auditoria-responsividad-movil.md ← Auditoría original de responsive
 │   └── plan-gastos-generales*.md      ← Plan de R12 (ya implementado)
-└── deploy/                            ← Infraestructura y despliegue
-    ├── migracion-macmini.md           ← Migración droplet → Mac mini (túnel, datos, ventana)
-    ├── runbook.md                     ← Runbook de deploy (Mac Mini)
-    └── recordatorios-launchagent.md   ← LaunchAgent de recordatorios
+├── deploy/                            ← Infraestructura y despliegue
+│   ├── migracion-macmini.md           ← Migración droplet → Mac mini (túnel, datos, ventana)
+│   ├── runbook.md                     ← Runbook de deploy (Mac Mini)
+│   └── recordatorios-launchagent.md   ← LaunchAgent de recordatorios
+└── presentaciones/                    ← Material de difusión
+    └── presentacion-ejecutivos.html   ← Deck para dirección (8 diapositivas, autocontenido)
 ```
 
 ---
@@ -117,6 +119,14 @@ Registros de lo que pasó durante el desarrollo. Organizados por carril (interfa
 | [`deploy/migracion-macmini.md`](deploy/migracion-macmini.md) | **Migración del droplet Ubuntu a la Mac mini**, conservando la base y el dominio `gocreate.mx`. Inventario del servidor en vivo, cómo se mueve el túnel de Cloudflare, trampas del proyecto (WAL, cwd relativo), ventana paso a paso, verificación y rollback. **Preparado, no ejecutado.** |
 | [`deploy/runbook.md`](deploy/runbook.md) | Runbook de deploy en Mac Mini on-premise: LaunchDaemon, backups, hardening. ⚠️ Anterior al deploy actual con Cloudflare Tunnel — su §6 (Caddy) **ya no aplica**, ver §2 de `migracion-macmini.md`. |
 | [`deploy/recordatorios-launchagent.md`](deploy/recordatorios-launchagent.md) | LaunchAgent de macOS para el script de recordatorios de vencimiento. 8 variables SMTP requeridas. |
+
+---
+
+## Presentaciones
+
+| Documento | Contenido |
+|-----------|-----------|
+| [`presentaciones/presentacion-ejecutivos.html`](presentaciones/presentacion-ejecutivos.html) | Deck de 8 diapositivas para dirección: qué es GOCreate, el problema que resuelve, antes/después, los tres módulos, y cierre con demo en vivo. Autocontenido (imágenes en base64) — se abre en cualquier navegador, sin servidor. Navegación con ← →, `F` para pantalla completa. |
 
 ---
 
