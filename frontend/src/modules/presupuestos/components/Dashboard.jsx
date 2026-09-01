@@ -6,15 +6,18 @@ import CreatorUsageChart from "./charts/CreatorUsageChart";
 import BrandSpendApexChart from "./charts/BrandSpendApexChart";
 import SpendTrendChart from "./charts/SpendTrendChart";
 import GeneralExpensesChart from "./charts/GeneralExpensesChart";
-import DashboardPdfTemplate from "./PdfReport/DashboardPdfTemplate";
-import { generateDashboardPdf } from "./PdfReport/generateDashboardPdf";
-import { useAuth } from "@/context/AuthContext";
+import OperationalExpensesChart from "./charts/OperationalExpensesChart";
+import OperationalByRubroChart from "./charts/OperationalByRubroChart";
+import TicketsPerDayChart from "./charts/TicketsPerDayChart";
 import {
   fetchDashboardSummary,
   fetchMonthlySpend,
   fetchCreatorUsage,
   fetchBrandSpendBreakdown,
   fetchGeneralExpensesMonthly,
+  fetchOperationalDashboard,
+  fetchTicketsPerDay,
+  downloadDashboardReportPdf,
 } from "@/api";
 
 import { formatMXN } from "@/design";
@@ -38,16 +41,16 @@ function fmtDateParam(d) {
 
 export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
   usePageTitle("Dashboard");
-  const { user } = useAuth();
   const [summary, setSummary] = useState(null);
   const [monthly, setMonthly] = useState([]);
   const [creatorUsage, setCreatorUsage] = useState([]);
   const [brandSpend, setBrandSpend] = useState([]);
   const [generalExpensesMonthly, setGeneralExpensesMonthly] = useState([]);
+  const [operationalDashboard, setOperationalDashboard] = useState(null);
+  const [ticketsPerDay, setTicketsPerDay] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [pdfState, setPdfState] = useState("idle"); // idle | rendering | generating
-  const pdfSnapshotRef = useRef(null);
+  const [pdfState, setPdfState] = useState("idle"); // idle | generating
 
   const loadDashboardData = useCallback(async (signal, isFirstLoad) => {
     setLoading(true);
@@ -61,18 +64,22 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
       // consola). Las cargas subsecuentes (debounced por cambio de fecha)
       // sí usan AbortController para cancelar requests obsoletas.
       const opts = isFirstLoad ? {} : { signal };
-      const [s, m, c, b, ge] = await Promise.all([
+      const [s, m, c, b, ge, od, tpd] = await Promise.all([
         fetchDashboardSummary(start, end, opts),
         fetchMonthlySpend(start, end, opts),
         fetchCreatorUsage(start, end, opts),
         fetchBrandSpendBreakdown(start, end, opts),
         fetchGeneralExpensesMonthly(start, end, opts),
+        fetchOperationalDashboard(start, end, opts),
+        fetchTicketsPerDay(start, end, opts),
       ]);
       setSummary(s);
       setMonthly(m);
       setCreatorUsage(c);
       setBrandSpend(b);
       setGeneralExpensesMonthly(ge);
+      setOperationalDashboard(od);
+      setTicketsPerDay(tpd);
     } catch (e) {
       if (e.name === "AbortError") return; // reemplazada por un filtro mas reciente, no es un error real
       setError(e.message);
@@ -122,33 +129,19 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
     0
   );
 
+  const operationalTotal = operationalDashboard?.total ?? 0;
+  const operationalCount = operationalDashboard?.count ?? 0;
+
   const handleDownloadPdf = async () => {
     if (pdfState !== "idle") return;
     setError(null);
-    pdfSnapshotRef.current = {
-      kpi,
-      summary,
-      monthly,
-      creatorUsage,
-      brandSpend,
-      generalExpensesMonthly,
-      dateRange,
-      generatedAt: new Date(),
-      generatedByName: user?.full_name,
-    };
-    setPdfState("rendering");
+    setPdfState("generating");
     try {
-      // La plantilla off-screen se monta recién ahora; se espera un tick de
-      // pintado (ApexCharts renderiza su SVG de forma asíncrona) antes de
-      // capturarla con html2canvas.
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setPdfState("generating");
-      const start = fmtDateParam(dateRange.start) || "historico";
-      const end = fmtDateParam(dateRange.end) || "actual";
-      await generateDashboardPdf({ filename: `reporte-presupuesto_${start}_a_${end}.pdf` });
+      // El PDF se genera en el backend (reportlab, vectores nativos) — ya no
+      // hay plantilla off-screen ni captura de pantalla que esperar.
+      const start = fmtDateParam(dateRange.start);
+      const end = fmtDateParam(dateRange.end);
+      await downloadDashboardReportPdf(start, end);
     } catch (e) {
       setError(e.message || "No se pudo generar el PDF.");
     } finally {
@@ -172,7 +165,6 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
           className="btn-go-ghost shrink-0"
         >
           {pdfState === "idle" && "Descargar PDF"}
-          {pdfState === "rendering" && "Preparando reporte…"}
           {pdfState === "generating" && "Generando PDF…"}
         </button>
       </GlassPanel>
@@ -253,14 +245,38 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               label="Gastado en el Período"
               value={summary ? summary.total_spent : "—"}
               format={formatMXN}
-              hint="según filtro de fechas"
+              hint={
+                <>
+                  según filtro de fechas
+                  {summary?.pending_total > 0 && (
+                    <>
+                      {" · "}
+                      <span style={{ color: "var(--go-warning)" }}>
+                        +{formatMXN(summary.pending_total)} pendientes por confirmar
+                      </span>
+                    </>
+                  )}
+                </>
+              }
               accentColor={ACCENTS.orange}
               glass
             />
             <KpiTile
               label="Tickets"
               value={summary?.ticket_count ?? "—"}
-              hint={`Promedio ${summary ? formatMXN(summary.avg_ticket) : "—"} por ticket`}
+              hint={
+                <>
+                  Promedio {summary ? formatMXN(summary.avg_ticket) : "—"} por ticket
+                  {summary?.pending_count > 0 && (
+                    <>
+                      {" · "}
+                      <span style={{ color: "var(--go-warning)" }}>
+                        {summary.pending_count === 1 ? "1 pendiente" : `${summary.pending_count} pendientes`} por confirmar
+                      </span>
+                    </>
+                  )}
+                </>
+              }
               accentColor={ACCENTS.turquoise}
               glass
             />
@@ -277,6 +293,18 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               format={formatMXN}
               hint={`${generalExpensesCount} ${generalExpensesCount === 1 ? "gasto" : "gastos"} en el periodo`}
               accentColor={ACCENTS.orange}
+              glass
+            />
+          </div>
+
+          {/* ── KPI row 3: Gastos Operativos (fusionados con Gastos Generales) ── */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiTile
+              label="Gastos Operativos"
+              value={operationalTotal}
+              format={formatMXN}
+              hint={`${operationalCount} ${operationalCount === 1 ? "gasto" : "gastos"} en el periodo`}
+              accentColor={ACCENTS.turquoise}
               glass
             />
           </div>
@@ -351,12 +379,50 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
             </div>
             <GeneralExpensesChart data={generalExpensesMonthly} />
           </GlassPanel>
-        </>
-      )}
 
-      {/* ── Plantilla off-screen para el PDF (R8), solo montada al generar ── */}
-      {pdfState !== "idle" && pdfSnapshotRef.current && (
-        <DashboardPdfTemplate {...pdfSnapshotRef.current} />
+          {/* ── Row: Operational expenses by month + by rubro (side by side) ── */}
+          <div className="grid gap-8 lg:grid-cols-2">
+            <GlassPanel as="section" className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2
+                  className="font-display text-sm font-bold uppercase tracking-[0.08em]"
+                  style={{ color: "var(--go-text-primary)" }}
+                >
+                  Gastos Operativos por Mes
+                </h2>
+                <span className="go-eyebrow">MXN</span>
+              </div>
+              <OperationalExpensesChart data={operationalDashboard?.mensual} />
+            </GlassPanel>
+
+            <GlassPanel as="section" className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2
+                  className="font-display text-sm font-bold uppercase tracking-[0.08em]"
+                  style={{ color: "var(--go-text-primary)" }}
+                >
+                  Gastos Operativos por Rubro
+                </h2>
+                <span className="go-eyebrow">MXN</span>
+              </div>
+              <OperationalByRubroChart data={operationalDashboard?.por_rubro} />
+            </GlassPanel>
+          </div>
+
+          {/* ── Row: Tickets subidos por día ────────────────────────────── */}
+          <GlassPanel as="section" className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2
+                className="font-display text-sm font-bold uppercase tracking-[0.08em]"
+                style={{ color: "var(--go-text-primary)" }}
+              >
+                Tickets Subidos por Día
+              </h2>
+              <span className="go-eyebrow">Tickets</span>
+            </div>
+            <TicketsPerDayChart data={ticketsPerDay} />
+          </GlassPanel>
+        </>
       )}
     </div>
   );

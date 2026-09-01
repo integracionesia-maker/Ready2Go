@@ -76,12 +76,7 @@ Módulo de préstamo de equipo de grabación. **Plan aprobado, en construcción 
 
 ## Gastos Operativos
 
-Módulo hermano de Presupuestos/Equipos: acumulador de gastos por **rubro**, **aislado de marketing**. Tablas propias, rol `operativo`, dashboard y exportación propios.
-
-| Documento | Contenido |
-|-----------|-----------|
-| [`gastos-operativos/plan-implementacion.md`](gastos-operativos/plan-implementacion.md) | Plan completo: planeación, diseño (datos, RBAC, API), implementación por WP, testeo y documentación. |
-| [`gastos-operativos/manual-usuario.md`](gastos-operativos/manual-usuario.md) | Manual por rol: registrar gastos, rubros, dashboard, exportación y reglas clave. |
+**Fusionado dentro de Presupuestos → Gastos Generales (WP fusión, sept-2026)**: ya no es un módulo aparte con switch ni rol propio — ver [`presupuestos/gastos-generales-manual.md`](presupuestos/gastos-generales-manual.md). Los documentos del diseño original (tablas propias por rubro, rol `operativo`, aislamiento total de marketing) quedaron como referencia histórica en [`historico/gastos-operativos-plan-implementacion.md`](historico/gastos-operativos-plan-implementacion.md) y [`historico/gastos-operativos-manual-usuario.md`](historico/gastos-operativos-manual-usuario.md).
 
 ---
 

@@ -11,8 +11,8 @@ Direccion visual: **liquid glass** (dark-first, naranja como unico acento). Regl
 
 ## Gotchas
 
-- **Theming (`data-theme`)**: el selector en `index.css` es `[data-theme="light"]`, **sin** `:root` — a propósito, para que el reporte PDF (R8) pueda forzar tema claro en un contenedor propio (`data-theme="light"` local) sin tocar el tema real del usuario en `<html>`. No revertir a `:root[data-theme="light"]`, rompería esa plantilla off-screen.
-- `jspdf` y `html2canvas` son dependencias de frontend (no dev, corren en runtime) cargadas con `import()` dinámico solo al descargar el PDF — no agregar imports estáticos de estas dos, engordarían el bundle principal.
+- **Theming (`data-theme`)**: el selector en `index.css` es `[data-theme="light"]`, **sin** `:root` — a propósito, para que un reporte PDF client-side (`EquiposDashboardPdfTemplate.jsx`, `GeneralExpensesPdfTemplate.jsx`) pueda forzar tema claro en un contenedor propio (`data-theme="light"` local) sin tocar el tema real del usuario en `<html>`. No revertir a `:root[data-theme="light"]`, rompería esas plantillas off-screen.
+- `jspdf` y `html2canvas` son dependencias de frontend (no dev, corren en runtime) cargadas con `import()` dinámico solo al descargar esos PDFs — no agregar imports estáticos de estas dos, engordarían el bundle principal. **El PDF del Dashboard de Presupuestos ya NO usa este pipeline**: se genera en backend con `reportlab` (vectores nativos, sin captura de pantalla — ver `backend/app/pdf/dashboard_reporte.py`), descargado vía `downloadDashboardReportPdf` (`@/api`).
 - No agregar alias manuales de `react`/`react-dom` en `vite.config.js` — causo el bug de "Invalid hook call" (resuelto 2026-07-15). `resolve.dedupe` + `optimizeDeps.include` es suficiente con un solo `node_modules`.
 - En `frontend/src/modules/presupuestos/components/charts/apexTheme.js`/`createApexOptions`, nunca asignar `stroke`/`fill`/`plotOptions`/`responsive` como `undefined` explicito — ApexCharts 5.x pisa sus defaults internos y truena el dashboard completo sin error boundary.
 

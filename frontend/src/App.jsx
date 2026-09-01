@@ -7,7 +7,6 @@ import EquiposLayout from "./modules/equipos/EquiposLayout";
 import { NotFoundPage, ScrollToTop, SkeletonShimmer } from "@/design";
 
 const LoginPage = lazy(() => import("./modules/presupuestos/pages/LoginPage"));
-const GastosOperativosLayout = lazy(() => import("./modules/gastos-operativos/GastosOperativosLayout"));
 const InicioPage = lazy(() => import("./modules/equipos/pages/InicioPage"));
 const DashboardEquiposPage = lazy(() => import("./modules/equipos/pages/DashboardEquiposPage"));
 const InventarioPage = lazy(() => import("./modules/equipos/pages/InventarioPage"));
@@ -82,14 +81,6 @@ export default function App() {
             <Route path="prestamo/:folio" element={<FichaPrestamoPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
-          <Route
-            path="/gastos-operativos/*"
-            element={
-              <Suspense fallback={<SkeletonShimmer className="h-64 w-full" />}>
-                <GastosOperativosLayout />
-              </Suspense>
-            }
-          />
           <Route path="/*" element={<PresupuestosLayout />} />
         </Route>
       </Route>

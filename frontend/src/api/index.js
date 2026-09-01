@@ -276,6 +276,73 @@ export function fetchGeneralExpensesExport(months) {
   return request(`/general-expenses/export?${params.toString()}`);
 }
 
+/* ── Gastos Operativos (fusionados en UI con Gastos Generales) ──────────────
+ * Tabla y endpoints propios (rubro + fecha_gasto, solo borrado lógico) — la
+ * fusión es de UI, no de esquema. `startDate`/`endDate` ya vienen formateadas
+ * (`YYYY-MM-DD`) por quien llama, igual que el resto de este archivo.
+ */
+
+export function listRubros(activeOnly = false) {
+  return request(`/rubros/${activeOnly ? "?active_only=true" : ""}`);
+}
+
+export function createRubro(nombre) {
+  return request("/rubros/", { method: "POST", body: JSON.stringify({ nombre }) });
+}
+
+export function updateRubro(id, data) {
+  return request(`/rubros/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function listOperationalExpenses({ rubroId, startDate, endDate } = {}) {
+  const params = new URLSearchParams();
+  if (rubroId) params.set("rubro_id", rubroId);
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  const qs = params.toString();
+  return request(`/operational-expenses/${qs ? `?${qs}` : ""}`);
+}
+
+export async function createOperationalExpense({ rubroId, amount, description, fechaGasto, file }) {
+  const formData = new FormData();
+  formData.append("rubro_id", rubroId);
+  formData.append("amount", amount);
+  formData.append("description", description);
+  formData.append("fecha_gasto", fechaGasto);
+  formData.append("file", file);
+
+  const res = await fetchWithAuthRetry("/operational-expenses/", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) await throwApiError(res);
+
+  return res.json();
+}
+
+export function softDeleteOperationalExpense(id) {
+  return request(`/operational-expenses/${id}/soft-delete`, { method: "POST" });
+}
+
+export function operationalExpenseFileUrl(id) {
+  return `${BASE}/operational-expenses/${id}/file`;
+}
+
+export function fetchOperationalExpensesExport(months) {
+  const params = new URLSearchParams();
+  params.set("months", months.join(","));
+  return request(`/operational-expenses/export?${params.toString()}`);
+}
+
+export function fetchOperationalDashboard(startDate, endDate, { signal } = {}) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  const qs = params.toString();
+  return request(`/operational-expenses/dashboard${qs ? `?${qs}` : ""}`, { signal });
+}
+
 /* ── Dashboard ─────────────────────────────────────────────────────────────── */
 
 export function fetchDashboardSummary(startDate, endDate, { signal } = {}) {
@@ -308,4 +375,33 @@ export function fetchGeneralExpensesMonthly(startDate, endDate, { signal } = {})
   if (endDate) params.set("end_date", endDate);
   const qs = params.toString();
   return request(`/dashboard/general-expenses-monthly${qs ? `?${qs}` : ""}`, { signal });
+}
+
+export function fetchTicketsPerDay(startDate, endDate, { signal } = {}) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  const qs = params.toString();
+  return request(`/dashboard/tickets-per-day${qs ? `?${qs}` : ""}`, { signal });
+}
+
+/** Reporte del dashboard generado en backend (reportlab, vectores nativos —
+ * ver backend/app/pdf/dashboard_reporte.py). Descarga directa: a diferencia
+ * del resto del archivo, esta función no devuelve JSON, dispara un archivo. */
+export async function downloadDashboardReportPdf(startDate, endDate) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  const qs = params.toString();
+  const res = await fetchWithAuthRetry(`/dashboard/report.pdf${qs ? `?${qs}` : ""}`);
+  if (!res.ok) await throwApiError(res);
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] || "reporte-presupuesto.pdf";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }

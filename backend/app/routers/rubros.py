@@ -1,9 +1,10 @@
-"""Catalogo de rubros del modulo Gastos Operativos.
+"""Catalogo de rubros de Gastos Operativos (fusionado en la UI con Gastos
+Generales de Presupuestos).
 
 Rubro = la clasificacion del gasto (E-commerce, IA, Aplicaciones, ...). Editable
-desde la app. Listar exige `gastos_operativos:ver`; crear/editar/desactivar
-exige `gastos_operativos:gestionar_rubros` (lo tienen admin/superadmin y el rol
-`operativo`).
+desde la app. Misma puerta de acceso que `general_expenses.py`/`operational_expenses.py`
+(`require_role`, ya no el modulo RBAC aditivo `gastos_operativos`, retirado del
+catalogo).
 """
 
 from typing import List
@@ -13,18 +14,16 @@ from sqlalchemy.orm import Session
 
 from .. import crud, crud_operativos, models, schemas_operativos as schemas
 from ..database import get_db
-from ..rbac import require_perm
+from ..dependencies import require_role
 
 router = APIRouter(prefix="/api/rubros", tags=["gastos-operativos"])
-
-MODULO = "gastos_operativos"
 
 
 @router.get("/", response_model=List[schemas.RubroResponse])
 def list_rubros(
     active_only: bool = False,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm(MODULO, "ver")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     return crud_operativos.list_rubros(db, active_only=active_only)
 
@@ -33,7 +32,7 @@ def list_rubros(
 def create_rubro(
     data: schemas.RubroCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm(MODULO, "gestionar_rubros")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     nombre = data.nombre.strip()
     if crud_operativos.get_rubro_by_nombre(db, nombre):
@@ -55,7 +54,7 @@ def update_rubro(
     rubro_id: int,
     data: schemas.RubroUpdate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm(MODULO, "gestionar_rubros")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     rubro = crud_operativos.get_rubro(db, rubro_id)
     if not rubro:

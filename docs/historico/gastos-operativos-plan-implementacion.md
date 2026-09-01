@@ -1,6 +1,8 @@
 # Plan de implementación — Módulo **Gastos Operativos** (GOCreate)
 
-> Estado: **propuesta de diseño**, sin construir. Requiere luz verde explícita antes de codificar (mismo criterio que el módulo Equipos).
+> **SUPERADO (WP fusión, sept-2026)**: el módulo aislado que describe este documento se retiró. Gastos Operativos vive ahora fusionado en la UI de Presupuestos → Gastos Generales (mismo formulario con selector de tipo, mismo listado con distintivo visual), aunque conserva sus tablas y endpoints propios. El rol base `operativo` (amurallado, único que veía este módulo) se retiró del catálogo RBAC. Ver `docs/presupuestos/gastos-generales-manual.md` para el estado actual. Se conserva este documento como referencia histórica del diseño original.
+
+> Estado original: **propuesta de diseño**, sin construir. Requiere luz verde explícita antes de codificar (mismo criterio que el módulo Equipos).
 > Autor del plan: sesión de asistencia · Owner: Damián · Supervisión: Jose Aguilar
 > Rama de trabajo: `dami-branch` · Integración a `master` solo cuando se pida.
 

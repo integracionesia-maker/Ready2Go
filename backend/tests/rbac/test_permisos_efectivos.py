@@ -44,13 +44,9 @@ BASE = {
             "exportar",
         },
         "equipos_aprobacion": {"autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"},
-        "gastos_operativos": {"ver", "crear", "borrar", "exportar", "gestionar_rubros"},
     },
     "creador": {
         "presupuestos": {"ver_propio", "subir_ticket"},
-    },
-    "operativo": {
-        "gastos_operativos": {"ver", "crear", "borrar", "exportar", "gestionar_rubros"},
     },
     "marketing_presupuestos": {
         "presupuestos": {
@@ -95,7 +91,6 @@ BASE = {
             "cancelar",
             "exportar",
         },
-        "gastos_operativos": {"ver", "crear", "borrar", "exportar", "gestionar_rubros"},
     },
     "marketing_basico": {
         "presupuestos": {"ver_propio", "subir_ticket"},
@@ -146,7 +141,6 @@ TODO_EL_CATALOGO = {
         "exportar",
     },
     "equipos_aprobacion": {"autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"},
-    "gastos_operativos": {"ver", "crear", "borrar", "exportar", "gestionar_rubros"},
     "usuarios": {"gestionar", "gestionar_roles"},
     "auditoria": {"ver"},
 }
@@ -180,7 +174,6 @@ COMBINACIONES = [
         "marketing_admin",
         "marketing_basico",
         "colaborador_mkt",
-        "operativo",
     )
     for aditivos in subconjuntos_de_aditivos()
 ]

@@ -404,27 +404,57 @@ def get_brand_spend_breakdown(
 def get_monthly_spend(
     db: Session, start_date: Optional[date] = None, end_date: Optional[date] = None
 ) -> List[schemas.MonthlySpendItem]:
+    def _por_mes(status: str):
+        q = db.query(
+            func.strftime("%Y-%m", models.Ticket.upload_date).label("month"),
+            func.coalesce(func.sum(models.Ticket.amount), 0.0).label("total"),
+            func.count(models.Ticket.id).label("count"),
+        ).filter(
+            models.Ticket.status == status,
+            models.Ticket.is_deleted == False,
+        )
+        if start_date:
+            q = q.filter(models.Ticket.upload_date >= start_date)
+        if end_date:
+            q = q.filter(models.Ticket.upload_date < end_date + timedelta(days=1))
+        return {r.month: (float(r.total), r.count) for r in q.group_by("month").all()}
+
+    aprobados = _por_mes(models.TicketStatus.APROBADO.value)
+    # Pendientes: informativo (R7 — nunca cuentan contra el ciclo). Un mes con
+    # SOLO tickets pendientes (ej. el mes en curso, sin nada revisado todavia)
+    # debe aparecer igual, por eso se unen las llaves de ambos diccionarios.
+    pendientes = _por_mes(models.TicketStatus.PENDIENTE.value)
+
+    meses = sorted(set(aprobados) | set(pendientes))
+    resultado = []
+    for mes in meses:
+        total, count = aprobados.get(mes, (0.0, 0))
+        pending_total, pending_count = pendientes.get(mes, (0.0, 0))
+        resultado.append(
+            schemas.MonthlySpendItem(
+                month=mes, total=total, count=count,
+                pending_total=pending_total, pending_count=pending_count,
+            )
+        )
+    return resultado
+
+
+def get_tickets_per_day(
+    db: Session, start_date: Optional[date] = None, end_date: Optional[date] = None
+) -> List[schemas.TicketsPerDayItem]:
+    """Cuantos tickets se SUBIERON cada dia — metrica de actividad/uso, no de
+    gasto aprobado: cuenta todos los estados (pendiente/aprobado/rechazado),
+    a diferencia de `get_monthly_spend`. Solo excluye borrados."""
     q = db.query(
-        func.strftime("%Y-%m", models.Ticket.upload_date).label("month"),
-        func.coalesce(func.sum(models.Ticket.amount), 0.0).label("total"),
+        func.strftime("%Y-%m-%d", models.Ticket.upload_date).label("day"),
         func.count(models.Ticket.id).label("count"),
-    ).filter(
-        models.Ticket.status == models.TicketStatus.APROBADO.value,
-        models.Ticket.is_deleted == False,
-    )
+    ).filter(models.Ticket.is_deleted == False)
     if start_date:
         q = q.filter(models.Ticket.upload_date >= start_date)
     if end_date:
         q = q.filter(models.Ticket.upload_date < end_date + timedelta(days=1))
-    rows = (
-        q.group_by("month")
-        .order_by("month")
-        .all()
-    )
-    return [
-        schemas.MonthlySpendItem(month=r.month, total=float(r.total), count=r.count)
-        for r in rows
-    ]
+    rows = q.group_by("day").order_by("day").all()
+    return [schemas.TicketsPerDayItem(day=r.day, count=r.count) for r in rows]
 
 
 def _peek_cycle_budget(db: Session, creator: models.Creator, target_date: date) -> float:
@@ -451,28 +481,39 @@ def get_creator_usage(
 ) -> List[schemas.CreatorUsageItem]:
     """El denominador ('initial_budget' del schema) ahora es el monto del ciclo
     vigente de cada creador (R7), no un presupuesto histórico acumulado."""
-    ticket_spent = db.query(
-        models.Ticket.creator_id,
-        func.coalesce(func.sum(models.Ticket.amount), 0.0).label("spent"),
-    ).filter(
-        models.Ticket.status == models.TicketStatus.APROBADO.value,
-        models.Ticket.is_deleted == False,
-    )
-    if start_date:
-        ticket_spent = ticket_spent.filter(models.Ticket.upload_date >= start_date)
-    if end_date:
-        ticket_spent = ticket_spent.filter(models.Ticket.upload_date < end_date + timedelta(days=1))
-    ticket_spent = ticket_spent.group_by(models.Ticket.creator_id).subquery()
+    def _por_creador(status: str):
+        q = db.query(
+            models.Ticket.creator_id,
+            func.coalesce(func.sum(models.Ticket.amount), 0.0).label("total"),
+            func.count(models.Ticket.id).label("count"),
+        ).filter(
+            models.Ticket.status == status,
+            models.Ticket.is_deleted == False,
+        )
+        if start_date:
+            q = q.filter(models.Ticket.upload_date >= start_date)
+        if end_date:
+            q = q.filter(models.Ticket.upload_date < end_date + timedelta(days=1))
+        return q.group_by(models.Ticket.creator_id).subquery()
+
+    ticket_spent = _por_creador(models.TicketStatus.APROBADO.value)
+    ticket_pending = _por_creador(models.TicketStatus.PENDIENTE.value)
 
     rows = (
-        db.query(models.Creator, func.coalesce(ticket_spent.c.spent, 0.0).label("spent"))
+        db.query(
+            models.Creator,
+            func.coalesce(ticket_spent.c.total, 0.0).label("spent"),
+            func.coalesce(ticket_pending.c.total, 0.0).label("pending"),
+            func.coalesce(ticket_pending.c.count, 0).label("pending_count"),
+        )
         .outerjoin(ticket_spent, models.Creator.id == ticket_spent.c.creator_id)
+        .outerjoin(ticket_pending, models.Creator.id == ticket_pending.c.creator_id)
         .filter(models.Creator.is_active == True)
         .all()
     )
 
     items = []
-    for creator, spent in rows:
+    for creator, spent, pending, pending_count in rows:
         budget = _peek_cycle_budget(db, creator, date.today())
         items.append(
             schemas.CreatorUsageItem(
@@ -481,6 +522,9 @@ def get_creator_usage(
                 spent=float(spent),
                 initial_budget=float(budget),
                 percentage=round((float(spent) / budget) * 100, 1) if budget > 0 else 0.0,
+                # Informativo (R7): nunca entra al calculo de `percentage`.
+                pending=float(pending),
+                pending_count=pending_count,
             )
         )
     items.sort(key=lambda i: i.spent, reverse=True)
@@ -502,6 +546,19 @@ def get_dashboard_summary(
     if end_date:
         q = q.filter(models.Ticket.upload_date < end_date + timedelta(days=1))
     total_spent, ticket_count = q.first()
+
+    qp = db.query(
+        func.coalesce(func.sum(models.Ticket.amount), 0.0),
+        func.count(models.Ticket.id),
+    ).filter(
+        models.Ticket.status == models.TicketStatus.PENDIENTE.value,
+        models.Ticket.is_deleted == False,
+    )
+    if start_date:
+        qp = qp.filter(models.Ticket.upload_date >= start_date)
+    if end_date:
+        qp = qp.filter(models.Ticket.upload_date < end_date + timedelta(days=1))
+    pending_total, pending_count = qp.first()
 
     active_brands = (
         db.query(func.count(func.distinct(models.Brand.id)))
@@ -525,6 +582,9 @@ def get_dashboard_summary(
         ticket_count=ticket_count,
         avg_ticket=round(avg_ticket, 2),
         active_brands=active_brands,
+        # Informativo (R7): nunca se suma a `total_spent`.
+        pending_total=float(pending_total),
+        pending_count=pending_count,
     )
 
 

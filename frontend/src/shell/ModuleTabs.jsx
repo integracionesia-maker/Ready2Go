@@ -4,7 +4,7 @@ import { MODULE_NAV_ITEMS } from "./navItems";
 import { useAuth } from "@/context/AuthContext";
 
 /**
- * Switch Presupuestos / Equipos / Gastos Operativos.
+ * Switch Presupuestos / Equipos.
  * Solo muestra los tabs de los módulos a los que el usuario tiene acceso; si
  * solo tiene uno, el switch no se renderiza.
  *
@@ -19,7 +19,6 @@ export default function ModuleTabs() {
     () => ({
       presupuestos: (permisos.presupuestos || []).length > 0,
       equipos: Object.keys(permisos).some((m) => m.startsWith("equipos_") && permisos[m].length > 0),
-      gastos_operativos: (permisos.gastos_operativos || []).length > 0,
     }),
     [permisos]
   );

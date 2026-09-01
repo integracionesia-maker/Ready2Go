@@ -98,6 +98,18 @@ Esto también resuelve implícitamente la pregunta "¿qué pasa con un ticket pe
 
 > Ejemplo: un creador tiene $100 restantes en su ciclo. Sube un ticket de $500. El admin lo aprueba de todas formas (viendo la advertencia); el ciclo queda en $100 - $500 = **-$400**. La app lo muestra en rojo, pero no impide nada.
 
+### 2.6 Visibilidad de tickets pendientes en el Dashboard — informativo, nunca cuenta
+
+Problema real: los creadores suben tickets constantemente, pero admin/superadmin no siempre tiene tiempo de validarlos — y como el Dashboard solo grafica `aprobado`, la actividad real (probablemente correcta, los creadores no suelen mentir) queda invisible hasta que alguien revisa la cola.
+
+**Decisión**: el gasto `aprobado` sigue siendo el número oficial (KPIs, ciclos, cálculos) — nada de esto cambia. Pero los tres endpoints principales del dashboard ahora devuelven **también** el monto/cantidad `pendiente` de ese mismo periodo, por separado:
+
+- `GET /api/dashboard/summary` → `pending_total`, `pending_count`.
+- `GET /api/dashboard/monthly-spend` → cada mes trae `pending_total`/`pending_count` además de `total`/`count`. Un mes con **solo** tickets pendientes (ej. el mes en curso, sin nada revisado todavía) igual aparece en la lista — antes de este cambio no salía.
+- `GET /api/dashboard/creator-usage` → cada creador trae `pending`/`pending_count` además de `spent`/`percentage`. Un creador con todo pendiente y nada aprobado aún (`spent=0`) igual aparece en la lista.
+
+En el frontend (`Dashboard.jsx`), esto se ve como una segunda serie apilada en las gráficas de barras existentes ("Transacciones por Mes", "Uso de Presupuesto por Creador"), en color ámbar (`--go-warning`) con la leyenda "Pendiente por confirmar", y como un texto secundario ámbar en las KPI tiles "Gastado en el Período"/"Tickets". **No es una vista ni un endpoint nuevo** — es el mismo dashboard, con la información pendiente pintada al lado de la aprobada, nunca sumada a ella. `rechazado` nunca cuenta como pendiente (es terminal).
+
 ### 2.6 Migración de datos históricos
 
 `backend/migrate_ciclos_y_validacion.py` (idempotente, corre desde `backend/`):

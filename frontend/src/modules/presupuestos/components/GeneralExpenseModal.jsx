@@ -1,6 +1,11 @@
 import { useState, useRef, useCallback } from "react";
-import { createGeneralExpense } from "@/api";
+import { createGeneralExpense, createOperationalExpense } from "@/api";
 import { CameraCaptureButton, useMobile } from "@/design";
+
+function hoyISO() {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+}
 
 const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".pdf"];
 const ALLOWED_MIME = [
@@ -19,8 +24,11 @@ function extensionDe(nombre) {
   return partes.length > 1 ? `.${partes.pop().toLowerCase()}` : "";
 }
 
-export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
+export default function GeneralExpenseModal({ brands, rubros, onClose, onSuccess }) {
+  const [tipo, setTipo] = useState("general"); // "general" | "operativo" — el distintivo
   const [brandId, setBrandId] = useState("");
+  const [rubroId, setRubroId] = useState("");
+  const [fechaGasto, setFechaGasto] = useState(hoyISO());
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [file, setFile] = useState(null);
@@ -28,6 +36,7 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
   const esMovil = useMobile();
 
   const activeBrands = (brands || []).filter((b) => b.is_active);
+  const activeRubros = (rubros || []).filter((r) => r.is_active);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -98,8 +107,16 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
     setError(null);
     setSuccessMsg(null);
 
-    if (!brandId) {
+    if (tipo === "general" && !brandId) {
       setError("Selecciona una marca.");
+      return;
+    }
+    if (tipo === "operativo" && !rubroId) {
+      setError("Selecciona un rubro.");
+      return;
+    }
+    if (tipo === "operativo" && !fechaGasto) {
+      setError("La fecha del gasto es obligatoria.");
       return;
     }
     if (!description || description.trim().length < 1) {
@@ -121,13 +138,24 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
 
     setSubmitting(true);
     try {
-      await createGeneralExpense({
-        brandId: Number(brandId),
-        amount: Number(amount),
-        description,
-        file,
-      });
-      setSuccessMsg("Gasto general registrado exitosamente.");
+      if (tipo === "general") {
+        await createGeneralExpense({
+          brandId: Number(brandId),
+          amount: Number(amount),
+          description,
+          file,
+        });
+        setSuccessMsg("Gasto general registrado exitosamente.");
+      } else {
+        await createOperationalExpense({
+          rubroId: Number(rubroId),
+          amount: Number(amount),
+          description,
+          fechaGasto,
+          file,
+        });
+        setSuccessMsg("Gasto operativo registrado exitosamente.");
+      }
       setTimeout(() => {
         onSuccess();
       }, 800);
@@ -156,7 +184,7 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
             className="font-display text-base font-bold uppercase tracking-[0.06em]"
             style={{ color: "var(--go-text-primary)" }}
           >
-            Nuevo Gasto General
+            Nuevo Gasto
           </h2>
           <button
             onClick={onClose}
@@ -173,23 +201,79 @@ export default function GeneralExpenseModal({ brands, onClose, onSuccess }) {
 
         {/* ── Body ────────────────────────────────────────────────── */}
         <form onSubmit={handleSubmit} className="space-y-4 px-4 sm:px-6 py-5">
-          {/* Brand selector */}
+          {/* Distintivo: tipo de gasto (general = ligado a marca, operativo = ligado a rubro) */}
           <div>
-            <label className="go-eyebrow mb-1.5 block">Marca</label>
-            <select
-              value={brandId}
-              onChange={(e) => setBrandId(e.target.value)}
-              className="go-select"
-              required
-            >
-              <option value="">Seleccionar marca...</option>
-              {activeBrands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            <label className="go-eyebrow mb-1.5 block">Tipo de gasto</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setTipo("general")}
+                className={tipo === "general" ? "btn-go flex-1" : "btn-go-ghost flex-1"}
+              >
+                General
+              </button>
+              <button
+                type="button"
+                onClick={() => setTipo("operativo")}
+                className={tipo === "operativo" ? "btn-go flex-1" : "btn-go-ghost flex-1"}
+              >
+                Operativo
+              </button>
+            </div>
           </div>
+
+          {tipo === "general" ? (
+            /* Brand selector */
+            <div>
+              <label className="go-eyebrow mb-1.5 block">Marca</label>
+              <select
+                value={brandId}
+                onChange={(e) => setBrandId(e.target.value)}
+                className="go-select"
+                required
+              >
+                <option value="">Seleccionar marca...</option>
+                {activeBrands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            /* Rubro selector + fecha del gasto */
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="go-eyebrow mb-1.5 block">Rubro</label>
+                <select
+                  value={rubroId}
+                  onChange={(e) => setRubroId(e.target.value)}
+                  className="go-select"
+                  required
+                >
+                  <option value="">Seleccionar rubro...</option>
+                  {activeRubros.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="go-eyebrow mb-1.5 block">Fecha del gasto</label>
+                <input
+                  type="date"
+                  value={fechaGasto}
+                  onChange={(e) => setFechaGasto(e.target.value)}
+                  className="go-input"
+                  required
+                />
+                <p className="mt-1 font-body text-[11px]" style={{ color: "var(--go-text-muted)" }}>
+                  Define el mes al que cuenta el gasto.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div>

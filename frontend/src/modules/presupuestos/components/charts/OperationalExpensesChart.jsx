@@ -15,7 +15,10 @@ function monthLabel(ym) {
   return `${MONTHS_ES[parseInt(m, 10) - 1]} ${y}`;
 }
 
-export default function GeneralExpensesChart({ data }) {
+/** Gastos operativos por mes (fusionados con Gastos Generales en la UI, pero
+ * tabla propia — `operationalDashboard.mensual`). Mismo patrón que
+ * GeneralExpensesChart.jsx, con el acento turquesa para distinguirlo. */
+export default function OperationalExpensesChart({ data }) {
   const { theme } = useTheme();
   const isMobile = useMobile();
   const options = useMemo(() => {
@@ -56,14 +59,14 @@ export default function GeneralExpensesChart({ data }) {
           },
         },
       },
-      colors: [GO_CHART_COLORS[0]], // go-orange
+      colors: [GO_CHART_COLORS[1]], // turquesa — distintivo de "operativo"
     }, theme);
   }, [data, theme]);
 
   const series = useMemo(() => {
     return [
       {
-        name: "Gasto",
+        name: "Gasto operativo",
         data: (data || []).map((d) => d.total),
       },
     ];
@@ -72,7 +75,7 @@ export default function GeneralExpensesChart({ data }) {
   if (!data || data.length === 0) {
     return (
       <p className="py-10 text-center font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
-        Sin gastos generales en este periodo.
+        Sin gastos operativos en este periodo.
       </p>
     );
   }

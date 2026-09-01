@@ -31,11 +31,7 @@ export default function Header({ onToggleMobileMenu, mobileMenuOpen = false, sub
   // siempre a Presupuestos. Rutas del sistema (/perfil, /auditoria, ...) caen
   // al inicio de Presupuestos, que es el default de la app.
   const { pathname } = useLocation();
-  const inicioModulo = pathname.startsWith("/equipos")
-    ? "/equipos"
-    : pathname.startsWith("/gastos-operativos")
-    ? "/gastos-operativos"
-    : "/";
+  const inicioModulo = pathname.startsWith("/equipos") ? "/equipos" : "/";
   const interactive = SOPORTA_HOVER_FINO && !reduceMotion;
   const [glow, setGlow] = useState({ x: 0.5, visible: false });
 

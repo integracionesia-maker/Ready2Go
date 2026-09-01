@@ -177,6 +177,15 @@ class MonthlySpendItem(BaseModel):
     month: str  # "2026-07"
     total: float
     count: int
+    # Tickets `pendiente` de ese mes (creadores ya los subieron, admin/superadmin
+    # aún no los revisa). Informativo — NUNCA se suma a `total` ni afecta ciclos.
+    pending_total: float = 0.0
+    pending_count: int = 0
+
+
+class TicketsPerDayItem(BaseModel):
+    day: str  # "2026-08-31"
+    count: int
 
 
 class CreatorUsageItem(BaseModel):
@@ -185,6 +194,9 @@ class CreatorUsageItem(BaseModel):
     spent: float
     initial_budget: float
     percentage: float  # 0-100
+    # Igual que en MonthlySpendItem: informativo, nunca cuenta contra el ciclo.
+    pending: float = 0.0
+    pending_count: int = 0
 
 
 class DashboardSummary(BaseModel):
@@ -192,6 +204,8 @@ class DashboardSummary(BaseModel):
     ticket_count: int
     avg_ticket: float
     active_brands: int
+    pending_total: float = 0.0
+    pending_count: int = 0
 
 
 # ── Autenticación ────────────────────────────────────────────────────────────

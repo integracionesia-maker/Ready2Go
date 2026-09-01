@@ -10,14 +10,18 @@ function usageColor(pct) {
   return "#00A36E"; // go-success
 }
 
-export default function CreatorUsageChart({ data, forceTheme }) {
-  const { theme: ctxTheme } = useTheme();
-  const theme = forceTheme || ctxTheme;
+/** Barras horizontales apiladas: "% Usado" (aprobado, cuenta contra el ciclo,
+ * color por umbral rojo/ámbar/verde) + "% Pendiente" (lo que representarían
+ * los tickets sin revisar sobre ese mismo presupuesto — informativo, NUNCA
+ * entra al cálculo de `percentage`, R7). Un creador con todo pendiente y nada
+ * aprobado aún (spent=0) igual aparece, para que se vea que sí subió algo. */
+export default function CreatorUsageChart({ data }) {
+  const { theme } = useTheme();
   const isMobile = useMobile();
   const options = useMemo(() => {
-    const items = (data || []).filter((d) => d.spent > 0);
+    const items = (data || []).filter((d) => d.spent > 0 || d.pending > 0);
     return createApexOptions({
-      chart: { type: "bar" },
+      chart: { type: "bar", stacked: true },
       plotOptions: {
         bar: {
           horizontal: true,
@@ -27,39 +31,42 @@ export default function CreatorUsageChart({ data, forceTheme }) {
       },
       xaxis: {
         categories: items.map((d) => d.name),
-        title: { text: "% del presupuesto utilizado", style: { fontSize: "11px", fontFamily: "'Inter', sans-serif", color: "var(--go-text-secondary)" } },
-        labels: { formatter: (v) => `${v}%` },
-        max: 100,
+        title: { text: "% del presupuesto (aprobado + pendiente)", style: { fontSize: "11px", fontFamily: "'Inter', sans-serif", color: "var(--go-text-secondary)" } },
+        labels: { formatter: (v) => `${Math.round(v)}%` },
       },
       yaxis: {
         labels: { style: { fontWeight: 600, fontSize: "12px" } },
       },
       dataLabels: {
         enabled: true,
-        formatter: (v) => `${v}%`,
+        formatter: (v) => (v > 0 ? `${v.toFixed(0)}%` : ""),
         style: { fontSize: "11px", fontWeight: 600 },
       },
       tooltip: {
         y: {
-          formatter: (v, { dataPointIndex }) => {
+          formatter: (v, { seriesIndex, dataPointIndex }) => {
             const item = items[dataPointIndex];
-            return `${v}% — $${item.spent.toLocaleString("es-MX", { minimumFractionDigits: 2 })} / $${item.initial_budget.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
+            if (seriesIndex === 0) {
+              return `${v.toFixed(1)}% usado — $${item.spent.toLocaleString("es-MX", { minimumFractionDigits: 2 })} / $${item.initial_budget.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
+            }
+            const n = item?.pending_count ?? 0;
+            return `${v.toFixed(1)}% pendiente — $${item.pending.toLocaleString("es-MX", { minimumFractionDigits: 2 })} (${n === 1 ? "1 ticket" : `${n} tickets`} sin revisar)`;
           },
         },
       },
-      legend: { show: false },
+      legend: { show: true, position: "top", horizontalAlign: "right" },
       grid: { xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
+      colors: [GO_CHART_COLORS[0], GO_CHART_COLORS[5]], // el 0 se pisa por punto (fillColor); el 1 es el ambar del segmento pendiente
     }, theme);
   }, [data, theme]);
 
   const series = useMemo(() => {
-    const items = (data || []).filter((d) => d.spent > 0);
+    const items = (data || []).filter((d) => d.spent > 0 || d.pending > 0);
     if (items.length === 0) return [];
     return [
       {
         name: "% Usado",
         data: items.map((d) => {
-          // Use percentage from backend but also compute global for color
           const globalPct = d.initial_budget > 0
             ? parseFloat(((d.spent / d.initial_budget) * 100).toFixed(1))
             : 0;
@@ -69,6 +76,13 @@ export default function CreatorUsageChart({ data, forceTheme }) {
             fillColor: usageColor(globalPct),
           };
         }),
+      },
+      {
+        name: "% Pendiente por confirmar",
+        data: items.map((d) => ({
+          x: d.name,
+          y: d.initial_budget > 0 ? parseFloat(((d.pending / d.initial_budget) * 100).toFixed(1)) : 0,
+        })),
       },
     ];
   }, [data]);

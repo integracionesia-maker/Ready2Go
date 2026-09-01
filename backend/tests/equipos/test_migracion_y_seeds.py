@@ -351,9 +351,9 @@ def test_la_secuencia_completa_corre_dos_veces_seguidas(tmp_path):
         assert conn.execute(text("SELECT COUNT(*) FROM empresa")).scalar() == 3
         assert conn.execute(text("SELECT COUNT(*) FROM loan")).scalar() == 1
         assert conn.execute(text("SELECT COUNT(*) FROM media_asset")).scalar() == 4
-        # 133 = 113 previos + 20 del módulo Gastos Operativos (5 acciones ×
-        # superadmin[*] + admin + marketing_admin + el rol nuevo `operativo`).
-        assert conn.execute(text("SELECT COUNT(*) FROM role_permissions")).scalar() == 133
+        # Gastos Operativos se fusionó a Gastos Generales (fuera del catálogo
+        # RBAC aditivo, retirado junto con el rol `operativo`).
+        assert conn.execute(text("SELECT COUNT(*) FROM role_permissions")).scalar() == 113
     motor.dispose()
 
 

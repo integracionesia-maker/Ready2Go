@@ -1,5 +1,7 @@
 # Manual de usuario — Gastos Operativos
 
+> **SUPERADO (WP fusión, sept-2026)**: ya no es un módulo aparte con switch propio — se fusionó dentro de Presupuestos → Gastos Generales (un formulario con selector General/Operativo, un listado combinado con distintivo visual). El rol base `operativo` se retiró. Manual vigente: `docs/presupuestos/gastos-generales-manual.md`. Se conserva este documento como referencia histórica de las pantallas originales.
+
 > Módulo de la plataforma GOCreate, hermano de Presupuestos y Equipos.
 > Contabilidad de gastos **separada de marketing**.
 

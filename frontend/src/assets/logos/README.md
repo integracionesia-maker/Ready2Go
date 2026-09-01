@@ -19,8 +19,10 @@ elige la variante correcta según `ThemeContext`:
 <BrandLogo variant="imagotipo" className="h-28 w-auto" />
 ```
 
-Excepciones sin BrandLogo: el reporte PDF (`PdfReport/DashboardPdfTemplate.jsx`)
-importa `isotipo-go-naranja.png` directo porque siempre se genera en tema claro,
-y el favicon es una copia estática en `frontend/public/favicon.png`.
+Excepciones sin BrandLogo: el reporte PDF del Dashboard de Presupuestos ahora se
+genera en backend con reportlab (`backend/app/pdf/dashboard_reporte.py`), fuera
+de este árbol de assets; el de Equipos (`equipos/components/PdfReport/EquiposDashboardPdfTemplate.jsx`)
+sigue importando `isotipo-go-naranja.png` directo porque siempre se genera en
+tema claro. El favicon es una copia estática en `frontend/public/favicon.png`.
 
 Fuente de verdad de la identidad: `IDENTIDAD DE MARCA/context_design.md` (repo `context_desing_go`).

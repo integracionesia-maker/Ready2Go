@@ -4,9 +4,8 @@ import { createApexOptions, formatChartCurrency, GO_CHART_COLORS } from "@/desig
 import { useTheme } from "@/context/ThemeContext";
 import { useMobile } from "@/design";
 
-export default function BrandSpendApexChart({ data, forceTheme }) {
-  const { theme: ctxTheme } = useTheme();
-  const theme = forceTheme || ctxTheme;
+export default function BrandSpendApexChart({ data }) {
+  const { theme } = useTheme();
   const isMobile = useMobile();
   const options = useMemo(() => {
     const items = (data || []).filter((d) => d.total_spent > 0);

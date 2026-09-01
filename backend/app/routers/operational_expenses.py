@@ -1,11 +1,12 @@
-"""Gastos operativos: acumulador por rubro, aislado de marketing.
-
-Permisos (motor aditivo): `ver` lista/dashboard/descarga, `crear` alta,
-`borrar` borrado logico, `exportar` la exportacion. No hay borrado fisico.
+"""Gastos operativos: acumulador por rubro, fusionado en la UI con Gastos
+Generales (Presupuestos). Tabla y endpoints propios (campos distintos:
+`rubro_id`/dos fechas/solo borrado logico), misma puerta de acceso que
+`general_expenses.py` (`require_role`, ya no el modulo RBAC aditivo
+`gastos_operativos`, retirado del catalogo).
 
 El comprobante es obligatorio y el mes se define por `fecha_gasto` (manual), no
 por la fecha de subida. Los archivos se sirven SOLO por `GET /{id}/file` con
-sesion y permiso — nunca por mount estatico.
+sesion — nunca por mount estatico.
 """
 
 from datetime import date
@@ -17,12 +18,10 @@ from sqlalchemy.orm import Session
 
 from .. import crud, crud_operativos, models, schemas_operativos as schemas
 from ..database import get_db, SessionLocal
-from ..rbac import require_perm
+from ..dependencies import require_role
 from ..upload_manager import save_upload, delete_upload
 
 router = APIRouter(prefix="/api/operational-expenses", tags=["gastos-operativos"])
-
-MODULO = "gastos_operativos"
 
 
 def _to_response(e: models.OperationalExpense) -> schemas.OperationalExpenseResponse:
@@ -51,7 +50,7 @@ def list_expenses(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm(MODULO, "ver")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     expenses = crud_operativos.list_expenses(
         db, rubro_id=rubro_id, start_date=start_date, end_date=end_date
@@ -64,7 +63,7 @@ def dashboard(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm(MODULO, "ver")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     return crud_operativos.dashboard(db, start_date=start_date, end_date=end_date)
 
@@ -73,7 +72,7 @@ def dashboard(
 def export_expenses(
     months: str = Query(..., description="Meses 'YYYY-MM' separados por coma (por fecha_gasto)."),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm(MODULO, "exportar")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     month_list = [m.strip() for m in months.split(",") if m.strip()]
     if not month_list:
@@ -89,7 +88,7 @@ def export_expenses(
 def download_file(
     expense_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm(MODULO, "ver")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     expense = crud_operativos.get_expense(db, expense_id)
     if not expense or expense.is_deleted:
@@ -104,7 +103,7 @@ def create_expense(
     description: str = Form(..., min_length=1, max_length=500),
     fecha_gasto: date = Form(..., description="Fecha en que se hizo el gasto (define el mes)."),
     file: UploadFile = File(...),
-    current_user: models.User = Depends(require_perm(MODULO, "crear")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     db: Session = SessionLocal()
     file_path_on_disk: Optional[str] = None
@@ -157,7 +156,7 @@ def create_expense(
 def soft_delete_expense(
     expense_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm(MODULO, "borrar")),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
 ):
     expense = crud_operativos.get_expense(db, expense_id)
     if not expense or expense.is_deleted:

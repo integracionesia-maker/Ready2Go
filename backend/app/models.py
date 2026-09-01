@@ -40,10 +40,6 @@ class UserRole(str, enum.Enum):
     # Empleado general sin acceso por defecto a ningun modulo (solo el piso:
     # inicio + perfil propio). Todo acceso se concede via paquetes aditivos.
     USUARIO = "usuario"
-    # Gastos Operativos: acumulador de gastos por rubro, contabilidad separada
-    # de marketing. Cero acceso a Presupuestos ni Equipos. Ver
-    # docs/gastos-operativos/plan-implementacion.md.
-    OPERATIVO = "operativo"
 
 
 class CyclePeriod(str, enum.Enum):

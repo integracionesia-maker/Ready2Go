@@ -3,8 +3,18 @@ import DateRangeFilter from "../components/DateRangeFilter";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import GeneralExpenseModal from "../components/GeneralExpenseModal";
 import GeneralExpensesExportModal from "../components/GeneralExpensesExportModal";
+import RubrosManagerModal from "../components/RubrosManagerModal";
 import { GlassPanel, RowActions, ICONS, MediaViewer, usePageTitle } from "@/design";
-import { fetchGeneralExpenses, softDeleteGeneralExpense, hardDeleteGeneralExpense, generalExpenseFileUrl } from "@/api";
+import {
+  fetchGeneralExpenses,
+  softDeleteGeneralExpense,
+  hardDeleteGeneralExpense,
+  generalExpenseFileUrl,
+  listOperationalExpenses,
+  softDeleteOperationalExpense,
+  operationalExpenseFileUrl,
+  listRubros,
+} from "@/api";
 
 import { formatMXN } from "@/design";
 
@@ -18,6 +28,14 @@ function formatDate(iso) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+// `fecha_gasto` de un gasto operativo es solo fecha ("YYYY-MM-DD"), sin hora —
+// a diferencia de `upload_date` (general), que sí trae hora.
+function formatDateSolo(iso) {
+  if (!iso) return "—";
+  const d = new Date(`${iso}T00:00:00`);
+  return d.toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "numeric" });
 }
 
 function fmtDateParam(d) {
@@ -37,9 +55,41 @@ function today() {
   return new Date(t.getFullYear(), t.getMonth(), t.getDate());
 }
 
+// Normaliza gastos generales y operativos a una forma común de fila. La
+// "fecha que manda" difiere por tipo: `upload_date` para general (fecha de
+// subida), `fecha_gasto` para operativo (fecha manual, define el mes) — cada
+// tipo ya se filtró/ordenó en el backend por su propio campo semántico; aquí
+// solo se elige qué campo mostrar en la columna "Fecha".
+function normalizeGeneral(e) {
+  return {
+    id: e.id,
+    tipo: "general",
+    fechaOrden: e.upload_date,
+    fechaLabel: formatDate(e.upload_date),
+    etiqueta: e.brand_name || `ID ${e.brand_id}`,
+    description: e.description,
+    amount: e.amount,
+    raw: e,
+  };
+}
+
+function normalizeOperativo(e) {
+  return {
+    id: e.id,
+    tipo: "operativo",
+    fechaOrden: e.fecha_gasto,
+    fechaLabel: formatDateSolo(e.fecha_gasto),
+    etiqueta: e.rubro_nombre || `ID ${e.rubro_id}`,
+    description: e.description,
+    amount: e.amount,
+    raw: e,
+  };
+}
+
 export default function GeneralExpensesPage({ brands = [] }) {
   usePageTitle("Gastos Generales");
-  const [expenses, setExpenses] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [rubros, setRubros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -50,20 +100,35 @@ export default function GeneralExpensesPage({ brands = [] }) {
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [rubrosModalOpen, setRubrosModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [viewerExpense, setViewerExpense] = useState(null);
+  const [viewerRow, setViewerRow] = useState(null);
+
+  const loadRubros = useCallback(() => {
+    listRubros(false)
+      .then(setRubros)
+      .catch(() => {}); // el selector del modal simplemente queda vacío si falla
+  }, []);
 
   const loadExpenses = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetchGeneralExpenses({
-      startDate: fmtDateParam(dateRange.start),
-      endDate: fmtDateParam(dateRange.end),
-    })
-      .then((data) => {
-        if (!cancelled) setExpenses(data);
+    const startDate = fmtDateParam(dateRange.start);
+    const endDate = fmtDateParam(dateRange.end);
+
+    Promise.all([
+      fetchGeneralExpenses({ startDate, endDate }),
+      listOperationalExpenses({ startDate, endDate }),
+    ])
+      .then(([generales, operativos]) => {
+        if (cancelled) return;
+        const combinados = [
+          ...generales.map(normalizeGeneral),
+          ...operativos.map(normalizeOperativo),
+        ].sort((a, b) => (a.fechaOrden < b.fechaOrden ? 1 : a.fechaOrden > b.fechaOrden ? -1 : 0));
+        setRows(combinados);
       })
       .catch((e) => {
         if (!cancelled) setError(e.message);
@@ -82,6 +147,10 @@ export default function GeneralExpensesPage({ brands = [] }) {
     return cancel;
   }, [loadExpenses]);
 
+  useEffect(() => {
+    loadRubros();
+  }, [loadRubros]);
+
   const handleExpenseCreated = () => {
     setCreateModalOpen(false);
     loadExpenses();
@@ -97,6 +166,9 @@ export default function GeneralExpensesPage({ brands = [] }) {
           Gastos Generales
         </h2>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <button type="button" onClick={() => setRubrosModalOpen(true)} className="btn-go-ghost w-full sm:w-auto">
+            Gestionar rubros
+          </button>
           <button type="button" onClick={() => setExportModalOpen(true)} className="btn-go-ghost w-full sm:w-auto">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path
@@ -111,7 +183,7 @@ export default function GeneralExpensesPage({ brands = [] }) {
             <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            Nuevo Gasto General
+            Nuevo Gasto
           </button>
         </div>
       </div>
@@ -153,13 +225,13 @@ export default function GeneralExpensesPage({ brands = [] }) {
             className="ml-3 font-body text-sm"
             style={{ color: "var(--go-text-secondary)" }}
           >
-            Cargando gastos generales...
+            Cargando gastos...
           </span>
         </div>
       )}
 
       {/* ── Empty state ───────────────────────────────────────────────── */}
-      {!loading && expenses.length === 0 && (
+      {!loading && rows.length === 0 && (
         <div
           className="flex flex-col items-center justify-center py-16 font-body text-sm"
           style={{ color: "var(--go-text-secondary)" }}
@@ -177,12 +249,12 @@ export default function GeneralExpensesPage({ brands = [] }) {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <p>No hay gastos generales registrados.</p>
+          <p>No hay gastos registrados.</p>
         </div>
       )}
 
       {/* ── Table ─────────────────────────────────────────────────────── */}
-      {!loading && expenses.length > 0 && (
+      {!loading && rows.length > 0 && (
         <GlassPanel className="p-4 sm:p-6">
           <div className="go-table-scroll-wrapper">
             <div
@@ -192,49 +264,55 @@ export default function GeneralExpensesPage({ brands = [] }) {
               <table className="go-table">
               <thead>
                 <tr>
+                  <th>Tipo</th>
                   <th>Fecha</th>
-                  <th>Marca</th>
+                  <th>Marca / Rubro</th>
                   <th>Descripción</th>
                   <th className="text-right">Monto</th>
                   <th className="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {expenses.map((expense) => (
-                  <tr key={expense.id}>
-                    <td style={{ color: "var(--go-text-secondary)" }}>
-                      {formatDate(expense.upload_date)}
-                    </td>
+                {rows.map((row) => (
+                  <tr key={`${row.tipo}-${row.id}`}>
                     <td>
-                      <span className="font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
-                        {expense.brand_name || `ID ${expense.brand_id}`}
+                      {/* Distintivo visual: naranja GO para general, turquesa para operativo. */}
+                      <span
+                        className="go-badge whitespace-nowrap"
+                        style={
+                          row.tipo === "general"
+                            ? { background: "rgba(251,103,11,0.12)", color: "var(--go-orange)" }
+                            : { background: "rgba(0,163,182,0.12)", color: "#00A3B6" }
+                        }
+                      >
+                        {row.tipo === "general" ? "General" : "Operativo"}
                       </span>
                     </td>
-                    <td style={{ color: "var(--go-text-primary)" }}>
-                      {expense.description}
+                    <td style={{ color: "var(--go-text-secondary)" }}>{row.fechaLabel}</td>
+                    <td>
+                      <span className="font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>
+                        {row.etiqueta}
+                      </span>
                     </td>
+                    <td style={{ color: "var(--go-text-primary)" }}>{row.description}</td>
                     <td className="num text-right font-semibold" style={{ color: "var(--go-warning)" }}>
-                      {formatMXN(expense.amount)}
+                      {formatMXN(row.amount)}
                     </td>
                     <td className="text-center">
                       <RowActions
                         actions={[
                           {
-                            // Antes era un window.open que, con el
-                            // `Content-Disposition: attachment` del backend,
-                            // descargaba el archivo en vez de mostrarlo. Ahora
-                            // abre el mismo visor que Transacciones.
                             key: "ver",
                             label: "Ver",
                             icon: ICONS.ver,
-                            onClick: () => setViewerExpense(expense),
+                            onClick: () => setViewerRow(row),
                           },
                           {
                             key: "eliminar",
                             label: "Eliminar",
                             icon: ICONS.eliminar,
                             variant: "danger",
-                            onClick: () => setDeleteTarget(expense),
+                            onClick: () => setDeleteTarget(row),
                           },
                         ]}
                       />
@@ -249,18 +327,27 @@ export default function GeneralExpensesPage({ brands = [] }) {
       )}
 
       {createModalOpen && (
-        <GeneralExpenseModal brands={brands} onClose={() => setCreateModalOpen(false)} onSuccess={handleExpenseCreated} />
+        <GeneralExpenseModal
+          brands={brands}
+          rubros={rubros}
+          onClose={() => setCreateModalOpen(false)}
+          onSuccess={handleExpenseCreated}
+        />
       )}
 
       {exportModalOpen && <GeneralExpensesExportModal onClose={() => setExportModalOpen(false)} />}
 
-      {viewerExpense && (
+      {rubrosModalOpen && (
+        <RubrosManagerModal onClose={() => setRubrosModalOpen(false)} onChange={loadRubros} />
+      )}
+
+      {viewerRow && (
         <MediaViewer
-          url={generalExpenseFileUrl(viewerExpense.id)}
-          fileName={viewerExpense.file_name}
-          mimeType={viewerExpense.mime_type || ""}
-          title={`Comprobante — ${viewerExpense.description}`}
-          onClose={() => setViewerExpense(null)}
+          url={viewerRow.tipo === "general" ? generalExpenseFileUrl(viewerRow.id) : operationalExpenseFileUrl(viewerRow.id)}
+          fileName={viewerRow.raw.file_name}
+          mimeType={viewerRow.raw.mime_type || ""}
+          title={`Comprobante — ${viewerRow.description}`}
+          onClose={() => setViewerRow(null)}
         />
       )}
 
@@ -269,13 +356,20 @@ export default function GeneralExpensesPage({ brands = [] }) {
           itemLabel={`"${deleteTarget.description}" (${formatMXN(deleteTarget.amount)})`}
           onClose={() => setDeleteTarget(null)}
           onSoftDelete={async () => {
-            await softDeleteGeneralExpense(deleteTarget.id);
+            if (deleteTarget.tipo === "general") await softDeleteGeneralExpense(deleteTarget.id);
+            else await softDeleteOperationalExpense(deleteTarget.id);
             loadExpenses();
           }}
-          onHardDelete={async () => {
-            await hardDeleteGeneralExpense(deleteTarget.id);
-            loadExpenses();
-          }}
+          // Gastos operativos: solo borrado lógico (sin `onHardDelete`, el
+          // modal omite la opción de borrado físico — ver DeleteConfirmModal.jsx).
+          onHardDelete={
+            deleteTarget.tipo === "general"
+              ? async () => {
+                  await hardDeleteGeneralExpense(deleteTarget.id);
+                  loadExpenses();
+                }
+              : undefined
+          }
         />
       )}
     </div>

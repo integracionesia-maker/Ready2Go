@@ -15,14 +15,19 @@ function monthLabel(ym) {
   return `${MONTHS_ES[parseInt(m, 10) - 1]} ${y}`;
 }
 
-export default function MonthlySpendChart({ data, forceTheme }) {
-  const { theme: ctxTheme } = useTheme();
-  const theme = forceTheme || ctxTheme;
+/** Barras apiladas: "Aprobado" (gasto oficial, cuenta contra el ciclo) +
+ * "Pendiente por confirmar" (lo que los creadores ya subieron pero
+ * admin/superadmin no ha revisado — informativo, NUNCA suma al ciclo, R7).
+ * Un mes con solo pendientes (ej. el mes en curso) igual aparece: el
+ * backend une las llaves de ambos estados. */
+export default function MonthlySpendChart({ data }) {
+  const { theme } = useTheme();
   const isMobile = useMobile();
   const options = useMemo(() => {
     return createApexOptions({
       chart: {
         type: "bar",
+        stacked: true,
         toolbar: { show: true, tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false } },
       },
       xaxis: {
@@ -37,28 +42,36 @@ export default function MonthlySpendChart({ data, forceTheme }) {
         bar: {
           borderRadius: 4,
           columnWidth: "55%",
-          dataLabels: { position: "top" },
         },
       },
       dataLabels: {
         enabled: true,
-        formatter: formatChartCurrency,
-        offsetY: -20,
+        formatter: (v) => (v > 0 ? formatChartCurrency(v) : ""),
         style: { fontSize: "10px", colors: ["var(--go-text-secondary)"] },
       },
       tooltip: {
-        y: { formatter: (v) => `$${v.toLocaleString("es-MX", { minimumFractionDigits: 2 })}` },
+        y: {
+          formatter: (v, { seriesIndex, dataPointIndex }) => {
+            const amount = `$${v.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
+            const item = (data || [])[dataPointIndex];
+            if (seriesIndex === 0) {
+              const n = item?.count ?? 0;
+              return `${amount} · ${n === 1 ? "1 ticket aprobado" : `${n} tickets aprobados`}`;
+            }
+            const n = item?.pending_count ?? 0;
+            return `${amount} · ${n === 1 ? "1 ticket pendiente" : `${n} tickets pendientes`}`;
+          },
+        },
       },
-      colors: [GO_CHART_COLORS[1]], // turquoise
+      legend: { show: true, position: "top", horizontalAlign: "right" },
+      colors: [GO_CHART_COLORS[1], GO_CHART_COLORS[5]], // turquesa (aprobado) + ambar (pendiente)
     }, theme);
   }, [data, theme]);
 
   const series = useMemo(() => {
     return [
-      {
-        name: "Gasto",
-        data: (data || []).map((d) => d.total),
-      },
+      { name: "Aprobado", data: (data || []).map((d) => d.total) },
+      { name: "Pendiente por confirmar", data: (data || []).map((d) => d.pending_total || 0) },
     ];
   }, [data]);
 
