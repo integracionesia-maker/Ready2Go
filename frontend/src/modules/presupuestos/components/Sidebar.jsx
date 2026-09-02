@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { LiquidGlow } from "@/design";
-import { ADMIN_ROLES, ADMINISTRACION_ROLES, PRESUPUESTOS_ROLES } from "../roles";
+import { ADMINISTRACION_ROLES, PRESUPUESTOS_ROLES, puedeValidarTickets } from "../roles";
 
 const NAV_ITEMS = [
   {
@@ -34,7 +34,10 @@ const NAV_ITEMS = [
     to: "/validacion",
     label: "Validación",
     icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-    roles: ADMIN_ROLES,
+    // Especial: no se filtra con `roles` (ver puedeValidarTickets abajo) —
+    // combina rol base (admin/superadmin) con el paquete aditivo
+    // APROBADOR_PRESUPUESTOS.
+    roles: null,
     badgeKey: "pendingCount",
   },
   {
@@ -68,8 +71,10 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
 
   const labelClass = collapsed ? "md:hidden" : "";
 
-  const visibleItems = NAV_ITEMS.filter(
-    (item) => !item.roles || (user && item.roles.includes(user.role))
+  const visibleItems = NAV_ITEMS.filter((item) =>
+    item.to === "/validacion"
+      ? puedeValidarTickets(user)
+      : !item.roles || (user && item.roles.includes(user.role))
   );
 
   return (

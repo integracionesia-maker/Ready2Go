@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from .. import crud, models, schemas
 from ..database import get_db, SessionLocal
 from ..dependencies import get_current_user, require_role
+from ..rbac import require_rol_o_paquete, tiene_paquete
 from ..upload_manager import save_upload, delete_upload
 
 router = APIRouter(prefix="/api/tickets", tags=["tickets"])
@@ -26,6 +27,16 @@ ROLES_CON_TICKETS = (
     "superadmin", "admin", "marketing_presupuestos", "marketing_admin",
     "creador", "marketing_basico",
 )
+
+PAQUETE_APROBADOR = "APROBADOR_PRESUPUESTOS"
+
+
+def _puede_ver_tickets(current_user: models.User, db: Session) -> bool:
+    """`ROLES_CON_TICKETS` + la excepcion puntual del paquete aditivo: sin esto,
+    alguien con rol base fuera de esa lista (p. ej. `usuario`) que recibe
+    APROBADOR_PRESUPUESTOS puede aprobar/rechazar via API pero nunca ve la cola
+    de Validacion, porque list_tickets/download_file lo rechazarian antes."""
+    return current_user.role in ROLES_CON_TICKETS or tiene_paquete(db, current_user, PAQUETE_APROBADOR)
 
 
 def _ticket_to_response(t: models.Ticket) -> schemas.TicketResponse:
@@ -68,7 +79,7 @@ def list_tickets(
     if status is not None and status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail=f"Estado inválido: '{status}'.")
 
-    if current_user.role not in ROLES_CON_TICKETS:
+    if not _puede_ver_tickets(current_user, db):
         raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
 
     # `limit`/`offset` opcionales (sin cambio de contrato: sin ellos se
@@ -121,7 +132,7 @@ def download_file(
     # completo), creador (dueño del ticket) y marketing_basico (solo lo que el
     # mismo subio) pueden descargar comprobantes. Roles sin acceso a Presupuestos
     # (colaborador_mkt, usuario) reciben 403 (hallazgo #2 auditoría).
-    if current_user.role not in ROLES_CON_TICKETS:
+    if not _puede_ver_tickets(current_user, db):
         raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
     if current_user.role == "creador" and ticket.creator_id != current_user.creator_id:
         raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
@@ -211,11 +222,22 @@ def create_ticket(
         db.close()
 
 
+# aprobar/rechazar/soft-delete se quedan en require_role("admin","superadmin")
+# a pelo (no en require_perm), con require_rol_o_paquete sumando la excepcion
+# puntual de APROBADOR_PRESUPUESTOS por encima. Ojo: rbac_catalog.py ya lista
+# "validar_ticket"/"borrar_ticket" para marketing_presupuestos/marketing_admin,
+# pero como esta ruta nunca consulto ese catalogo, esos roles NO pueden aprobar
+# ni borrar tickets hoy pese a lo que dice el catalogo — es una discrepancia
+# preexistente, no algo que este cambio corrija (decision explicita: hacerlo
+# extendería el permiso a roles base ya existentes, no solo a la excepcion
+# puntual pedida).
 @router.post("/{ticket_id}/aprobar", response_model=schemas.TicketResponse)
 def aprobar_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(
+        require_rol_o_paquete("admin", "superadmin", paquete=PAQUETE_APROBADOR)
+    ),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket or ticket.is_deleted:
@@ -239,7 +261,9 @@ def rechazar_ticket(
     ticket_id: int,
     data: schemas.TicketRejectRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(
+        require_rol_o_paquete("admin", "superadmin", paquete=PAQUETE_APROBADOR)
+    ),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket or ticket.is_deleted:
@@ -263,7 +287,9 @@ def rechazar_ticket(
 def soft_delete_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("admin", "superadmin")),
+    current_user: models.User = Depends(
+        require_rol_o_paquete("admin", "superadmin", paquete=PAQUETE_APROBADOR)
+    ),
 ):
     ticket = crud.get_ticket(db, ticket_id)
     if not ticket or ticket.is_deleted:
@@ -284,6 +310,9 @@ def soft_delete_ticket(
 def hard_delete_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
+    # A proposito NO acepta el paquete aditivo APROBADOR_PRESUPUESTOS: el borrado
+    # fisico borra el archivo y la fila sin dejar rastro (irreversible, a
+    # diferencia de soft-delete). Se queda exclusivo de admin/superadmin.
     current_user: models.User = Depends(require_role("admin", "superadmin")),
 ):
     ticket = crud.get_ticket(db, ticket_id)

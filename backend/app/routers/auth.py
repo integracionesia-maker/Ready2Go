@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from .. import crud, models, rbac_catalog, schemas, security
 from ..database import get_db
 from ..dependencies import get_current_user
-from ..rbac import permisos_del_request
+from ..rbac import paquetes_aditivos_de, permisos_del_request
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -185,6 +185,7 @@ def me(
     respuesta.permisos = rbac_catalog.a_json(
         permisos_del_request(request, db, current_user)
     )
+    respuesta.paquetes_aditivos = paquetes_aditivos_de(db, current_user)
     return respuesta
 
 

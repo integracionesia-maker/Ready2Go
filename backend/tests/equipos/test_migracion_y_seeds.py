@@ -352,8 +352,9 @@ def test_la_secuencia_completa_corre_dos_veces_seguidas(tmp_path):
         assert conn.execute(text("SELECT COUNT(*) FROM loan")).scalar() == 1
         assert conn.execute(text("SELECT COUNT(*) FROM media_asset")).scalar() == 4
         # Gastos Operativos se fusionó a Gastos Generales (fuera del catálogo
-        # RBAC aditivo, retirado junto con el rol `operativo`).
-        assert conn.execute(text("SELECT COUNT(*) FROM role_permissions")).scalar() == 113
+        # RBAC aditivo, retirado junto con el rol `operativo`). +2 por el
+        # paquete aditivo APROBADOR_PRESUPUESTOS (validar_ticket, borrar_ticket).
+        assert conn.execute(text("SELECT COUNT(*) FROM role_permissions")).scalar() == 115
     motor.dispose()
 
 

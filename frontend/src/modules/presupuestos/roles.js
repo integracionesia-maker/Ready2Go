@@ -48,10 +48,36 @@ export const TICKETS_ROLES = [...PRESUPUESTOS_ROLES, "creador", "marketing_basic
 export const ADMINISTRACION_ROLES = ["admin", "superadmin", "marketing_admin"];
 
 /**
- * Validación de tickets (y borrado): exclusiva de admin/superadmin. Espejo de
- * aprobar/rechazar/borrar en `tickets.py`, que son admin/superadmin.
+ * Validación de tickets (y borrado lógico): admin/superadmin por rol base.
+ * Espejo de `require_role("admin","superadmin")` en `tickets.py` — pero ya NO
+ * es la puerta completa, ver `puedeValidarTickets` más abajo.
  */
 export const ADMIN_ROLES = ["admin", "superadmin"];
+
+/**
+ * Nombre del paquete aditivo que abre la excepción puntual de Validación sin
+ * ser admin/superadmin. Espejo de `PAQUETE_APROBADOR` en
+ * `backend/app/routers/tickets.py`.
+ */
+export const PAQUETE_APROBADOR_PRESUPUESTOS = "APROBADOR_PRESUPUESTOS";
+
+/**
+ * ¿Puede este usuario aprobar/rechazar/borrar (lógico) tickets? Rol base en
+ * `ADMIN_ROLES`, O el paquete aditivo concedido explícitamente en
+ * `user.paquetes_aditivos` (de `GET /api/auth/me`).
+ *
+ * A propósito NO usa `user.permisos` (la unión general): el catálogo del
+ * backend ya lista `validar_ticket` para `marketing_presupuestos`/
+ * `marketing_admin` sin que `tickets.py` los deje pasar — si esta función
+ * mirara `permisos`, la Validación aparecería para esos roles y luego
+ * reventaría en 403 al hacer clic (ver `rbac.require_rol_o_paquete` en el
+ * backend, que tiene el mismo cuidado del lado del servidor).
+ */
+export function puedeValidarTickets(user) {
+  if (!user) return false;
+  if (ADMIN_ROLES.includes(user.role)) return true;
+  return (user.paquetes_aditivos || []).includes(PAQUETE_APROBADOR_PRESUPUESTOS);
+}
 
 /** Gestión de usuarios y RBAC (R4). */
 export const SUPERADMIN_ONLY = ["superadmin"];

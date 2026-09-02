@@ -18,8 +18,12 @@ function FullScreenSpinner() {
  * must_change_password pendiente -> /perfil; con sesión pero rol no permitido -> /403.
  * Si la verificación de sesión falla por red (no por 401 real), muestra el
  * estado "sin conexión" (R1) en vez de mandar a /login engañosamente.
+ *
+ * `allow`: escotilla opcional para rutas que un rol fuera de `roles` puede
+ * abrir por otra vía (ej. un paquete aditivo, ver `puedeValidarTickets` en
+ * `roles.js` para /validacion) — si es `true`, se salta el chequeo de `roles`.
  */
-export default function ProtectedRoute({ roles, children }) {
+export default function ProtectedRoute({ roles, allow, children }) {
   const { user, loading, networkError, retrying, retryCheckSession } = useAuth();
   const location = useLocation();
 
@@ -43,7 +47,7 @@ export default function ProtectedRoute({ roles, children }) {
     return <Navigate to="/perfil" replace />;
   }
 
-  if (roles && !roles.includes(user.role)) {
+  if (roles && !allow && !roles.includes(user.role)) {
     return <Navigate to="/403" replace />;
   }
 

@@ -46,6 +46,9 @@ __all__ = [
     "tiene_permiso",
     "require_perm",
     "require_cualquiera",
+    "require_rol_o_paquete",
+    "paquetes_aditivos_de",
+    "tiene_paquete",
     "MODO_ADITIVO",
     "MODO_LEGACY",
 ]
@@ -81,6 +84,27 @@ def _aditivos_concedidos(db: Session, user_id: int) -> list[str]:
         .all()
     )
     return [fila[0] for fila in filas]
+
+
+def paquetes_aditivos_de(db: Session, user) -> list[str]:
+    """Concesiones explicitas del usuario tal cual (sin rol base, sin piso).
+
+    Uso: el cliente necesita saber "¿tengo esta excepcion puntual?" sin que la
+    respuesta se contamine con lo que su rol base ya trae por catalogo (ver
+    `require_rol_o_paquete` para el porque). Se expone en `/api/auth/me` para
+    que la UI decida que mostrar (p. ej. la cola de Validacion) igual que decide
+    el backend, en vez de inferirlo de `permisos` (la union general)."""
+    if user is None or user.role == SUPERADMIN:
+        return []
+    try:
+        return _aditivos_concedidos(db, user.id)
+    except SQLAlchemyError as exc:
+        raise PermisosNoDisponibles() from exc
+
+
+def tiene_paquete(db: Session, user, paquete: str) -> bool:
+    """True si `user` tiene concedido (activo) el paquete aditivo `paquete`."""
+    return paquete in paquetes_aditivos_de(db, user)
 
 
 def permisos_efectivos(db: Session, user) -> dict[str, set[str]]:
@@ -162,6 +186,35 @@ def require_perm(modulo: str, accion: str):
         if not tiene_permiso(permisos, modulo, accion):
             raise SinPermiso()
         return current_user
+
+    return _dependencia
+
+
+def require_rol_o_paquete(*roles: str, paquete: str):
+    """Dependencia FastAPI para endpoints que todavia usan `require_role` a pelo
+    (p. ej. `tickets.py`) y necesitan una excepcion puntual sin migrar todo el
+    endpoint al motor aditivo.
+
+    Pasa si `current_user.role` esta en `roles`, o si tiene concedido el paquete
+    aditivo `paquete` — via `user_role_grants`, **no** via `permisos_efectivos`.
+    La distincion importa: algunos roles base ya listan el mismo (modulo, accion)
+    en `rbac_catalog.py` sin que el endpoint los deje pasar hoy (ver comentario en
+    `tickets.py`); usar `permisos_efectivos` aqui colaria esos roles por una
+    puerta de atras el dia que alguien la use, deshaciendo a medias esa
+    restriccion sin que nadie lo haya decidido. Esta funcion solo mira la
+    concesion explicita, para que el efecto quede acotado a quien de verdad
+    recibio el paquete por Asignaciones.
+    """
+    if rbac_catalog.kind_de(paquete) != rbac_catalog.KIND_ADITIVO:
+        raise ValueError(f"'{paquete}' no es un paquete aditivo del catalogo.")
+
+    def _dependencia(
+        current_user=Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ):
+        if current_user.role in roles or tiene_paquete(db, current_user, paquete):
+            return current_user
+        raise SinPermiso()
 
     return _dependencia
 

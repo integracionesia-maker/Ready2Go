@@ -217,6 +217,17 @@ PAQUETES: dict[str, dict] = {
             "equipos_prestamos": ("ver_global",),
         },
     },
+    "APROBADOR_PRESUPUESTOS": {
+        "kind": KIND_ADITIVO,
+        "descripcion": "Aprueba, rechaza y borra (logico) tickets de creadores sin ser "
+        "admin/superadmin. Pensado para una excepcion puntual asignada por un admin "
+        "(ej. alguien designado para cubrir la validacion), no para un rol base nuevo. "
+        "El borrado FISICO/permanente sigue siendo exclusivo de admin/superadmin: "
+        "ver nota en backend/app/routers/tickets.py.",
+        "permisos": {
+            "presupuestos": ("validar_ticket", "borrar_ticket"),
+        },
+    },
 }
 
 

@@ -131,6 +131,8 @@ En el frontend (`Dashboard.jsx`), esto se ve como una segunda serie apilada en l
 ### 3.3 Bandeja de validación
 
 Ruta `/validacion` (solo `admin`/`superadmin`, componente `ValidationQueue.jsx`): lista los tickets `pendiente` con creador, marca (+ badge de prioridad, R9), monto, fecha, restante del ciclo, y tres acciones:
+
+**Excepción puntual — paquete aditivo `APROBADOR_PRESUPUESTOS`:** desde Administración → Asignaciones se le puede conceder a cualquier usuario (sin importar su rol base) la capacidad de aprobar, rechazar y borrar (lógico) tickets, para casos como una persona designada por un admin para cubrir la validación sin ser admin ella misma. **No incluye borrado físico/permanente** — eso sigue siendo exclusivo de `admin`/`superadmin`. Implementado con `rbac.require_rol_o_paquete` en vez del motor de permisos general a propósito: ver la nota en `CLAUDE.md` sobre por qué `marketing_presupuestos`/`marketing_admin` no reciben esto automáticamente pese a tener `validar_ticket` en el catálogo.
 - **Ver**: abre el comprobante en el visor in-app (R11, ver §5) sin descargarlo.
 - **Aprobar**: descuenta del ciclo asignado al ticket (§2.4), sin validar fondos (§2.5). Registra `reviewed_by_user_id` + `reviewed_at`.
 - **Rechazar**: exige un motivo (`rejection_reason`, obligatorio, no vacío) — nunca descuenta. El creador lo ve en su vista de Transacciones (tooltip sobre el badge "Rechazado").

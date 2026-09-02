@@ -232,6 +232,11 @@ class UserResponse(BaseModel):
     # de usuarios) los dejan en {} a propósito, para no resolver RBAC en rutas
     # que no lo necesitan. Lista y no set porque JSON no tiene sets.
     permisos: dict[str, list[str]] = {}
+    # Paquetes aditivos concedidos tal cual (sin rol base, sin piso) — distinto
+    # de `permisos`, que ya es la unión. La UI lo usa para excepciones puntuales
+    # (ej. mostrar la cola de Validación) sin que un rol base que ya liste el
+    # mismo permiso en el catálogo cuele por la unión general. Solo /me lo llena.
+    paquetes_aditivos: list[str] = []
 
     model_config = {"from_attributes": True}
 
