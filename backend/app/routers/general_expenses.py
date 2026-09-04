@@ -74,7 +74,15 @@ def download_general_expense_file(
     expense = crud.get_general_expense(db, expense_id)
     if not expense or expense.is_deleted:
         raise HTTPException(status_code=404, detail="Gasto general no encontrado.")
-    return FileResponse(path=expense.file_path, media_type=expense.mime_type, filename=expense.file_name)
+    # `content_disposition_type="inline"`: sin esto, FileResponse con `filename`
+    # manda Content-Disposition: attachment por default y el navegador
+    # descarga el PDF en vez de mostrarlo en el <iframe> del visor.
+    return FileResponse(
+        path=expense.file_path,
+        media_type=expense.mime_type,
+        filename=expense.file_name,
+        content_disposition_type="inline",
+    )
 
 
 @router.post("/", response_model=schemas.GeneralExpenseResponse, status_code=201)

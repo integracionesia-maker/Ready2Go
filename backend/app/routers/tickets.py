@@ -138,7 +138,15 @@ def download_file(
         raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
     if current_user.role == "marketing_basico" and ticket.uploaded_by_user_id != current_user.id:
         raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
-    return FileResponse(path=ticket.file_path, media_type=ticket.mime_type, filename=ticket.file_name)
+    # `content_disposition_type="inline"`: sin esto, FileResponse con `filename`
+    # manda Content-Disposition: attachment por default y el navegador
+    # descarga el PDF en vez de mostrarlo en el <iframe> del visor.
+    return FileResponse(
+        path=ticket.file_path,
+        media_type=ticket.mime_type,
+        filename=ticket.file_name,
+        content_disposition_type="inline",
+    )
 
 
 @router.post("/", response_model=schemas.TicketResponse, status_code=201)

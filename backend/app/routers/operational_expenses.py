@@ -93,7 +93,15 @@ def download_file(
     expense = crud_operativos.get_expense(db, expense_id)
     if not expense or expense.is_deleted:
         raise HTTPException(status_code=404, detail="Gasto operativo no encontrado.")
-    return FileResponse(path=expense.file_path, media_type=expense.mime_type, filename=expense.file_name)
+    # `content_disposition_type="inline"`: sin esto, FileResponse con `filename`
+    # manda Content-Disposition: attachment por default y el navegador
+    # descarga el PDF en vez de mostrarlo en el <iframe> del visor.
+    return FileResponse(
+        path=expense.file_path,
+        media_type=expense.mime_type,
+        filename=expense.file_name,
+        content_disposition_type="inline",
+    )
 
 
 @router.post("/", response_model=schemas.OperationalExpenseResponse, status_code=201)
