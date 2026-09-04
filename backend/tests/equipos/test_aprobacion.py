@@ -33,10 +33,17 @@ def ana(inventario, db):
 
 @pytest.fixture
 def melisa(inventario, db):
-    return usuario_con(db, username="melisa", aditivos=("APROBADOR_EQUIPO",))
+    # `firma_entrega` es identidad (titular del paquete singleton
+    # TITULAR_FIRMA_EQUIPO), no permiso — sin este aditivo, `_prestado()` (que
+    # firma con melisa) dejaria de poder subir firma_entrega.
+    return usuario_con(db, username="melisa", aditivos=("APROBADOR_EQUIPO", "TITULAR_FIRMA_EQUIPO"))
 
 
 def _prestado(cliente, equipment_ids=(1,)):
+    """Confirmado y con las DOS firmas ya completas — `confirmar` ya no pide
+    ninguna (revision 2), asi que se completan aparte aqui: la del aprobador
+    con `melisa` (unico permiso que la acepta), la del beneficiario con el
+    mismo `cliente` que crea el prestamo."""
     loan_id = cliente.post(
         "/api/loans/", json={"motivo": "Live", "fecha_regreso_esperada": "2026-12-31"}
     ).json()["id"]
@@ -47,9 +54,27 @@ def _prestado(cliente, equipment_ids=(1,)):
         item_id = ficha["items"][-1]["id"]
         subir(cliente, loan_id, "foto_entrega_frente", item_id)
         subir(cliente, loan_id, "foto_entrega_atras", item_id)
-    subir(cliente, loan_id, "firma_entrega")
-    subir(cliente, loan_id, "firma_responsable")
     cliente.post(f"/api/loans/{loan_id}/confirmar")
+    subir(logueado("melisa"), loan_id, "firma_entrega")
+    subir(cliente, loan_id, "firma_responsable")
+    return loan_id
+
+
+def _prestado_con_una_sola_firma(cliente, equipment_ids=(1,)):
+    """Como `_prestado`, pero solo se completa la firma del aprobador — deja
+    el prestamo confirmado con la del beneficiario pendiente."""
+    loan_id = cliente.post(
+        "/api/loans/", json={"motivo": "Live", "fecha_regreso_esperada": "2026-12-31"}
+    ).json()["id"]
+    for equipment_id in equipment_ids:
+        ficha = cliente.post(
+            f"/api/loans/{loan_id}/items", json={"equipment_id": equipment_id}
+        ).json()
+        item_id = ficha["items"][-1]["id"]
+        subir(cliente, loan_id, "foto_entrega_frente", item_id)
+        subir(cliente, loan_id, "foto_entrega_atras", item_id)
+    cliente.post(f"/api/loans/{loan_id}/confirmar")
+    subir(logueado("melisa"), loan_id, "firma_entrega")
     return loan_id
 
 
@@ -68,7 +93,7 @@ def _devuelto(cliente, loan_id):
 # ── Permisos ────────────────────────────────────────────────────────────────
 
 
-def test_un_colaborador_no_autoriza_entregas(inventario, ana):
+def test_un_colaborador_no_autoriza_entregas(inventario, ana, melisa):
     cliente = logueado("ana.ruiz")
     loan_id = _prestado(cliente)
     resp = cliente.post(f"/api/loans/{loan_id}/autorizar-entrega")
@@ -76,7 +101,7 @@ def test_un_colaborador_no_autoriza_entregas(inventario, ana):
     assert resp.json()["codigo"] == "SIN_PERMISO"
 
 
-def test_un_admin_si_autoriza(inventario, ana, db):
+def test_un_admin_si_autoriza(inventario, ana, melisa, db):
     """Redefinicion de roles (docs/asignaciones/prompt-rbac-redefinicion.md):
     `admin` = Presupuestos completo + Equipos completo, aprobacion INCLUIDA
     en el rol base (ver rbac_catalog.PAQUETES["admin"]). Ya no depende del
@@ -86,7 +111,7 @@ def test_un_admin_si_autoriza(inventario, ana, db):
     assert logueado("adm").post(f"/api/loans/{loan_id}/autorizar-entrega").status_code == 200
 
 
-def test_marketing_equipos_no_autoriza_sin_paquete_aditivo(inventario, ana, db):
+def test_marketing_equipos_no_autoriza_sin_paquete_aditivo(inventario, ana, melisa, db):
     """`marketing_equipos` tiene Equipos completo pero SIN aprobacion: para
     autorizar entregas necesita el paquete aditivo APROBADOR_EQUIPO (ver
     rbac_catalog.PAQUETES["marketing_equipos"])."""
@@ -169,6 +194,62 @@ def test_todo_ok_sin_autorizacion_no_completa_y_no_escribe_nada(inventario, ana,
     assert ficha["items"][0]["decision"] is None
     assert ficha["items"][0]["devuelto_at"] is None
     assert ficha["confirmada_por"] is None
+
+
+def test_todo_ok_con_firma_pendiente_no_completa_y_no_escribe_nada(inventario, ana, melisa):
+    """Mismo patron que `test_todo_ok_sin_autorizacion_no_completa_y_no_escribe_nada`
+    (§1b de loan_state.py): se rechaza ANTES de mutar."""
+    cliente_ana = logueado("ana.ruiz")
+    loan_id = _prestado_con_una_sola_firma(cliente_ana)
+    items = _devuelto(cliente_ana, loan_id)
+
+    cliente_mel = logueado("melisa")
+    cliente_mel.post(f"/api/loans/{loan_id}/autorizar-entrega")
+    resp = cliente_mel.post(
+        f"/api/loans/{loan_id}/confirmar-devolucion",
+        json={"decisiones": [{"loan_item_id": items[0], "decision": "ok"}]},
+    )
+    assert resp.status_code == 409
+    assert resp.json()["codigo"] == "TRANSICION_INVALIDA"
+    assert "firma pendiente" in resp.json()["detail"]
+
+    ficha = cliente_mel.get(f"/api/loans/{loan_id}").json()
+    assert ficha["estado"] == "pendiente_confirmacion"
+    assert ficha["items"][0]["decision"] is None
+
+
+def test_completar_la_firma_desbloquea_confirmar_devolucion(inventario, ana, melisa):
+    cliente_ana = logueado("ana.ruiz")
+    loan_id = _prestado_con_una_sola_firma(cliente_ana)
+    items = _devuelto(cliente_ana, loan_id)
+    subir(cliente_ana, loan_id, "firma_responsable")
+
+    cliente_mel = logueado("melisa")
+    cliente_mel.post(f"/api/loans/{loan_id}/autorizar-entrega")
+    cuerpo = cliente_mel.post(
+        f"/api/loans/{loan_id}/confirmar-devolucion",
+        json={"decisiones": [{"loan_item_id": items[0], "decision": "ok"}]},
+    ).json()
+    assert cuerpo["estado"] == "completado"
+
+
+def test_con_incidencia_y_firma_pendiente_si_pasa_a_incompleto(inventario, ana, melisa):
+    """La guarda se evalua contra el DESTINO, igual que la de autorizacion: si
+    tambien bloqueara aqui, un prestamo con incidencia y firma pendiente no
+    tendria a donde ir."""
+    cliente_ana = logueado("ana.ruiz")
+    loan_id = _prestado_con_una_sola_firma(cliente_ana)
+    items = _devuelto(cliente_ana, loan_id)
+
+    cuerpo = logueado("melisa").post(
+        f"/api/loans/{loan_id}/confirmar-devolucion",
+        json={
+            "decisiones": [
+                {"loan_item_id": items[0], "decision": "danado", "nota": "Lente rayado"}
+            ]
+        },
+    ).json()
+    assert cuerpo["estado"] == "incompleto"
 
 
 def test_con_incidencia_si_pasa_a_incompleto_sin_autorizacion(inventario, ana, melisa):
@@ -362,6 +443,21 @@ def test_cerrar_incidencia_sin_autorizacion_es_409(inventario, ana, melisa):
     assert "no esta autorizada" in resp.json()["detail"]
 
 
+def test_cerrar_incidencia_con_firma_pendiente_es_409(inventario, ana, melisa):
+    cliente_ana, cliente_mel = logueado("ana.ruiz"), logueado("melisa")
+    loan_id = _prestado_con_una_sola_firma(cliente_ana)
+    items = _devuelto(cliente_ana, loan_id)
+    cliente_mel.post(
+        f"/api/loans/{loan_id}/confirmar-devolucion",
+        json={"decisiones": [{"loan_item_id": items[0], "decision": "danado", "nota": "Rayado"}]},
+    )
+    cliente_mel.post(f"/api/loans/{loan_id}/autorizar-entrega")
+
+    resp = cliente_mel.post(f"/api/loans/{loan_id}/cerrar-incidencia", json={"nota": "Reparado."})
+    assert resp.status_code == 409
+    assert "firma pendiente" in resp.json()["detail"]
+
+
 def test_se_puede_autorizar_un_prestamo_ya_incompleto(inventario, ana, melisa):
     """Sin esto, un prestamo que llego a incompleto sin autorizacion no se
     podria cerrar nunca."""
@@ -428,6 +524,11 @@ def test_la_bitacora_registra_el_ciclo_completo(inventario, ana, melisa):
         "creado",
         "item_agregado",
         "confirmado",
+        "responsiva_generada",
+        # `_prestado` completa las dos firmas despues de confirmar (revision
+        # 2: confirmar ya no las pide) — la segunda deja `firmas_completas`
+        # en True y dispara una v2 de la responsiva.
+        "firma_completada",
         "responsiva_generada",
         "devolucion_registrada",
         "entrega_autorizada",

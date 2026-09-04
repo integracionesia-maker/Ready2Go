@@ -79,7 +79,9 @@ def ana(inventario, db):
 
 @pytest.fixture
 def melisa(inventario, db):
-    return usuario_con(db, username="melisa", aditivos=("APROBADOR_EQUIPO",))
+    # `firma_entrega` es identidad (titular del paquete singleton
+    # TITULAR_FIRMA_EQUIPO), no permiso.
+    return usuario_con(db, username="melisa", aditivos=("APROBADOR_EQUIPO", "TITULAR_FIRMA_EQUIPO"))
 
 
 def _confirmado(cliente, equipment_ids=(1,)):
@@ -100,8 +102,8 @@ def _confirmado(cliente, equipment_ids=(1,)):
         item_id = ficha["items"][-1]["id"]
         subir(cliente, loan_id, "foto_entrega_frente", item_id)
         subir(cliente, loan_id, "foto_entrega_atras", item_id)
-    subir(cliente, loan_id, "firma_entrega")
-    subir(cliente, loan_id, "firma_responsable")
+    # Sin firmas: `confirmar` ya no pide ninguna (revision 2, §1b de
+    # loan_state.py).
     cliente.post(f"/api/loans/{loan_id}/confirmar")
     return loan_id
 
@@ -282,8 +284,8 @@ def test_en_modo_legacy_no_hay_aprobadores(inventario, db, monkeypatch, caplog):
 # ── Contenido de los correos ────────────────────────────────────────────────
 
 
-def test_hay_cinco_plantillas():
-    assert len(pl.PLANTILLAS) == 5
+def test_hay_seis_plantillas():
+    assert len(pl.PLANTILLAS) == 6
 
 
 def test_ninguna_plantilla_lleva_emojis(inventario, ana, db):
@@ -316,6 +318,32 @@ def test_el_responsable_recibe_su_copia_del_pdf(inventario, ana, melisa, smtp_fa
     copia = next(c for c in smtp_falso if c["to"] == ana.email)
     assert "CE-0001" in copia["subject"]
     assert copia["adjuntos"] == ["CE-0001_v1.pdf"]
+
+
+def test_el_aviso_de_confirmacion_avisa_de_las_firmas_pendientes(inventario, ana, melisa, smtp_falso):
+    """`confirmar` ya no pide ninguna firma (revision 2): al momento de este
+    correo lo normal es que falten LAS DOS."""
+    cliente = logueado("ana.ruiz")
+    _confirmado(cliente)
+
+    aprobador = next(c for c in smtp_falso if c["to"] == melisa.email)
+    assert "el aprobador" in aprobador["body"]
+    assert "el beneficiario" in aprobador["body"]
+
+
+def test_completar_las_dos_firmas_avisa_al_responsable_y_al_aprobador(inventario, ana, melisa, smtp_falso):
+    cliente = logueado("ana.ruiz")
+    loan_id = _confirmado(cliente)
+    smtp_falso.clear()
+
+    subir(logueado("melisa"), loan_id, "firma_entrega")
+    subir(cliente, loan_id, "firma_responsable")
+
+    aprobador = next(c for c in smtp_falso if c["to"] == melisa.email)
+    responsable = next(c for c in smtp_falso if c["to"] == ana.email)
+    assert "CE-0001" in aprobador["subject"]
+    assert aprobador["adjuntos"] == ["CE-0001_v2.pdf"]
+    assert responsable["adjuntos"] == ["CE-0001_v2.pdf"]
 
 
 def test_el_remitente_lleva_nombre_visible(inventario, ana, melisa, smtp_falso):

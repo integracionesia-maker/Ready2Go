@@ -98,6 +98,54 @@ def test_revocar_devuelve_false_si_no_habia_nada(db, catalogo):
     assert crud_rbac.revocar(db, user.id, "AUDITOR") is False
 
 
+# ── Paquetes singleton (ej. TITULAR_FIRMA_EQUIPO) ───────────────────────────
+
+
+def test_conceder_singleton_revoca_del_titular_anterior(db, catalogo):
+    melisa = usuario_con(db, username="mel.titular", role="colaborador_mkt")
+    ana = usuario_con(db, username="ana.titular", role="colaborador_mkt")
+
+    crud_rbac.conceder(db, melisa.id, "TITULAR_FIRMA_EQUIPO", granted_by=None)
+    assert crud_rbac.tiene_grant(db, melisa.id, "TITULAR_FIRMA_EQUIPO")
+
+    crud_rbac.conceder(db, ana.id, "TITULAR_FIRMA_EQUIPO", granted_by=None)
+    assert crud_rbac.tiene_grant(db, ana.id, "TITULAR_FIRMA_EQUIPO")
+    assert not crud_rbac.tiene_grant(db, melisa.id, "TITULAR_FIRMA_EQUIPO")
+
+    assert db.query(UserRoleGrant).filter(UserRoleGrant.role_name == "TITULAR_FIRMA_EQUIPO").count() == 1
+
+
+def test_conceder_singleton_al_mismo_titular_no_falla_ni_duplica(db, catalogo):
+    """Idempotente igual que cualquier otro aditivo: conceder dos veces al
+    mismo usuario no dispara el desplazamiento contra si mismo."""
+    melisa = usuario_con(db, username="mel.idem", role="colaborador_mkt")
+    crud_rbac.conceder(db, melisa.id, "TITULAR_FIRMA_EQUIPO", granted_by=None)
+    crud_rbac.conceder(db, melisa.id, "TITULAR_FIRMA_EQUIPO", granted_by=None)
+    assert db.query(UserRoleGrant).filter(UserRoleGrant.role_name == "TITULAR_FIRMA_EQUIPO").count() == 1
+
+
+def test_paquete_normal_no_es_singleton_varios_a_la_vez(db, catalogo):
+    """Guardia de regresion: la logica de singleton no debe filtrarse a un
+    paquete aditivo normal — AUDITOR sigue siendo de varios a la vez."""
+    a = usuario_con(db, username="aud.a", role="colaborador_mkt")
+    b = usuario_con(db, username="aud.b", role="colaborador_mkt")
+    crud_rbac.conceder(db, a.id, "AUDITOR", granted_by=None)
+    crud_rbac.conceder(db, b.id, "AUDITOR", granted_by=None)
+    assert crud_rbac.tiene_grant(db, a.id, "AUDITOR")
+    assert crud_rbac.tiene_grant(db, b.id, "AUDITOR")
+
+
+def test_titular_de_devuelve_none_si_nadie_lo_tiene(db, catalogo):
+    assert crud_rbac.titular_de(db, "TITULAR_FIRMA_EQUIPO") is None
+    assert crud_rbac.titular_firma_equipo(db) is None
+
+
+def test_titular_firma_equipo_devuelve_al_usuario_actual(db, catalogo):
+    melisa = usuario_con(db, username="mel.resuelve", role="colaborador_mkt")
+    crud_rbac.conceder(db, melisa.id, "TITULAR_FIRMA_EQUIPO", granted_by=None)
+    assert crud_rbac.titular_firma_equipo(db).id == melisa.id
+
+
 # ── usuarios_con_permiso ────────────────────────────────────────────────────
 
 
@@ -281,6 +329,25 @@ def test_usuario_inexistente_es_404(db, catalogo, superadmin_user):
     resp = logueado("superadmin", PASSWORD_SUPERADMIN).get("/api/users/99999/roles")
     assert resp.status_code == 404
     assert resp.json()["codigo"] == "NO_ENCONTRADO"
+
+
+def test_conceder_singleton_por_api_desplaza_al_titular_anterior(db, catalogo, superadmin_user):
+    melisa = usuario_con(db, username="mel.api", role="colaborador_mkt")
+    ana = usuario_con(db, username="ana.api", role="colaborador_mkt")
+    cliente = logueado("superadmin", PASSWORD_SUPERADMIN)
+
+    primera = cliente.post(f"/api/users/{melisa.id}/roles", json={"role_name": "TITULAR_FIRMA_EQUIPO"})
+    assert primera.status_code == 201, primera.text
+    assert primera.json()["aditivos"][0]["singleton"] is True
+
+    segunda = cliente.post(f"/api/users/{ana.id}/roles", json={"role_name": "TITULAR_FIRMA_EQUIPO"})
+    assert segunda.status_code == 201, segunda.text
+    assert [g["role_name"] for g in segunda.json()["aditivos"]] == ["TITULAR_FIRMA_EQUIPO"]
+
+    # A Melisa se lo quitaron en silencio del lado del servidor, no solo del
+    # de Ana — el punto entero del singleton es que nunca haya dos titulares.
+    ver_melisa = cliente.get(f"/api/users/{melisa.id}/roles").json()
+    assert ver_melisa["aditivos"] == []
 
 
 def test_gestionar_roles_no_lo_tiene_nadie_mas_que_superadmin(db, catalogo):

@@ -61,6 +61,8 @@ __all__ = [
     "generar_responsiva",
     "faltantes_para_confirmar",
     "faltantes_para_devolucion",
+    "firmas_completas",
+    "completar_firma_faltante",
     "COLUMNAS_CSV",
     "filas_csv",
 ]
@@ -285,7 +287,13 @@ def _equipos_por_prestamo(db: Session, loan_ids: list[int]) -> dict[int, list[st
     return salida
 
 
-def serializar_fila(prestamo: Loan, equipos: list[str], referencia: date | None = None) -> dict:
+def serializar_fila(
+    prestamo: Loan,
+    equipos: list[str],
+    referencia: date | None = None,
+    *,
+    firmas_faltantes: frozenset[str] = frozenset(),
+) -> dict:
     atrasado, dias = calcular_atraso(prestamo, referencia)
     return {
         "id": prestamo.id,
@@ -305,6 +313,8 @@ def serializar_fila(prestamo: Loan, equipos: list[str], referencia: date | None 
         "atrasado": atrasado,
         "dias_atraso": dias,
         "entrega_autorizada": bool(prestamo.entrega_autorizada),
+        "firma_entrega_pendiente": KindMedia.FIRMA_ENTREGA.value in firmas_faltantes,
+        "firma_responsable_pendiente": KindMedia.FIRMA_RESPONSABLE.value in firmas_faltantes,
         "total_equipos": len(equipos),
         "equipos": equipos,
     }
@@ -463,7 +473,7 @@ def faltantes_para_confirmar(db: Session, prestamo: Loan) -> list[str]:
         faltas.append("Selecciona al menos un equipo.")
         return faltas
 
-    por_item, firmas = _mapa_media(db, prestamo.id)
+    por_item, _ = _mapa_media(db, prestamo.id)
 
     sin_frente = 0
     sin_atras = 0
@@ -478,12 +488,49 @@ def faltantes_para_confirmar(db: Session, prestamo: Loan) -> list[str]:
         faltas.append(f"Faltan las fotos de frente de {sin_frente} equipo.")
     if sin_atras:
         faltas.append(f"Faltan las fotos de atras de {sin_atras} equipo.")
-    if KindMedia.FIRMA_ENTREGA.value not in firmas:
-        faltas.append("Falta la firma de quien entrega el equipo.")
-    if KindMedia.FIRMA_RESPONSABLE.value not in firmas:
-        faltas.append("Falta la firma de quien recibe el equipo.")
+
+    # `confirmar` NUNCA exige ninguna firma (decision explicita del usuario,
+    # revision 2): quien llena el formulario no es necesariamente ni quien
+    # aprueba (Melisa/APROBADOR_EQUIPO) ni el beneficiario (quien recibe el
+    # equipo). Las dos se completan despues, cada una por su lado, con el
+    # prestamo ya confirmado (ver `acepta_media`, `completar_firma_faltante`
+    # y la guarda `firmas_completas` que bloquea llegar a `completado`).
 
     return faltas
+
+
+def firmas_completas(db: Session, loan_id: int) -> bool:
+    """Ambas firmas presentes — la de quien entrega y la del responsable.
+
+    Se deriva de `media_asset`, igual que el resto del modulo deriva la
+    disponibilidad de equipo de `loan_item`: no hay una columna
+    `loan.firmas_completas` que pueda desincronizarse de la fila real.
+    """
+    _, firmas = _mapa_media(db, loan_id)
+    return all(kind in firmas for kind in KINDS_FIRMA)
+
+
+def _firmas_faltantes_por_prestamo(db: Session, loan_ids: list[int]) -> dict[int, set[str]]:
+    """Version por lote de `firmas_completas`, para el listado — evita una
+    consulta por fila (mismo patron que `_equipos_por_prestamo`).
+
+    Devuelve, por prestamo, el conjunto de *kinds* de firma que TODAVIA
+    faltan (nunca los presentes) — granular a proposito: el listado necesita
+    distinguir "falta la del aprobador" de "falta la del beneficiario" para
+    la cola de Aprobaciones y para el badge de cada fila.
+    """
+    if not loan_ids:
+        return {}
+    presentes: dict[int, set[str]] = {}
+    for loan_id, kind in (
+        db.query(MediaAsset.loan_id, MediaAsset.kind)
+        .filter(MediaAsset.loan_id.in_(loan_ids), MediaAsset.kind.in_(KINDS_FIRMA))
+        .distinct()
+        .all()
+    ):
+        presentes.setdefault(loan_id, set()).add(kind)
+    todas = set(KINDS_FIRMA)
+    return {loan_id: todas - presentes.get(loan_id, set()) for loan_id in loan_ids}
 
 
 def faltantes_para_devolucion(
@@ -569,6 +616,32 @@ def generar_responsiva(
     return documento
 
 
+def completar_firma_faltante(db: Session, prestamo: Loan, actor: User) -> ResponsivaDoc:
+    """Se llama cuando la segunda de las dos firmas (aprobador + beneficiario)
+    por fin se sube, con el prestamo ya confirmado (`prestado`,
+    `pendiente_confirmacion` o `incompleto`). La v1 de la responsiva quedo con
+    ambas firmas en blanco — nunca se piden al confirmar, ver §1b de
+    loan_state.py — y esta genera la siguiente version, ya completa. Nunca pisa
+    la v1: es la misma regla de `generar_responsiva`, "un documento firmado es
+    evidencia".
+
+    El router es quien decide CUANDO llamar a esto (justo despues de subir una
+    firma que deja `firmas_completas` en True) y quien encola el correo de
+    aviso — aqui solo se muta el prestamo.
+    """
+    registrar_evento(
+        db,
+        prestamo,
+        TipoEvento.FIRMA_COMPLETADA.value,
+        "Firma pendiente completada. Carta responsiva actualizada.",
+        actor,
+    )
+    documento = generar_responsiva(db, prestamo, actor, motivo="Firma pendiente completada.")
+    db.commit()
+    db.refresh(prestamo)
+    return documento
+
+
 def confirmar(db: Session, prestamo: Loan, actor: User) -> Loan:
     """`borrador -> prestado`. Asigna folio y genera la responsiva v1.
 
@@ -584,7 +657,7 @@ def confirmar(db: Session, prestamo: Loan, actor: User) -> Loan:
         db,
         prestamo,
         TipoEvento.CONFIRMADO.value,
-        "Prestamo confirmado. Carta responsiva firmada por ambas partes.",
+        "Prestamo confirmado. Pendiente la firma del aprobador y la del beneficiario.",
         actor,
     )
     generar_responsiva(db, prestamo, actor)

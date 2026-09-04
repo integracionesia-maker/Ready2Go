@@ -149,8 +149,9 @@ Permisos efectivos = `UNION` de los paquetes de `['_PISO', users.role, *grants]`
 | `APROBADOR_EQUIPO` | aditivo | `equipos_aprobacion:{autorizar_entrega,confirmar_devolucion,cerrar_incidencia}` + `equipos_prestamos:ver_global` |
 | `CUSTODIO_EQUIPO` | aditivo | `equipos_inventario:{crear,editar,auditar_condicion,dar_de_baja}` + `equipos_prestamos:ver_global` |
 | `AUDITOR` | aditivo | solo lecturas globales (`*:ver*`), cero escritura |
+| `TITULAR_FIRMA_EQUIPO` | aditivo, **singleton** | cero permisos por si solo — pero es quien de verdad puede subir `firma_entrega`: ese candado se resuelve por **identidad** (`current_user.id == titular.id`), no por permiso, precisamente para que ni `APROBADOR_EQUIPO` en general ni el bypass de superadmin (`*`) lo abran. Solo un usuario a la vez (`crud_rbac.conceder` revoca del titular anterior); mientras nadie haya firmado, su nombre se imprime por default en la carta responsiva. Ver `docs/equipos/firma-pendiente-al-confirmar.md` §Titular. |
 
-Asignacion inicial acordada: **Melisa = base `colaborador_mkt` + aditivo `APROBADOR_EQUIPO`**. Emily/Betzabet = `colaborador_mkt` (+ `CUSTODIO_EQUIPO` si el area lo pide). Resto del area = `colaborador_mkt`. Damian/Jose = `superadmin`/`admin` como hoy.
+Asignacion inicial acordada: **Melisa = base `colaborador_mkt` + aditivo `APROBADOR_EQUIPO` + aditivo `TITULAR_FIRMA_EQUIPO`**. Emily/Betzabet = `colaborador_mkt` (+ `CUSTODIO_EQUIPO` si el area lo pide). Resto del area = `colaborador_mkt`. Damian/Jose = `superadmin`/`admin` como hoy.
 
 **Regla dura:** `APROBADOR_EQUIPO` no concede un solo permiso de `presupuestos`. Hay un test que lo afirma por enumeracion, no por lectura de codigo.
 
@@ -275,7 +276,7 @@ Un equipo no puede estar en dos prestamos abiertos ni con dos personas. La maque
 ### 4.3 Maquina de estados del prestamo
 
 ```
-                 (firmas + fotos completas)
+                    (fotos completas, sin firmas)
    borrador ──────────────────────────────▶ prestado ──▶ pendiente_confirmacion
       │                                        │                    │
       │ cancelar (libera equipos)               │ vence: overdue     │ confirma aprobador
@@ -291,6 +292,7 @@ Reglas:
 
 - `borrador` es servidor, no cliente: el prestamo se crea al abrir el formulario para poder subir fotos/firmas por partes sin perderlas. Un borrador **no** reserva el equipo (`loan_item` se inserta al confirmar).
 - `entrega_autorizada` es **ortogonal** al estado (Melisa puede autorizar antes o despues de que el equipo vuelva) pero **bloquea el cierre**: un prestamo no llega a `completado` con `entrega_autorizada=0`. En la maqueta un prestamo podia recorrer todo el flujo sin que nadie autorizara la responsiva — hueco de trazabilidad.
+- **`firmas_completas` sigue el mismo patron que `entrega_autorizada`** (implementado, luz verde de Jose 04/09/2026, revision 2 el mismo dia; el candado de `firma_entrega` se ajusto a identidad ese mismo dia, ver mas abajo): `confirmar` ya **no exige ninguna firma** — da igual quien llene el formulario, `firma_entrega` le pertenece a quien tiene el paquete SINGLETON `TITULAR_FIRMA_EQUIPO` (identidad, no permiso: ni otro `APROBADOR_EQUIPO` ni superadmin la pueden subir) y `firma_responsable` al beneficiario (texto libre, no necesariamente un usuario del sistema), y ninguna de las dos coincide necesariamente con quien confirma. Ambas se completan despues, en cualquier estado no terminal. Llegar a `completado` exige las dos. Detalle completo: `docs/equipos/firma-pendiente-al-confirmar.md`.
 - `incompleto` tiene salida (`cerrar_incidencia` con nota obligatoria). En la maqueta era terminal: un equipo danado quedaba en `revision` para siempre.
 - Atraso se calcula **en servidor** con fecha de `America/Mexico_City`. La maqueta compara strings ISO generados con `toISOString()` (UTC): entre 18:00 y 24:00 CDMX marca atrasado un dia antes.
 
@@ -308,8 +310,9 @@ Reglas:
 | GET | `/api/equipment/{id}` | `equipos_inventario:ver` | Ficha + auditorias + historial de prestamos |
 | POST | `/api/loans/` | `equipos_prestamos:solicitar` | Crea `borrador` |
 | POST | `/api/loans/{id}/items` | `equipos_prestamos:solicitar` | Valida disponibilidad (409 si ocupado) |
-| POST | `/api/loans/{id}/media` | `equipos_prestamos:solicitar` | Multipart, una foto/firma por request |
-| POST | `/api/loans/{id}/confirmar` | `equipos_prestamos:solicitar` | `borrador → prestado`: valida 2 fotos por equipo + 2 firmas, asigna folio, genera PDF v1, dispara correos |
+| POST | `/api/loans/{id}/media` | `equipos_prestamos:solicitar` (fotos y `firma_responsable`) / **identidad**: `current_user.id == titular_firma_equipo(db).id` (solo `firma_entrega`, no es un permiso) | Multipart, una foto/firma por request; firmas nunca en `borrador` |
+| GET | `/api/loans/titular-firma-equipo` | `equipos_prestamos:solicitar` o `equipos_aprobacion:autorizar_entrega` | Quien es hoy el titular (`user_id`/`nombre`) + `soy_titular` para el usuario actual — el cliente lo usa para saber a quien pintarle el boton "Firmar" del aprobador |
+| POST | `/api/loans/{id}/confirmar` | `equipos_prestamos:solicitar` | `borrador → prestado`: valida 2 fotos por equipo; **ninguna firma se exige aqui** (ver `docs/equipos/firma-pendiente-al-confirmar.md`), asigna folio, genera PDF v1, dispara correos |
 | POST | `/api/loans/{id}/cancelar` | `equipos_prestamos:cancelar` | Solo desde `borrador`/`prestado` sin devolucion |
 | POST | `/api/loans/{id}/devolucion` | `equipos_prestamos:registrar_devolucion` | `prestado → pendiente_confirmacion`; fotos de devolucion o `no_devuelto` + nota obligatoria |
 | POST | `/api/loans/{id}/autorizar-entrega` | `equipos_aprobacion:autorizar_entrega` | Melisa |
@@ -406,9 +409,9 @@ Todo dentro de `@media (prefers-reduced-motion: reduce)` → sin movimiento, sol
 |---|---|---|
 | Inicio | `/equipos` | KPIs (prestados, atrasados, pendientes, disponibles), "Requiere atencion", prestamos en curso, distribucion de estados |
 | Inventario | `/equipos/inventario` | Busqueda, filtros, tarjetas/tabla, ficha, alta/edicion, auditoria de condicion |
-| Nuevo prestamo | `/equipos/nuevo` | Wizard 4 pasos: datos → equipos → fotos+accesorios → firmas; validacion por paso |
+| Nuevo prestamo | `/equipos/nuevo` | Wizard 3 pasos: datos (incluye beneficiario nombre+correo) → equipos → fotos+accesorios; confirma sin firmas; validacion por paso |
 | Prestamos activos | `/equipos/activos` | Tabla con atraso, registrar devolucion, ver responsiva |
-| Aprobaciones | `/equipos/aprobaciones` | Autorizaciones de entrega + devoluciones por confirmar (solo `APROBADOR_EQUIPO`) |
+| Aprobaciones | `/equipos/aprobaciones` | Autorizaciones de entrega + firmas pendientes + devoluciones por confirmar (solo `APROBADOR_EQUIPO`) |
 | Historial | `/equipos/historial` | Filtros por estado/persona/fecha, exportar CSV |
 | Ficha de prestamo | `/equipos/prestamo/:folio` | Responsiva, fotos antes/despues lado a lado, bitacora completa |
 

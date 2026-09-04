@@ -242,6 +242,9 @@ export default function ActivosPage() {
                         <span className={`go-badge ${ESTADO_BADGE[loan.estado]}`}>{ESTADO_LABEL[loan.estado]}</span>
                         {loan.atrasado && <span className="go-badge go-badge-error">Atrasado {loan.dias_atraso}d</span>}
                         {!loan.entrega_autorizada && <span className="go-badge go-badge-neutral">Entrega no autorizada</span>}
+                        {(loan.firma_entrega_pendiente || loan.firma_responsable_pendiente) && (
+                          <span className="go-badge go-badge-warning">Firma pendiente</span>
+                        )}
                       </div>
                     </td>
                     <td>

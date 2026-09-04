@@ -34,12 +34,18 @@ def ana(inventario, db):
 
 @pytest.fixture
 def melisa(inventario, db):
-    return usuario_con(db, username="melisa", aditivos=("APROBADOR_EQUIPO",))
+    # `firma_entrega` es identidad (titular del paquete singleton
+    # TITULAR_FIRMA_EQUIPO), no permiso — melisa necesita los dos aditivos
+    # para poder seguir firmando en estas pruebas, igual que en la asignacion
+    # real acordada (docs/equipos/plan-quirurgico.md §3.4).
+    return usuario_con(db, username="melisa", aditivos=("APROBADOR_EQUIPO", "TITULAR_FIRMA_EQUIPO"))
 
 
 def _borrador_listo(cliente, *, equipment_ids=(1,), **datos):
-    """Crea un borrador con sus equipos, sus 2 fotos por equipo y las 2 firmas:
-    todo lo que `POST /confirmar` exige."""
+    """Crea un borrador con sus equipos y sus 2 fotos por equipo: todo lo que
+    `POST /confirmar` exige hoy (revision 2: ya NO pide ninguna firma — quien
+    llena el formulario no es necesariamente ni el aprobador ni el
+    beneficiario, ver §1b de loan_state.py)."""
     cuerpo = {
         "area": "Contenido",
         "empresa": "MERCASYSTEM SA DE CV",
@@ -64,8 +70,6 @@ def _borrador_listo(cliente, *, equipment_ids=(1,), **datos):
         subir(cliente, loan_id, "foto_entrega_frente", item_id)
         subir(cliente, loan_id, "foto_entrega_atras", item_id)
 
-    subir(cliente, loan_id, "firma_entrega")
-    subir(cliente, loan_id, "firma_responsable")
     return loan_id
 
 
@@ -194,18 +198,135 @@ def test_confirmar_sin_fotos_dice_que_falta(inventario, ana):
     assert "fotos" in resp.json()["detail"]
 
 
-def test_confirmar_sin_firmas_dice_cual_falta(inventario, ana):
+def test_confirmar_sin_ninguna_firma_procede_igual(inventario, ana):
+    """Revision 2, decision explicita del usuario: `confirmar` YA NO pide
+    ninguna firma. Quien llena el formulario no es necesariamente ni el
+    aprobador ni el beneficiario — las dos se completan despues, cada una
+    por su lado (ver §1b de loan_state.py)."""
     cliente = logueado("ana.ruiz")
     loan_id = cliente.post("/api/loans/", json={}).json()["id"]
     ficha = cliente.post(f"/api/loans/{loan_id}/items", json={"equipment_id": 1}).json()
     item_id = ficha["items"][0]["id"]
     subir(cliente, loan_id, "foto_entrega_frente", item_id)
     subir(cliente, loan_id, "foto_entrega_atras", item_id)
-    subir(cliente, loan_id, "firma_entrega")
 
-    resp = cliente.post(f"/api/loans/{loan_id}/confirmar")
+    cuerpo = cliente.post(f"/api/loans/{loan_id}/confirmar").json()
+    assert cuerpo["estado"] == "prestado"
+    assert cuerpo["folio"] == "CE-0001"
+    assert cuerpo["firmas"]["firma_entrega"] is None
+    assert cuerpo["firmas"]["firma_responsable"] is None
+
+    fila = next(i for i in cliente.get("/api/loans/").json()["items"] if i["id"] == loan_id)
+    assert fila["firma_entrega_pendiente"] is True
+    assert fila["firma_responsable_pendiente"] is True
+
+
+def test_una_firma_no_se_puede_subir_antes_de_confirmar(inventario, ana):
+    """Firmar un borrador que todavia puede ganar o perder equipos no tiene
+    sentido — a diferencia de las fotos, las firmas ya NO se piden en el
+    wizard, asi que tampoco se aceptan mientras el prestamo sigue siendo
+    borrador."""
+    cliente = logueado("ana.ruiz")
+    loan_id = cliente.post("/api/loans/", json={}).json()["id"]
+
+    resp = subir(cliente, loan_id, "firma_responsable")
     assert resp.status_code == 409
-    assert "firma de quien recibe" in resp.json()["detail"]
+    assert resp.json()["codigo"] == "TRANSICION_INVALIDA"
+
+
+def test_solo_el_titular_puede_subir_la_firma_del_aprobador(inventario, ana, melisa, db):
+    """`firma_entrega` es identidad, no permiso: solo el titular del paquete
+    SINGLETON `TITULAR_FIRMA_EQUIPO` puede subirla. Ni quien llena el
+    formulario ni otro `APROBADOR_EQUIPO` cualquiera vale — solo `melisa`,
+    que en este archivo es la titular (ver fixture)."""
+    otra_aprobadora = usuario_con(db, username="otra.aprobadora", aditivos=("APROBADOR_EQUIPO",))
+    cliente_ana = logueado("ana.ruiz")
+    loan_id = _borrador_listo(cliente_ana)
+    cliente_ana.post(f"/api/loans/{loan_id}/confirmar")
+
+    resp = subir(cliente_ana, loan_id, "firma_entrega")
+    assert resp.status_code == 403
+    assert resp.json()["codigo"] == "SIN_PERMISO"
+
+    # Tiene el mismo paquete APROBADOR_EQUIPO que melisa, pero no es la
+    # titular — la firma no se le abre por tener ese paquete.
+    resp_otra = subir(logueado("otra.aprobadora"), loan_id, "firma_entrega")
+    assert resp_otra.status_code == 403
+    assert resp_otra.json()["codigo"] == "SIN_PERMISO"
+
+    resp_melisa = subir(logueado("melisa"), loan_id, "firma_entrega")
+    assert resp_melisa.status_code == 201
+
+
+def test_un_aprobador_puro_no_puede_subir_fotos_ni_la_firma_del_beneficiario(inventario, ana, db):
+    """El paquete `APROBADOR_EQUIPO` trae `equipos_aprobacion:*` y
+    `equipos_prestamos:ver_global`, pero NO `equipos_prestamos:solicitar`. Con
+    `melisa` (rol base `colaborador_mkt`) no se ve: ese rol YA trae `solicitar`
+    de por si. El caso puro es un rol `usuario` con el paquete encima — el
+    patron que el propio catalogo describe para `CUSTODIO_EQUIPO`. Se le suma
+    tambien `TITULAR_FIRMA_EQUIPO` para poder seguir probando que SI puede
+    firmar como aprobador sin `solicitar` — de lo contrario esa asercion
+    fallaria por no ser titular, no por el motivo que esta prueba cubre."""
+    usuario_con(
+        db, username="aprobador.puro", role="usuario", aditivos=("APROBADOR_EQUIPO", "TITULAR_FIRMA_EQUIPO")
+    )
+
+    cliente_ana = logueado("ana.ruiz")
+    loan_id = _borrador_listo(cliente_ana)
+    cliente_ana.post(f"/api/loans/{loan_id}/confirmar")
+
+    resp = subir(logueado("aprobador.puro"), loan_id, "firma_responsable")
+    assert resp.status_code == 403
+    assert resp.json()["codigo"] == "SIN_PERMISO"
+
+    # Pero SI puede firmar como aprobador — llega por el OR del endpoint
+    # (autorizar_entrega, sin necesitar solicitar) y es la titular.
+    assert subir(logueado("aprobador.puro"), loan_id, "firma_entrega").status_code == 201
+
+
+def test_completar_las_dos_firmas_genera_responsiva_v2(inventario, ana, melisa):
+    cliente_ana = logueado("ana.ruiz")
+    loan_id = _borrador_listo(cliente_ana)
+    cliente_ana.post(f"/api/loans/{loan_id}/confirmar")
+
+    assert subir(logueado("melisa"), loan_id, "firma_entrega").status_code == 201
+    resp = subir(cliente_ana, loan_id, "firma_responsable")
+    assert resp.status_code == 201
+
+    cuerpo = cliente_ana.get(f"/api/loans/{loan_id}").json()
+    assert cuerpo["firmas"]["firma_entrega"] is not None
+    assert cuerpo["firmas"]["firma_responsable"] is not None
+    assert cuerpo["responsiva"]["version"] == 2
+    tipos = [e["tipo"] for e in cuerpo["eventos"]]
+    assert "firma_completada" in tipos
+
+    fila = next(i for i in cliente_ana.get("/api/loans/").json()["items"] if i["id"] == loan_id)
+    assert fila["firma_entrega_pendiente"] is False
+    assert fila["firma_responsable_pendiente"] is False
+
+
+def test_no_se_puede_resubir_una_firma_ya_capturada_en_prestado(inventario, ana, melisa):
+    cliente_ana = logueado("ana.ruiz")
+    loan_id = _borrador_listo(cliente_ana)
+    cliente_ana.post(f"/api/loans/{loan_id}/confirmar")
+    subir(logueado("melisa"), loan_id, "firma_entrega")
+
+    resp = subir(logueado("melisa"), loan_id, "firma_entrega")
+    assert resp.status_code == 409
+    assert resp.json()["codigo"] == "TRANSICION_INVALIDA"
+
+
+def test_firma_de_aprobador_se_puede_subir_para_un_prestamo_distinto_despues(inventario, ana, melisa):
+    """La proteccion de 'no resubir' es por (prestamo, kind), no global."""
+    cliente_ana = logueado("ana.ruiz")
+    primero = _borrador_listo(cliente_ana)
+    cliente_ana.post(f"/api/loans/{primero}/confirmar")
+    subir(logueado("melisa"), primero, "firma_entrega")
+
+    segundo = _borrador_listo(cliente_ana, equipment_ids=(2,))
+    cliente_ana.post(f"/api/loans/{segundo}/confirmar")
+    resp = subir(logueado("melisa"), segundo, "firma_entrega")
+    assert resp.status_code == 201
 
 
 def test_dos_fotos_del_mismo_lado_no_cuentan_como_dos_fotos(inventario, ana):
@@ -218,8 +339,6 @@ def test_dos_fotos_del_mismo_lado_no_cuentan_como_dos_fotos(inventario, ana):
 
     subir(cliente, loan_id, "foto_entrega_frente", item_id)
     subir(cliente, loan_id, "foto_entrega_frente", item_id)
-    subir(cliente, loan_id, "firma_entrega")
-    subir(cliente, loan_id, "firma_responsable")
 
     resp = cliente.post(f"/api/loans/{loan_id}/confirmar")
     assert resp.status_code == 409

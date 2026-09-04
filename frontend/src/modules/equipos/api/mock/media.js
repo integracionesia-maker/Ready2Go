@@ -50,12 +50,31 @@ export async function uploadMedia(loanId, { file, kind, loanItemId } = {}) {
     if (!item) throwNotFound("Item de préstamo no encontrado.");
   }
 
+  // Completar la firma que faltó al confirmar está permitido en cualquier
+  // estado no terminal; RE-subir una que ya existe no — es evidencia (mismo
+  // candado que el servidor real, ver routers/loans.py::subir_media).
+  if (esFirma && loan.estado !== "borrador" && loan.firmas[kind]) {
+    throwFixtureError("TRANSICION_INVALIDA");
+  }
+
   const id = ++state.mediaIdCounter;
   const dataUrl = await fileToDataUrl(file);
   state.media.set(id, { kind, loanId, dataUrl, sha256: fakeSha256(file.size) });
 
   if (esFirma) {
     loan.firmas[kind] = id;
+    if (kind === "firma_entrega") loan.firma_entrega_pendiente = false;
+    if (kind === "firma_responsable") loan.firma_responsable_pendiente = false;
+    if (loan.estado !== "borrador" && loan.firmas.firma_entrega && loan.firmas.firma_responsable) {
+      if (loan.responsiva) loan.responsiva = { ...loan.responsiva, version: loan.responsiva.version + 1 };
+      loan.eventos.push({
+        id: Date.now(),
+        tipo: "firma_completada",
+        actor: loan.responsable?.nombre || "—",
+        detalle: "Firma pendiente completada. Carta responsiva actualizada.",
+        created_at: new Date().toISOString(),
+      });
+    }
   } else {
     item.media[kind] = id;
   }

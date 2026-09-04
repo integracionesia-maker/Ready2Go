@@ -250,6 +250,9 @@ export default function HistorialPage() {
                       <div className="flex flex-wrap gap-1.5">
                         <span className={`go-badge ${ESTADO_BADGE[loan.estado]}`}>{ESTADO_LABEL[loan.estado] || loan.estado}</span>
                         {loan.atrasado && <span className="go-badge go-badge-error">Atrasado {loan.dias_atraso}d</span>}
+                        {(loan.firma_entrega_pendiente || loan.firma_responsable_pendiente) && (
+                          <span className="go-badge go-badge-warning">Firma pendiente</span>
+                        )}
                       </div>
                     </td>
                   </tr>

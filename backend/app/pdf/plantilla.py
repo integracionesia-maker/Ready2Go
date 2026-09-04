@@ -199,8 +199,12 @@ def _tabla_equipo(equipo: dict, e: dict) -> Table:
 def _bloque_firma(ruta_firma: str | None, nombre: str, pie: str, e: dict, ancho: float) -> list:
     """Imagen de la firma, linea, nombre y leyenda.
 
-    Si falta el archivo se deja el espacio en blanco con su linea: una carta sin
-    firma tiene que verse sin firma, no disimularla.
+    Si falta el archivo se deja el espacio en blanco con su linea Y un aviso
+    explicito ("FIRMA PENDIENTE"): una carta sin firma tiene que verse sin
+    firma, no disimularla — y ahora que `confirmar` puede pasar con una sola
+    firma (§1b de loan_state.py), "en blanco" ya no es un accidente raro, es un
+    estado esperado que hay que poder distinguir de un archivo movido/corrupto
+    a simple vista.
     """
     partes: list = []
     alto_maximo = 14 * mm
@@ -216,7 +220,8 @@ def _bloque_firma(ruta_firma: str | None, nombre: str, pie: str, e: dict, ancho:
         except Exception:  # noqa: BLE001 — archivo movido o corrupto: no tumba la carta
             partes.append(Spacer(1, alto_maximo))
     else:
-        partes.append(Spacer(1, alto_maximo))
+        partes.append(Spacer(1, alto_maximo - 10))
+        partes.append(Paragraph("(FIRMA PENDIENTE)", e["firma_pendiente"]))
 
     partes.append(Spacer(1, 2 * mm))
     partes.append(HRFlowable(width="90%", thickness=0.6, color=est.TEXTO, spaceAfter=3))
@@ -304,7 +309,7 @@ def construir(datos: dict, ancho_util: float) -> list:
     )
     derecha = _bloque_firma(
         datos.get("firma_entrega"),
-        datos.get("entregado_por"),
+        datos.get("aprobador_firmante"),
         PIE_FIRMA_ENTREGA,
         e,
         ancho_columna,

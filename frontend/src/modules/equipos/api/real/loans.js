@@ -32,6 +32,13 @@ export function fetchLoanByFolio(folio) {
   return request(`/loans/by-folio/${folio}`);
 }
 
+// Quien tiene hoy el paquete singleton TITULAR_FIRMA_EQUIPO — `firma_entrega`
+// es identidad, no permiso (ver backend/app/routers/loans.py:subir_media), así
+// que el botón "Firmar" del aprobador solo se pinta para `soy_titular`.
+export function fetchTitularFirmaEquipo() {
+  return request("/loans/titular-firma-equipo");
+}
+
 export function addLoanItem(loanId, { equipmentId, accesoriosSeleccionados, accesoriosOtros, cargadorCon }) {
   return request(`/loans/${loanId}/items`, {
     method: "POST",

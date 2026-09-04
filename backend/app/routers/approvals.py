@@ -38,6 +38,11 @@ DETALLE_SIN_AUTORIZAR = (
     "Autoriza la entrega antes de cerrar el prestamo."
 )
 
+DETALLE_FIRMA_PENDIENTE = (
+    "Este prestamo tiene una firma pendiente (del aprobador o del "
+    "beneficiario). Complétala antes de cerrar el prestamo."
+)
+
 
 def _exigir_autorizacion(prestamo, destino: str) -> None:
     """La guarda se evalua contra el estado DESTINO, no contra el actual.
@@ -54,6 +59,15 @@ def _exigir_autorizacion(prestamo, destino: str) -> None:
     """
     if loan_state.exige_autorizacion_de_entrega(destino) and not prestamo.entrega_autorizada:
         raise TransicionInvalida(DETALLE_SIN_AUTORIZAR)
+
+
+def _exigir_firmas_completas(db: Session, prestamo, destino: str) -> None:
+    """Mismo patron y misma razon que `_exigir_autorizacion` (ver nota 1b de
+    `loan_state.py`): `confirmar` acepta una sola firma, pero `completado`
+    exige las dos. Se rechaza ANTES de escribir nada, por el mismo motivo de
+    "exito falso" que `_exigir_autorizacion`."""
+    if loan_state.exige_firmas_completas(destino) and not crud_loans.firmas_completas(db, prestamo.id):
+        raise TransicionInvalida(DETALLE_FIRMA_PENDIENTE)
 
 
 @router.post("/{loan_id:int}/autorizar-entrega", response_model=schemas_loans.LoanDetail)
@@ -139,6 +153,7 @@ def confirmar_devolucion(
         prestamo, [d["decision"] for d in decisiones.values()]
     )
     _exigir_autorizacion(prestamo, destino)
+    _exigir_firmas_completas(db, prestamo, destino)
 
     crud_loans.confirmar_devolucion(db, prestamo, decisiones, destino, current_user)
     crud.log_audit(
@@ -192,6 +207,7 @@ def cerrar_incidencia(
         raise TransicionInvalida(exc.detalle) from exc
 
     _exigir_autorizacion(prestamo, destino)
+    _exigir_firmas_completas(db, prestamo, destino)
 
     crud_loans.cerrar_incidencia(db, prestamo, data.nota.strip(), current_user)
     crud.log_audit(

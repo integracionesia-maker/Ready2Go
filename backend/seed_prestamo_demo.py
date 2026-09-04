@@ -285,6 +285,11 @@ def sembrar_prestamo_demo(db, verbose: bool = True) -> Loan:
             KindMedia.FIRMA_ENTREGA.value,
             KindMedia.FIRMA_RESPONSABLE.value,
         )
+        # `firma_entrega` es ahora la firma del APROBADOR (§1b de
+        # loan_state.py) — el creador de esa fila (`created_by_user_id`) es
+        # quien firmo de verdad, no quien lleno el formulario. El PDF imprime
+        # ese nombre bajo la firma (ver pdf/responsiva.py::_firmas_de).
+        creador = melisa if kind == KindMedia.FIRMA_ENTREGA.value else ana
         db.add(
             MediaAsset(
                 id=media_id,
@@ -298,7 +303,7 @@ def sembrar_prestamo_demo(db, verbose: bool = True) -> Loan:
                 mime_type="image/png",
                 size_bytes=size_bytes,
                 sha256=sha,
-                created_by_user_id=ana.id,
+                created_by_user_id=creador.id,
                 created_at=CREADO_UTC,
             )
         )
@@ -310,7 +315,7 @@ def sembrar_prestamo_demo(db, verbose: bool = True) -> Loan:
             actor_user_id=ana.id,
             actor_nombre=ana.full_name,
             tipo=TipoEvento.CREADO.value,
-            detalle="Prestamo confirmado. Carta responsiva firmada por ambas partes.",
+            detalle="Prestamo confirmado.",
             created_at=CREADO_UTC,
         )
     )

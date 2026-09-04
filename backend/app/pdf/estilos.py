@@ -214,6 +214,19 @@ def estilos() -> dict[str, ParagraphStyle]:
             textColor=TEXTO_SECUNDARIO,
             spaceAfter=0,
         ),
+        # Mismo AMBAR que "pendiente por confirmar" en el resto de la app
+        # (Dashboard.jsx, kpi_pendiente) — un solo color para ese concepto en
+        # toda la marca, no uno nuevo inventado aqui.
+        "firma_pendiente": ParagraphStyle(
+            "firma_pendiente",
+            parent=base,
+            fontName=FUENTE_CUERPO_NEGRITA,
+            fontSize=8,
+            leading=10.5,
+            alignment=TA_CENTER,
+            textColor=AMBAR,
+            spaceAfter=0,
+        ),
         "aviso": ParagraphStyle(
             "aviso",
             parent=base,

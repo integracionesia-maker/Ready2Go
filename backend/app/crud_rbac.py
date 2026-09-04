@@ -122,7 +122,12 @@ def tiene_grant(db: Session, user_id: int, role_name: str) -> bool:
 
 
 def conceder(db: Session, user_id: int, role_name: str, granted_by: int | None) -> UserRoleGrant:
-    """Concede un aditivo. Idempotente: conceder dos veces no duplica ni falla."""
+    """Concede un aditivo. Idempotente: conceder dos veces no duplica ni falla.
+
+    Si el paquete es singleton (`rbac_catalog.es_singleton`), se revoca de
+    cualquier otro usuario que lo tuviera antes de conceder — un solo titular a
+    la vez, sin dejar dos filas vivas para el mismo paquete singleton.
+    """
     existente = (
         db.query(UserRoleGrant)
         .filter(UserRoleGrant.user_id == user_id, UserRoleGrant.role_name == role_name)
@@ -130,6 +135,11 @@ def conceder(db: Session, user_id: int, role_name: str, granted_by: int | None) 
     )
     if existente:
         return existente
+
+    if rbac_catalog.es_singleton(role_name):
+        db.query(UserRoleGrant).filter(
+            UserRoleGrant.role_name == role_name, UserRoleGrant.user_id != user_id
+        ).delete(synchronize_session=False)
 
     grant = UserRoleGrant(
         user_id=user_id,
@@ -141,6 +151,28 @@ def conceder(db: Session, user_id: int, role_name: str, granted_by: int | None) 
     db.commit()
     db.refresh(grant)
     return grant
+
+
+def titular_de(db: Session, role_name: str) -> User | None:
+    """Quien tiene un paquete singleton ahora mismo, o None si nadie.
+
+    No valida que `role_name` sea singleton: es una consulta generica de "quien
+    tiene este paquete, si acaso uno solo" — `conceder()` es quien garantiza la
+    unicidad al escribir.
+    """
+    grant = db.query(UserRoleGrant).filter(UserRoleGrant.role_name == role_name).first()
+    if not grant:
+        return None
+    return db.get(User, grant.user_id)
+
+
+def titular_firma_equipo(db: Session) -> User | None:
+    """Quien tiene hoy el paquete `TITULAR_FIRMA_EQUIPO`, o None si nadie.
+
+    Lo usa `pdf/responsiva.py` para rellenar el nombre por default del
+    aprobador mientras nadie haya firmado todavia (ver docstring del paquete
+    en `rbac_catalog.py`)."""
+    return titular_de(db, rbac_catalog.TITULAR_FIRMA_EQUIPO)
 
 
 def revocar(db: Session, user_id: int, role_name: str) -> bool:

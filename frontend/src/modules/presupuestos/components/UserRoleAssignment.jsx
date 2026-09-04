@@ -94,6 +94,15 @@ export default function UserRoleAssignment({ users }) {
     return aditivos.filter((r) => !yaConcedidos.has(r.name));
   }, [rolesCatalog, userRoles]);
 
+  // Un paquete singleton (ej. TITULAR_FIRMA_EQUIPO) solo lo puede tener un
+  // usuario a la vez — concederlo aqui se lo quita en silencio a quien lo
+  // tuviera antes (el servidor ya lo hace; esto es solo para que quien
+  // concede no se lleve la sorpresa).
+  const paqueteSeleccionadoEsSingleton = useMemo(
+    () => rolesCatalog.find((r) => r.name === packageToAdd)?.singleton ?? false,
+    [rolesCatalog, packageToAdd]
+  );
+
   const handleGrant = async () => {
     if (!packageToAdd || !selectedUserId) return;
     setGranting(true);
@@ -178,8 +187,9 @@ export default function UserRoleAssignment({ users }) {
             ) : (
               <div className="flex flex-wrap gap-2">
                 {userRoles.aditivos.map((a) => (
-                  <span key={a.role_name} className="go-badge go-badge-neutral">
+                  <span key={a.role_name} className="go-badge go-badge-neutral" title={a.singleton ? "Paquete único: solo esta persona lo tiene." : undefined}>
                     {a.role_name}
+                    {a.singleton && <span className="ml-1 font-normal opacity-70">(único)</span>}
                     <button
                       type="button"
                       onClick={() => handleRevoke(a.role_name)}
@@ -219,6 +229,12 @@ export default function UserRoleAssignment({ users }) {
                 {granting ? "Agregando..." : "Agregar"}
               </button>
             </div>
+            {paqueteSeleccionadoEsSingleton && (
+              <p className="mt-2 font-body text-xs" style={{ color: "var(--go-warning)" }}>
+                Paquete único: solo una persona puede tenerlo. Si ya estaba asignado a alguien más, se le
+                quitará automáticamente al concederlo aquí.
+              </p>
+            )}
           </div>
 
           <div>

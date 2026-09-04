@@ -58,6 +58,11 @@ KIND_PISO = "piso"
 KIND_BASE = "base"
 KIND_ADITIVO = "aditivo"
 
+# Paquete singleton (ver `es_singleton`): el nombre vive en una constante para
+# que `crud_rbac.titular_firma_equipo()` y `pdf/responsiva.py` no repitan el
+# literal.
+TITULAR_FIRMA_EQUIPO = "TITULAR_FIRMA_EQUIPO"
+
 PAQUETES: dict[str, dict] = {
     PISO: {
         "kind": KIND_PISO,
@@ -228,6 +233,21 @@ PAQUETES: dict[str, dict] = {
             "presupuestos": ("validar_ticket", "borrar_ticket"),
         },
     },
+    "TITULAR_FIRMA_EQUIPO": {
+        "kind": KIND_ADITIVO,
+        "singleton": True,
+        "descripcion": "Titular de la firma del aprobador en la carta responsiva de Equipos "
+        "(ver docs/equipos/firma-pendiente-al-confirmar.md). SINGLETON: solo un usuario a la "
+        "vez puede tenerlo — concederlo a alguien nuevo se lo revoca automaticamente al "
+        "anterior (crud_rbac.conceder). Su nombre se imprime por default en el bloque de "
+        "firma del aprobador mientras nadie haya firmado todavia; en cuanto exista una firma "
+        "real (de este titular o de cualquier otra persona con APROBADOR_EQUIPO), esa firma "
+        "real manda y nunca se pisa. No concede NINGUN permiso por si solo — es un tag puro, "
+        "no un sustituto de APROBADOR_EQUIPO. Pensado para que el nombre impreso por default "
+        "no dependa de quien haga clic primero (superadmin, un admin de prueba, etc.) ni quede "
+        "hardcodeado a una persona: si Melisa se va, se reasigna aqui y ya.",
+        "permisos": {},
+    },
 }
 
 
@@ -255,6 +275,17 @@ def kind_de(nombre: str) -> str | None:
 def descripcion_de(nombre: str) -> str:
     paquete = PAQUETES.get(nombre)
     return paquete["descripcion"] if paquete else ""
+
+
+def es_singleton(nombre: str) -> bool:
+    """True si el paquete solo puede tenerlo un usuario a la vez.
+
+    `crud_rbac.conceder()` lo usa para revocar del titular anterior antes de
+    conceder al nuevo. Paquete inexistente = False (deny-by-default: nada
+    especial pasa con un nombre basura).
+    """
+    paquete = PAQUETES.get(nombre)
+    return bool(paquete and paquete.get("singleton", False))
 
 
 def permisos_de_paquete(nombre: str) -> dict[str, set[str]]:

@@ -22,6 +22,7 @@ class RolResponse(BaseModel):
     descripcion: str
     is_active: bool
     permisos: Dict[str, List[str]] = {}
+    singleton: bool = False
 
 
 class GrantResponse(BaseModel):
@@ -31,6 +32,7 @@ class GrantResponse(BaseModel):
     descripcion: str
     granted_by: Optional[int] = None
     granted_at: Optional[datetime] = None
+    singleton: bool = False
 
 
 class UserRolesResponse(BaseModel):

@@ -54,6 +54,7 @@ def _a_grant_response(grant) -> schemas_rbac.GrantResponse:
         descripcion=rbac_catalog.descripcion_de(grant.role_name),
         granted_by=grant.granted_by,
         granted_at=grant.granted_at,
+        singleton=rbac_catalog.es_singleton(grant.role_name),
     )
 
 
@@ -92,14 +93,28 @@ def conceder_rol(
             f"El paquete '{role_name}' no esta sembrado en la base. Corre migrate_rbac_aditivo.py."
         )
 
+    # Capturado ANTES de conceder: si el paquete es singleton, `conceder()` ya
+    # habra revocado a este anterior titular (si habia uno) para cuando se
+    # arma el detalle de la bitacora — sin capturarlo antes, el desplazamiento
+    # quedaria mudo en el rastro.
+    anterior_titular = (
+        crud_rbac.titular_de(db, role_name)
+        if rbac_catalog.es_singleton(role_name)
+        else None
+    )
+
     crud_rbac.conceder(db, target.id, role_name, current_user.id)
+
+    detalle = f"role_name={role_name}"
+    if anterior_titular and anterior_titular.id != target.id:
+        detalle += f"; paquete singleton, revocado automaticamente de user_id={anterior_titular.id}"
     crud.log_audit(
         db,
         actor_user_id=current_user.id,
         action="rbac.grant",
         target_type="user",
         target_id=target.id,
-        details=f"role_name={role_name}",
+        details=detalle,
     )
     return listar_roles_de_usuario(target.id, db=db, current_user=current_user)
 

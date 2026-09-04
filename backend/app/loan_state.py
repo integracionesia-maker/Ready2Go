@@ -19,7 +19,7 @@ Siete transiciones, ni una mas. **Cualquier par (accion, estado) que no este en
 la tabla responde 409 TRANSICION_INVALIDA** — es regla de cierre explicita del
 contrato §3, no interpretacion.
 
-Dos reglas que se prestan a confusion y por eso viven aqui, no repartidas:
+Tres reglas que se prestan a confusion y por eso viven aqui, no repartidas:
 
 1. `entrega_autorizada` es **ortogonal** al estado: Melisa puede autorizar antes
    o despues de que el equipo vuelva. Pero **bloquea llegar a `completado`**, por
@@ -29,6 +29,28 @@ Dos reglas que se prestan a confusion y por eso viven aqui, no repartidas:
    La guarda se evalua contra el estado **destino**, no contra el actual: con
    alguna decision distinta de `ok` el destino es `incompleto` y la operacion
    procede aunque no haya autorizacion.
+
+1b. `firmas_completas` (ambas firmas capturadas) sigue el MISMO patron que
+   `entrega_autorizada`: `confirmar` **nunca** pide ninguna firma (decision
+   explicita del usuario, revision 2 — quien llena el formulario no es
+   necesariamente ni quien aprueba ni quien recibe el equipo), pero
+   **bloquea llegar a `completado`**, por los mismos dos caminos. Sin esta
+   guarda, un prestamo sin ninguna firma podria cerrarse del todo sin que
+   nadie firmara jamas la responsiva. Las dos firmas se suben despues,
+   siempre con el prestamo ya confirmado (`prestado`, `pendiente_confirmacion`
+   o `incompleto` — nunca `borrador`, ver `acepta_media`); una vez capturada
+   una firma no se puede volver a subir para ese `(prestamo, kind)` — es
+   evidencia, la protege el router, no esta funcion.
+
+   Las dos firmas ya NO son intercambiables: `firma_entrega` es de quien
+   **aprueba** el prestamo (paquete `APROBADOR_EQUIPO` — Melisa u otra persona
+   con el mismo paquete, nunca quien llena el formulario a menos que tambien
+   tenga el paquete), y `firma_responsable` es del **beneficiario** (quien
+   recibe el equipo — capturado como texto libre en `responsable_nombre`/
+   `responsable_email`, puede ser distinto de quien crea el prestamo). El
+   router exige el permiso de aprobacion especificamente para subir
+   `firma_entrega`; el resto de los kinds de media siguen pidiendo
+   `equipos_prestamos:solicitar`.
 
 2. `devuelto_at` de un renglon se escribe en **exactamente dos** operaciones:
    `cancelar` y `confirmar-devolucion`. En ninguna otra. `devolucion` NO lo
@@ -49,11 +71,13 @@ __all__ = [
     "estado_destino",
     "destino_por_decisiones",
     "exige_autorizacion_de_entrega",
+    "exige_firmas_completas",
     "escribe_devuelto_at",
     "acepta_items",
     "acepta_media",
     "acepta_autorizacion",
     "kinds_de_entrega",
+    "kinds_de_firma",
     "kinds_de_devolucion",
 ]
 
@@ -132,6 +156,12 @@ def exige_autorizacion_de_entrega(destino: str) -> bool:
     return destino == CO
 
 
+def exige_firmas_completas(destino: str) -> bool:
+    """Mismo patron que `exige_autorizacion_de_entrega`, misma razon: solo
+    `completado` exige que ambas firmas ya esten. Ver nota 1b del modulo."""
+    return destino == CO
+
+
 def escribe_devuelto_at(accion: str) -> bool:
     """Las dos unicas operaciones que cierran renglones.
 
@@ -148,7 +178,15 @@ def acepta_items(estado: str) -> bool:
 
 
 def kinds_de_entrega() -> tuple[str, ...]:
-    return ("foto_entrega_frente", "foto_entrega_atras", "firma_entrega", "firma_responsable")
+    """Fotos de entrega. Las firmas NO estan aqui: tienen su propia ventana de
+    estados (`kinds_de_firma`), mas amplia. Antes las cuatro vivian juntas; se
+    separaron al permitir completar una firma pendiente en `prestado` sin abrir
+    esa misma puerta para las fotos."""
+    return ("foto_entrega_frente", "foto_entrega_atras")
+
+
+def kinds_de_firma() -> tuple[str, ...]:
+    return ("firma_entrega", "firma_responsable")
 
 
 def kinds_de_devolucion() -> tuple[str, ...]:
@@ -156,14 +194,26 @@ def kinds_de_devolucion() -> tuple[str, ...]:
 
 
 def acepta_media(estado: str, kind: str) -> bool:
-    """Las fotos y firmas de entrega solo en `borrador`; las de devolucion solo
-    en `prestado`.
+    """Fotos de entrega solo en `borrador`; fotos de devolucion solo en
+    `prestado`; firmas en **`prestado`, `pendiente_confirmacion` o
+    `incompleto`** (ver nota 1b del modulo) — nunca en `borrador`: desde que
+    `confirmar` dejo de pedir ninguna firma, las dos se completan siempre
+    despues, con el prestamo ya confirmado (folio real, responsiva v1 ya
+    generada). Firmar un borrador que todavia puede perder o ganar equipos no
+    tiene sentido.
 
     El contrato no lo escribe. Se aplica igual porque no hay flujo legitimo que
     suba una foto de entrega a un prestamo ya completado, y permitirlo deja
     reescribir la evidencia que respalda una responsiva firmada (§6: "un
     documento firmado es evidencia"). Reportado en docs/avances/servidor.md.
+
+    Que una firma pase esta funcion NO significa que se pueda resubir una
+    firma que ya existe para ese prestamo: esa proteccion depende de una
+    consulta a `media_asset` y vive en el router, no aqui (esta funcion es
+    pura, sin base de datos).
     """
+    if kind in kinds_de_firma():
+        return estado in (P, PC, IN)
     if kind in kinds_de_entrega():
         return estado == B
     if kind in kinds_de_devolucion():

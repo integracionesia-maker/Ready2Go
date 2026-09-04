@@ -49,6 +49,7 @@ def listar_roles(
             descripcion=rbac_catalog.descripcion_de(nombre),
             is_active=activos.get(nombre, True),
             permisos=rbac_catalog.a_json(rbac_catalog.permisos_de_paquete(nombre)),
+            singleton=rbac_catalog.es_singleton(nombre),
         )
         for nombre in nombres
     ]
