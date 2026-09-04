@@ -9,6 +9,7 @@ import GeneralExpensesChart from "./charts/GeneralExpensesChart";
 import OperationalExpensesChart from "./charts/OperationalExpensesChart";
 import OperationalByRubroChart from "./charts/OperationalByRubroChart";
 import TicketsPerDayChart from "./charts/TicketsPerDayChart";
+import TopExpensesCard from "./charts/TopExpensesCard";
 import {
   fetchDashboardSummary,
   fetchMonthlySpend,
@@ -17,6 +18,7 @@ import {
   fetchGeneralExpensesMonthly,
   fetchOperationalDashboard,
   fetchTicketsPerDay,
+  fetchTopExpenses,
   downloadDashboardReportPdf,
 } from "@/api";
 
@@ -48,6 +50,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
   const [generalExpensesMonthly, setGeneralExpensesMonthly] = useState([]);
   const [operationalDashboard, setOperationalDashboard] = useState(null);
   const [ticketsPerDay, setTicketsPerDay] = useState([]);
+  const [topExpenses, setTopExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pdfState, setPdfState] = useState("idle"); // idle | generating
@@ -64,7 +67,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
       // consola). Las cargas subsecuentes (debounced por cambio de fecha)
       // sí usan AbortController para cancelar requests obsoletas.
       const opts = isFirstLoad ? {} : { signal };
-      const [s, m, c, b, ge, od, tpd] = await Promise.all([
+      const [s, m, c, b, ge, od, tpd, te] = await Promise.all([
         fetchDashboardSummary(start, end, opts),
         fetchMonthlySpend(start, end, opts),
         fetchCreatorUsage(start, end, opts),
@@ -72,6 +75,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
         fetchGeneralExpensesMonthly(start, end, opts),
         fetchOperationalDashboard(start, end, opts),
         fetchTicketsPerDay(start, end, opts),
+        fetchTopExpenses(start, end, opts),
       ]);
       setSummary(s);
       setMonthly(m);
@@ -80,6 +84,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
       setGeneralExpensesMonthly(ge);
       setOperationalDashboard(od);
       setTicketsPerDay(tpd);
+      setTopExpenses(te);
     } catch (e) {
       if (e.name === "AbortError") return; // reemplazada por un filtro mas reciente, no es un error real
       setError(e.message);
@@ -211,6 +216,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               value={kpi ? kpi.total_budget : "—"}
               format={formatMXN}
               hint={`${kpi?.active_creators ?? 0} creadores activos`}
+              info="Suma del monto del ciclo vigente (semanal o mensual) de cada creador activo, ahora mismo — no cambia con el filtro de fechas de arriba. Si ves $0, revisa que los creadores tengan un monto de ciclo configurado en Administración → Creadores."
               accentColor={ACCENTS.orange}
               glass
             />
@@ -219,6 +225,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               value={kpi ? kpi.total_spent : "—"}
               format={formatMXN}
               hint={`${spentPct.toFixed(1)}% ejecutado`}
+              info="Lo ya aprobado dentro del ciclo vigente de cada creador activo — también fijo, sin importar el filtro de fechas. Sube al aprobar un ticket; los pendientes o rechazados nunca cuentan aquí."
               accentColor={ACCENTS.turquoise}
               glass
             />
@@ -227,6 +234,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               value={kpi ? kpi.total_remaining : "—"}
               format={formatMXN}
               hint={`${remainingPct.toFixed(1)}% restante`}
+              info="Presupuesto Total menos Total Gastado del ciclo vigente. Puede salir en negativo si se aprobó más de lo presupuestado — la app lo permite a propósito, no es un error."
               accentColor={ACCENTS.sky}
               glass
             />
@@ -234,6 +242,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               label="Marcas Activas"
               value={summary?.active_brands ?? "—"}
               hint="con gastos en el período"
+              info="Marcas con al menos un ticket aprobado dentro del rango de fechas seleccionado arriba. Si acabas de cambiar el filtro a un período sin nada aprobado todavía, este número cae a 0."
               accentColor={ACCENTS.violet}
               glass
             />
@@ -259,6 +268,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
                 </>
               }
               accentColor={ACCENTS.orange}
+              info="Suma de tickets aprobados cuya fecha de subida cae dentro del filtro de fechas de arriba — a diferencia de 'Total Gastado', este sí cambia con el filtro. En $0 casi siempre significa que no hay tickets aprobados en ese rango (revisa si hay pendientes por confirmar, se muestran aparte)."
               glass
             />
             <KpiTile
@@ -277,6 +287,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
                   )}
                 </>
               }
+              info="Cantidad de tickets aprobados en el período filtrado, con su monto promedio. Los pendientes de validación se muestran aparte y no entran en este conteo ni en el promedio."
               accentColor={ACCENTS.turquoise}
               glass
             />
@@ -284,6 +295,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               label="Creadores Activos"
               value={creatorUsage.filter((c) => c.spent > 0).length}
               hint="con gastos en el período"
+              info="Creadores con al menos un ticket aprobado (monto mayor a $0) dentro del período filtrado — distinto de 'Marcas Activas', que cuenta marcas, no creadores."
               accentColor={ACCENTS.sky}
               glass
             />
@@ -292,6 +304,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               value={generalExpensesTotal}
               format={formatMXN}
               hint={`${generalExpensesCount} ${generalExpensesCount === 1 ? "gasto" : "gastos"} en el periodo`}
+              info="Gastos generales (ligados a una marca, sin ciclo ni validación) registrados dentro del período filtrado. No incluye Gastos Operativos ni afecta el presupuesto de los creadores."
               accentColor={ACCENTS.orange}
               glass
             />
@@ -304,10 +317,14 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               value={operationalTotal}
               format={formatMXN}
               hint={`${operationalCount} ${operationalCount === 1 ? "gasto" : "gastos"} en el periodo`}
+              info="Gastos operativos (clasificados por rubro) registrados dentro del período filtrado, según su fecha de gasto manual — independientes de creadores y marcas."
               accentColor={ACCENTS.turquoise}
               glass
             />
           </div>
+
+          {/* ── Top 3 gastos individuales del período (general + operativo) ── */}
+          <TopExpensesCard data={topExpenses} />
 
           {/* ── Row: Monthly bar chart ────────────────────────────────── */}
           <GlassPanel as="section" className="p-4 sm:p-6">

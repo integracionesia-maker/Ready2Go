@@ -629,6 +629,60 @@ def get_general_expenses(
     return q.order_by(models.GeneralExpense.upload_date.desc()).all()
 
 
+def get_top_expenses(
+    db: Session, start_date: Optional[date] = None, end_date: Optional[date] = None
+) -> List[schemas.TopExpenseItem]:
+    """Top 3 gastos INDIVIDUALES del período mezclando gastos generales y
+    operativos (sin sumatorias por marca/rubro). Cada tabla se filtra por su
+    campo de fecha semántico: generales por `upload_date`, operativos por
+    `fecha_gasto` (nunca al revés). `limit(3)` por tabla es correcto: el top-3
+    global siempre está contenido en la unión de los top-3 de cada tabla."""
+    generales = db.query(models.GeneralExpense).filter(
+        models.GeneralExpense.is_deleted == False
+    )
+    if start_date:
+        generales = generales.filter(models.GeneralExpense.upload_date >= start_date)
+    if end_date:
+        generales = generales.filter(models.GeneralExpense.upload_date < end_date + timedelta(days=1))
+    generales = generales.order_by(models.GeneralExpense.amount.desc()).limit(3).all()
+
+    operativos = db.query(models.OperationalExpense).filter(
+        models.OperationalExpense.is_deleted == False
+    )
+    if start_date:
+        operativos = operativos.filter(models.OperationalExpense.fecha_gasto >= start_date)
+    if end_date:
+        operativos = operativos.filter(models.OperationalExpense.fecha_gasto < end_date + timedelta(days=1))
+    operativos = operativos.order_by(models.OperationalExpense.amount.desc()).limit(3).all()
+
+    items = [
+        schemas.TopExpenseItem(
+            tipo="general",
+            id=g.id,
+            descripcion=g.description,
+            monto=float(g.amount),
+            fecha=g.upload_date.date(),
+            etiqueta=g.brand.name if g.brand else f"ID {g.brand_id}",
+        )
+        for g in generales
+    ] + [
+        schemas.TopExpenseItem(
+            tipo="operativo",
+            id=o.id,
+            descripcion=o.description,
+            monto=float(o.amount),
+            fecha=o.fecha_gasto,
+            etiqueta=o.rubro.nombre if o.rubro else f"ID {o.rubro_id}",
+        )
+        for o in operativos
+    ]
+    # Solo por monto: comparar date (fecha_gasto) con datetime (upload_date) en
+    # la clave lanzaría TypeError. El sort es estable: los empates quedan
+    # deterministas (generales primero, en el orden amount.desc() de SQL).
+    items.sort(key=lambda i: i.monto, reverse=True)
+    return items[:3]
+
+
 def get_general_expense(db: Session, expense_id: int) -> Optional[models.GeneralExpense]:
     return db.query(models.GeneralExpense).filter(models.GeneralExpense.id == expense_id).first()
 

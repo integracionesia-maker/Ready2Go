@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { EmptyState, GlassPanel, SkeletonShimmer, useToast, RowActions, ICONS, usePageTitle } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, useToast, RowActions, ICONS, usePageTitle, SortableHeaderCell, useSortable } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchLoans, fetchLoanById, loanResponsivaUrl } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -18,6 +18,14 @@ const ESTADO_BADGE = {
   pendiente_confirmacion: "go-badge-warning",
   incompleto: "go-badge-error",
 };
+
+const SORTABLE_COLUMNS = [
+  { key: "folio", label: "Folio", type: "string" },
+  { key: "responsable", label: "Responsable", type: "string", getValue: (l) => l.responsable?.nombre || "" },
+  { key: "equipos", label: "Equipos", type: "string", getValue: (l) => (l.equipos || []).join(", ") },
+  { key: "fecha_regreso_esperada", label: "Regreso esperado", type: "date" },
+  { key: "estado", label: "Estado", type: "string", getValue: (l) => ESTADO_LABEL[l.estado] || l.estado },
+];
 
 export default function ActivosPage() {
   usePageTitle("Préstamos Activos");
@@ -100,11 +108,20 @@ export default function ActivosPage() {
     return items;
   }, [todos, estadoFiltro, qDebounced]);
 
-  const totalPages = Math.max(1, Math.ceil(filtrados.length / pageSize));
+  const { sortedItems: sortedFiltrados, sortKey, sortDir, cycleSort: cycleSortRaw } = useSortable(
+    filtrados,
+    SORTABLE_COLUMNS
+  );
+  const cycleSort = (key) => {
+    cycleSortRaw(key);
+    setPage(1);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(sortedFiltrados.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const pageItems = filtrados.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const rangeStart = filtrados.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const rangeEnd = Math.min(currentPage * pageSize, filtrados.length);
+  const pageItems = sortedFiltrados.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const rangeStart = sortedFiltrados.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, sortedFiltrados.length);
 
   async function verResponsiva(loan) {
     const url = await loanResponsivaUrl(loan.id);
@@ -195,11 +212,17 @@ export default function ActivosPage() {
             <table className="go-table w-full">
               <thead>
                 <tr>
-                  <th>Folio</th>
-                  <th>Responsable</th>
-                  <th>Equipos</th>
-                  <th>Regreso esperado</th>
-                  <th>Estado</th>
+                  {SORTABLE_COLUMNS.map((col) => (
+                    <SortableHeaderCell
+                      key={col.key}
+                      label={col.label}
+                      columnKey={col.key}
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onSort={cycleSort}
+                      align={col.align}
+                    />
+                  ))}
                   <th aria-label="Acciones" />
                 </tr>
               </thead>

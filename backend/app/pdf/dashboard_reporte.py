@@ -443,6 +443,33 @@ def construir(datos: dict, ancho_util: float) -> list:
             )
         )
 
+    top = datos.get("top_expenses") or []
+    if top:
+        hubo_contenido_gastos = True
+        flujo.append(Spacer(1, 4 * mm))
+        flujo.append(
+            KeepTogether(
+                [
+                    _color_paragraph(e, "subtitulo", "Mayores Gastos Individuales del Período", _COLOR_SECCION_GASTOS),
+                    _tabla_simple(
+                        e,
+                        ["Rank", "Tipo", "Descripción", "Fecha", "Monto"],
+                        [
+                            [
+                                str(i + 1),
+                                "General" if t.tipo == "general" else "Operativo",
+                                t.descripcion,
+                                _fecha_larga(t.fecha),
+                                _moneda(t.monto),
+                            ]
+                            for i, t in enumerate(top)
+                        ],
+                        [ancho_util * 0.08, ancho_util * 0.16, ancho_util * 0.42, ancho_util * 0.18, ancho_util * 0.16],
+                    ),
+                ]
+            )
+        )
+
     if not hubo_contenido_gastos:
         flujo.append(_caja_sin_datos(e, "Sin gastos generales ni operativos en este período.", ancho_util))
 

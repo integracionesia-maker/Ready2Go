@@ -12,9 +12,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import Modal from "./Modal";
 import PasswordTemporal from "./PasswordTemporal";
-import { GlassPanel, RowActions, ICONS, useToast } from "@/design";
-import { SortableHeaderCell } from "./SortableHeader";
-import { useSortable } from "../hooks/useSortable";
+import { GlassPanel, RowActions, ICONS, useToast, SortableHeaderCell, useSortable } from "@/design";
 
 const ROLE_LABELS = {
   superadmin: "Superadministrador",
@@ -43,6 +41,19 @@ const USER_COLUMNS = [
   { key: "full_name", label: "Nombre", type: "string" },
   { key: "role", label: "Rol", type: "string", getValue: (u) => ROLE_LABELS[u.role] || u.role },
   { key: "is_active", label: "Estado", type: "string", getValue: (u) => (u.is_active ? "Activo" : "Inactivo") },
+  { key: "last_login", label: "Último acceso", type: "date" },
+];
+
+const SUPERADMIN_COLUMNS = [
+  { key: "username", label: "Usuario", type: "string" },
+  { key: "full_name", label: "Nombre", type: "string" },
+  { key: "email", label: "Correo", type: "string" },
+  {
+    key: "must_change_password",
+    label: "Contraseña",
+    type: "string",
+    getValue: (u) => (u.must_change_password ? "Debe cambiarla" : "Definitiva"),
+  },
   { key: "last_login", label: "Último acceso", type: "date" },
 ];
 
@@ -146,6 +157,12 @@ export default function UserManagement({ creators, onCreatorsChange }) {
   const [saReset, setSaReset] = useState({ fase: "confirmando", password: null, error: null });
 
   const { sortedItems: sortedUsers, sortKey, sortDir, cycleSort } = useSortable(users, USER_COLUMNS);
+  const {
+    sortedItems: sortedSuperAdmins,
+    sortKey: saSortKey,
+    sortDir: saSortDir,
+    cycleSort: saCycleSort,
+  } = useSortable(superAdmins, SUPERADMIN_COLUMNS);
 
   // Debounce de 300ms para la búsqueda
   useEffect(() => {
@@ -622,16 +639,16 @@ export default function UserManagement({ creators, onCreatorsChange }) {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>Usuario</th>
-                    <th>Nombre</th>
-                    <th>Correo</th>
-                    <th>Contraseña</th>
-                    <th>Último acceso</th>
+                    <SortableHeaderCell label="Usuario" columnKey="username" activeKey={saSortKey} dir={saSortDir} onSort={saCycleSort} />
+                    <SortableHeaderCell label="Nombre" columnKey="full_name" activeKey={saSortKey} dir={saSortDir} onSort={saCycleSort} />
+                    <SortableHeaderCell label="Correo" columnKey="email" activeKey={saSortKey} dir={saSortDir} onSort={saCycleSort} />
+                    <SortableHeaderCell label="Contraseña" columnKey="must_change_password" activeKey={saSortKey} dir={saSortDir} onSort={saCycleSort} />
+                    <SortableHeaderCell label="Último acceso" columnKey="last_login" activeKey={saSortKey} dir={saSortDir} onSort={saCycleSort} />
                     <th className="text-right" />
                   </tr>
                 </thead>
                 <tbody>
-                  {superAdmins.map((u) => {
+                  {sortedSuperAdmins.map((u) => {
                     const isSelf = u.id === currentUser.id;
                     return (
                       <tr

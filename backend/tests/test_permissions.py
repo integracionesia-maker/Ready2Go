@@ -367,6 +367,7 @@ class TestDashboardPermissions:
             "/api/dashboard/monthly-spend",
             "/api/dashboard/creator-usage",
             "/api/dashboard/general-expenses-monthly",
+            "/api/dashboard/top-expenses",
         ],
     )
     def test_creador_forbidden(self, logged_in_creador, path):
@@ -379,6 +380,7 @@ class TestDashboardPermissions:
             "/api/dashboard/monthly-spend",
             "/api/dashboard/creator-usage",
             "/api/dashboard/general-expenses-monthly",
+            "/api/dashboard/top-expenses",
         ],
     )
     def test_admin_allowed(self, logged_in_admin, path):
@@ -391,6 +393,7 @@ class TestDashboardPermissions:
             "/api/dashboard/monthly-spend",
             "/api/dashboard/creator-usage",
             "/api/dashboard/general-expenses-monthly",
+            "/api/dashboard/top-expenses",
         ],
     )
     def test_marketing_presupuestos_allowed(self, logged_in_marketing_presupuestos, path):

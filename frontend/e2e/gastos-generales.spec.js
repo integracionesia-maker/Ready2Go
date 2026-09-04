@@ -216,6 +216,88 @@ test.describe.serial("Gastos Generales y borrado de tickets (R12)", () => {
     await expect(kpiCard).toContainText("$350.00");
   });
 
+  test("el Dashboard muestra la card Top 3 de gastos individuales (general + operativo)", async ({ page }) => {
+    await login(page, ADMIN.username, ADMIN.newPassword);
+    await page.goto("/gastos-generales");
+
+    // Rubro único para el gasto operativo de este run (creado vía UI).
+    const RUBRO_NAME = `Rubro Top E2E ${RUN_ID}`;
+    await page.click('button:has-text("Gestionar rubros")');
+    await page.getByRole("button", { name: "Nuevo rubro" }).click();
+    const sub = page.locator(".fixed.inset-0").last();
+    await sub.locator('input[type="text"]').fill(RUBRO_NAME);
+    await sub.getByRole("button", { name: "Crear", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Nuevo rubro" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Cerrar" }).click();
+
+    // Gasto operativo de $1,000,000 con fecha de hoy: garantiza el rank 1 del
+    // rango por defecto del Dashboard (primer día del mes -> hoy) sin depender
+    // de los datos ya sembrados en la DB dev.
+    const hoy = new Date();
+    const isoHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+    const OP_DESC = `Gasto operativo top ${RUN_ID}`;
+    await page.getByRole("button", { name: "Nuevo Gasto", exact: true }).click();
+    let modal = page.locator(".fixed.inset-0").last();
+    await modal.getByRole("button", { name: "Operativo", exact: true }).click();
+    await modal.locator("select").selectOption({ label: RUBRO_NAME });
+    await modal.locator('input[type="date"]').fill(isoHoy);
+    await modal.locator("textarea").fill(OP_DESC);
+    await modal.locator('input[type="number"]').fill("1000000");
+    await modal.locator('input[type="file"]').setInputFiles({
+      name: "comprobante-top-op.pdf",
+      mimeType: "application/pdf",
+      buffer: fileBuffer(`${RUN_ID}-top-op`),
+    });
+    await modal.getByRole("button", { name: "Registrar Gasto" }).click();
+    await expect(modal.getByText("Gasto operativo registrado exitosamente.")).toBeVisible();
+
+    // Gasto general de $999,999: rank 2.
+    const GE_DESC = `Gasto general top ${RUN_ID}`;
+    await page.getByRole("button", { name: "Nuevo Gasto", exact: true }).click();
+    modal = page.locator(".fixed.inset-0").last();
+    await modal.locator("select").selectOption({ label: BRAND_NAME });
+    await modal.locator("textarea").fill(GE_DESC);
+    await modal.locator('input[type="number"]').fill("999999");
+    await modal.locator('input[type="file"]').setInputFiles({
+      name: "comprobante-top-ge.pdf",
+      mimeType: "application/pdf",
+      buffer: fileBuffer(`${RUN_ID}-top-ge`),
+    });
+    await modal.getByRole("button", { name: "Registrar Gasto" }).click();
+    await expect(modal.getByText("Gasto general registrado exitosamente.")).toBeVisible();
+
+    await page.goto("/dashboard");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByRole("heading", { name: "Mayores Gastos Individuales" })).toBeVisible();
+    const card = page.locator('[data-testid="top-expenses-card"]');
+    await expect(card).toBeVisible();
+
+    const filas = card.locator('[data-testid="top-expense-row"]');
+    const primera = filas.first();
+    await expect(primera).toContainText(OP_DESC);
+    await expect(primera).toContainText("$1,000,000.00");
+    // .go-badge aplica text-transform: uppercase — match sin distinguir caja.
+    await expect(primera).toContainText("Operativo", { ignoreCase: true });
+    await expect(card).toContainText(GE_DESC);
+    await expect(card).toContainText("General", { ignoreCase: true });
+
+    // Robustez anti-datos-sembrados: los montos de las filas deben venir en
+    // orden no creciente (los dos enormes garantizan rank 1-2; el tercero es
+    // cualquiera de la DB).
+    const montos = [];
+    for (let i = 0; i < (await filas.count()); i++) {
+      const match = (await filas.nth(i).innerText()).match(/\$[\d,]+\.\d{2}/);
+      if (match) montos.push(parseFloat(match[0].replace(/[$,]/g, "")));
+    }
+    expect(montos.length).toBeGreaterThan(0);
+    for (let i = 1; i < montos.length; i++) {
+      expect(montos[i - 1]).toBeGreaterThanOrEqual(montos[i]);
+    }
+
+    await logout(page);
+  });
+
   test("admin exporta Gastos Generales a PDF", async ({ page }) => {
     await login(page, ADMIN.username, ADMIN.newPassword);
     await page.goto("/gastos-generales");

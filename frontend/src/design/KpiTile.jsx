@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { animate, useReducedMotion } from "motion/react";
 import GlassPanel from "./GlassPanel";
+import InfoTooltip from "./InfoTooltip";
 
 /**
  * `glass` es opt-in (default false, tarjeta plana con los tokens de
@@ -17,6 +18,7 @@ export default function KpiTile({
   label,
   value,
   hint,
+  info,
   format = (v) => v,
   icon,
   glass = false,
@@ -48,15 +50,18 @@ export default function KpiTile({
 
   const body = (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <span className="font-body text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--go-text-secondary)" }}>
           {label}
         </span>
-        {icon && (
-          <span className="flex h-8 w-8 items-center justify-center rounded-go" style={{ background: "var(--go-orange-tint)", color: "var(--go-orange)" }}>
-            {icon}
-          </span>
-        )}
+        <span className="flex flex-shrink-0 items-center gap-2">
+          <InfoTooltip text={info} />
+          {icon && (
+            <span className="flex h-8 w-8 items-center justify-center rounded-go" style={{ background: "var(--go-orange-tint)", color: "var(--go-orange)" }}>
+              {icon}
+            </span>
+          )}
+        </span>
       </div>
       <span className="font-display text-2xl font-bold tabular-nums" style={{ color: "var(--go-text-primary)" }}>
         {typeof display === "number" ? format(Math.round(display)) : display}

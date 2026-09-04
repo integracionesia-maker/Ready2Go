@@ -3,9 +3,7 @@ import { fetchTickets, softDeleteTicket, hardDeleteTicket } from "@/api";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import MediaViewerModal from "./MediaViewerModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import { GlassPanel, RowActions, ICONS, usePageTitle } from "@/design";
-import { SortableHeaderCell } from "./SortableHeader";
-import { useSortable } from "../hooks/useSortable";
+import { GlassPanel, RowActions, ICONS, usePageTitle, SortableHeaderCell, useSortable } from "@/design";
 import { useAuth } from "@/context/AuthContext";
 
 const PAGE_SIZES = [10, 25, 50, 100];

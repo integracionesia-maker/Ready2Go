@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { GlassPanel, RowActions, ICONS } from "@/design";
+import { GlassPanel, RowActions, ICONS, SortableHeaderCell, useSortable } from "@/design";
 import Modal from "./Modal";
 import { listRubros, createRubro, updateRubro } from "@/api";
+
+const SORTABLE_COLUMNS = [
+  { key: "nombre", label: "Rubro", type: "string" },
+  {
+    key: "is_active",
+    label: "Estado",
+    type: "string",
+    align: "center",
+    getValue: (r) => (r.is_active ? "Activo" : "Inactivo"),
+  },
+];
 
 function RubroFormModal({ rubro, onClose, onSuccess }) {
   const [nombre, setNombre] = useState(rubro?.nombre || "");
@@ -53,6 +64,8 @@ export default function RubrosManagerModal({ onClose, onChange }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [subModal, setSubModal] = useState(null); // null | "crear" | rubro (editar)
+
+  const { sortedItems: sortedRubros, sortKey, sortDir, cycleSort } = useSortable(rubros, SORTABLE_COLUMNS);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,13 +125,22 @@ export default function RubrosManagerModal({ onClose, onChange }) {
                 <table className="go-table w-full">
                   <thead>
                     <tr>
-                      <th>Rubro</th>
-                      <th className="text-center">Estado</th>
+                      {SORTABLE_COLUMNS.map((col) => (
+                        <SortableHeaderCell
+                          key={col.key}
+                          label={col.label}
+                          columnKey={col.key}
+                          activeKey={sortKey}
+                          dir={sortDir}
+                          onSort={cycleSort}
+                          align={col.align}
+                        />
+                      ))}
                       <th className="text-right" />
                     </tr>
                   </thead>
                   <tbody>
-                    {rubros.map((r) => (
+                    {sortedRubros.map((r) => (
                       <tr key={r.id}>
                         <td className="font-display text-sm font-semibold" style={{ color: "var(--go-text-primary)" }}>{r.nombre}</td>
                         <td className="text-center">

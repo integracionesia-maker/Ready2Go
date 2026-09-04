@@ -64,6 +64,16 @@ def tickets_per_day(
     return crud.get_tickets_per_day(db, start_date=start_date, end_date=end_date)
 
 
+@router.get("/top-expenses", response_model=List[schemas.TopExpenseItem])
+def top_expenses(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_role("admin", "superadmin", "marketing_presupuestos", "marketing_admin")),
+):
+    return crud.get_top_expenses(db, start_date=start_date, end_date=end_date)
+
+
 @router.get("/report.pdf")
 def dashboard_report_pdf(
     start_date: Optional[date] = Query(None),
@@ -85,6 +95,7 @@ def dashboard_report_pdf(
         "brand_spend": crud.get_brand_spend_breakdown(db, start_date=start_date, end_date=end_date),
         "general_expenses_monthly": crud.get_general_expenses_monthly(db, start_date=start_date, end_date=end_date),
         "operational_dashboard": crud_operativos.dashboard(db, start_date=start_date, end_date=end_date),
+        "top_expenses": crud.get_top_expenses(db, start_date=start_date, end_date=end_date),
         "tickets_per_day": crud.get_tickets_per_day(db, start_date=start_date, end_date=end_date),
         "start_date": start_date,
         "end_date": end_date,
