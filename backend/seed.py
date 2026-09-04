@@ -8,8 +8,9 @@ Base.metadata.create_all(bind=engine)
 db = SessionLocal()
 
 brand_names = [
-    "Nike", "Samsung", "Coca-Cola", "Amazon", "Spotify",
-    "Adobe", "Microsoft", "L'Oréal",
+    "MARKETING", "CANCHAS EL FANTASMA", "DEL BARRIO PAL BARRIO",
+    "GRUPO ORTIZ", "HOTEL PUNTA GALERIA", "ICHIGO",
+    "PLAZA MADERO", "TODO PAL CAMPO", "TODO PAL NEGOCIO",
 ]
 
 brands = []
@@ -18,7 +19,7 @@ for name in brand_names:
     if existing:
         brands.append(existing)
     else:
-        b = models.Brand(name=name)
+        b = models.Brand(name=name, priority="alta" if name == "MARKETING" else "media")
         db.add(b)
         db.flush()
         brands.append(b)

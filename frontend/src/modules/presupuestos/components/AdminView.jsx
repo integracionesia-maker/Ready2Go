@@ -3,9 +3,7 @@ import { createCreator, updateCreator, createBrand, updateBrand, fetchCreatorCyc
 import { useAuth } from "@/context/AuthContext";
 import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import Modal from "./Modal";
-import { SortableHeaderCell } from "./SortableHeader";
-import { useSortable } from "../hooks/useSortable";
-import { GlassPanel, RowActions, ICONS, usePageTitle } from "@/design";
+import { GlassPanel, RowActions, ICONS, usePageTitle, SortableHeaderCell, useSortable } from "@/design";
 
 const CREATOR_COLUMNS = [
   { key: "name", label: "Nombre", type: "string" },
@@ -15,6 +13,13 @@ const CREATOR_COLUMNS = [
 ];
 
 const BRAND_COLUMNS = [{ key: "name", label: "Nombre", type: "string" }];
+
+const CYCLE_HISTORY_COLUMNS = [
+  { key: "start_date", label: "Periodo", type: "date" },
+  { key: "amount", label: "Monto", type: "number", align: "right" },
+  { key: "spent", label: "Gastado", type: "number", align: "right" },
+  { key: "remaining", label: "Restante", type: "number", align: "right" },
+];
 
 import { formatMXN } from "@/design";
 
@@ -42,6 +47,12 @@ export default function AdminView({ creators, brands, onChange }) {
     sortDir: brandSortDir,
     cycleSort: cycleBrandSort,
   } = useSortable(brands, BRAND_COLUMNS);
+  const {
+    sortedItems: sortedCycleHistory,
+    sortKey: cycleHistorySortKey,
+    sortDir: cycleHistorySortDir,
+    cycleSort: cycleCycleHistorySort,
+  } = useSortable(cycleHistory, CYCLE_HISTORY_COLUMNS);
 
   /* Creator form modal (create when editingCreator === null, edit otherwise) */
   const [creatorFormOpen, setCreatorFormOpen] = useState(false);
@@ -897,14 +908,41 @@ export default function AdminView({ creators, brands, onChange }) {
                   <table className="go-table">
                     <thead>
                       <tr>
-                        <th>Periodo</th>
-                        <th className="text-right">Monto</th>
-                        <th className="text-right">Gastado</th>
-                        <th className="text-right">Restante</th>
+                        <SortableHeaderCell
+                          label="Periodo"
+                          columnKey="start_date"
+                          activeKey={cycleHistorySortKey}
+                          dir={cycleHistorySortDir}
+                          onSort={cycleCycleHistorySort}
+                        />
+                        <SortableHeaderCell
+                          label="Monto"
+                          columnKey="amount"
+                          activeKey={cycleHistorySortKey}
+                          dir={cycleHistorySortDir}
+                          onSort={cycleCycleHistorySort}
+                          align="right"
+                        />
+                        <SortableHeaderCell
+                          label="Gastado"
+                          columnKey="spent"
+                          activeKey={cycleHistorySortKey}
+                          dir={cycleHistorySortDir}
+                          onSort={cycleCycleHistorySort}
+                          align="right"
+                        />
+                        <SortableHeaderCell
+                          label="Restante"
+                          columnKey="remaining"
+                          activeKey={cycleHistorySortKey}
+                          dir={cycleHistorySortDir}
+                          onSort={cycleCycleHistorySort}
+                          align="right"
+                        />
                       </tr>
                     </thead>
                     <tbody>
-                      {cycleHistory.map((cy) => (
+                      {sortedCycleHistory.map((cy) => (
                         <tr key={cy.id}>
                           <td>{cy.start_date} — {cy.end_date}</td>
                           <td className="num text-right">{formatMXN(cy.amount)}</td>

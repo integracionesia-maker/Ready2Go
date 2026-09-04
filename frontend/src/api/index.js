@@ -385,6 +385,14 @@ export function fetchTicketsPerDay(startDate, endDate, { signal } = {}) {
   return request(`/dashboard/tickets-per-day${qs ? `?${qs}` : ""}`, { signal });
 }
 
+export function fetchTopExpenses(startDate, endDate, { signal } = {}) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  const qs = params.toString();
+  return request(`/dashboard/top-expenses${qs ? `?${qs}` : ""}`, { signal });
+}
+
 /** Reporte del dashboard generado en backend (reportlab, vectores nativos —
  * ver backend/app/pdf/dashboard_reporte.py). Descarga directa: a diferencia
  * del resto del archivo, esta función no devuelve JSON, dispara un archivo. */

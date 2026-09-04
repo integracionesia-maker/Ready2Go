@@ -4,7 +4,7 @@ import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import GeneralExpenseModal from "../components/GeneralExpenseModal";
 import GeneralExpensesExportModal from "../components/GeneralExpensesExportModal";
 import RubrosManagerModal from "../components/RubrosManagerModal";
-import { GlassPanel, RowActions, ICONS, MediaViewer, usePageTitle } from "@/design";
+import { GlassPanel, RowActions, ICONS, MediaViewer, usePageTitle, SortableHeaderCell, useSortable } from "@/design";
 import {
   fetchGeneralExpenses,
   softDeleteGeneralExpense,
@@ -45,6 +45,14 @@ function fmtDateParam(d) {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+const SORTABLE_COLUMNS = [
+  { key: "tipo", label: "Tipo", type: "string" },
+  { key: "fechaOrden", label: "Fecha", type: "date" },
+  { key: "etiqueta", label: "Marca / Rubro", type: "string" },
+  { key: "description", label: "Descripción", type: "string" },
+  { key: "amount", label: "Monto", type: "number", align: "right" },
+];
 
 function firstOfMonth(y, m) {
   return new Date(y, m, 1);
@@ -103,6 +111,8 @@ export default function GeneralExpensesPage({ brands = [] }) {
   const [rubrosModalOpen, setRubrosModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewerRow, setViewerRow] = useState(null);
+
+  const { sortedItems: sortedRows, sortKey, sortDir, cycleSort } = useSortable(rows, SORTABLE_COLUMNS);
 
   const loadRubros = useCallback(() => {
     listRubros(false)
@@ -264,16 +274,22 @@ export default function GeneralExpensesPage({ brands = [] }) {
               <table className="go-table">
               <thead>
                 <tr>
-                  <th>Tipo</th>
-                  <th>Fecha</th>
-                  <th>Marca / Rubro</th>
-                  <th>Descripción</th>
-                  <th className="text-right">Monto</th>
+                  {SORTABLE_COLUMNS.map((col) => (
+                    <SortableHeaderCell
+                      key={col.key}
+                      label={col.label}
+                      columnKey={col.key}
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onSort={cycleSort}
+                      align={col.align}
+                    />
+                  ))}
                   <th className="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {sortedRows.map((row) => (
                   <tr key={`${row.tipo}-${row.id}`}>
                     <td>
                       {/* Distintivo visual: naranja GO para general, turquesa para operativo. */}

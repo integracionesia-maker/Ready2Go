@@ -14,6 +14,28 @@ def _texto(contenido: bytes) -> str:
     return "\n".join(p.extract_text() or "" for p in PdfReader(io.BytesIO(contenido)).pages)
 
 
+PDF = ("comprobante.pdf", b"%PDF-1.4\n% comprobante de prueba\n", "application/pdf")
+
+
+def _crear_rubro(cli, nombre="IA"):
+    r = cli.post("/api/rubros/", json={"nombre": nombre})
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+def _crear_gasto(cli, rubro_id, *, amount=100.0, fecha="2026-08-15", descripcion="gasto x"):
+    data = {"rubro_id": str(rubro_id), "amount": str(amount), "description": descripcion, "fecha_gasto": fecha}
+    return cli.post("/api/operational-expenses/", data=data, files={"file": PDF})
+
+
+def _crear_general(cli, brand_id, *, amount=100.0, description="gasto general x"):
+    return cli.post(
+        "/api/general-expenses/",
+        data={"brand_id": str(brand_id), "amount": str(amount), "description": description},
+        files={"file": PDF},
+    )
+
+
 def test_genera_un_pdf_de_verdad(logged_in_admin):
     resp = logged_in_admin.get("/api/dashboard/report.pdf")
     assert resp.status_code == 200
@@ -65,6 +87,35 @@ def test_sin_datos_no_revienta(logged_in_admin):
     assert "Sin actividad de presupuestos de creadores en este período." in texto
     assert "Sin gastos generales ni operativos en este período." in texto
     assert "Sin tickets subidos en este período." in texto
+
+
+def test_top3_aparece_en_el_pdf(logged_in_admin, brand_a):
+    rubro_id = _crear_rubro(logged_in_admin)
+    _crear_gasto(logged_in_admin, rubro_id, amount=5000, descripcion="Gasto operativo top")
+    _crear_general(logged_in_admin, brand_a.id, amount=4000, description="Gasto general top")
+    _crear_general(logged_in_admin, brand_a.id, amount=1500, description="Gasto general menor")
+
+    resp = logged_in_admin.get("/api/dashboard/report.pdf")
+    assert resp.status_code == 200
+    texto = _texto(resp.content)
+
+    assert "Mayores Gastos Individuales del Período" in texto
+    assert "$5,000.00" in texto
+    assert "$4,000.00" in texto
+    assert "Gasto operativo top" in texto
+    assert "Gasto general top" in texto
+    assert "Operativo" in texto
+    assert "IA" in texto
+
+
+def test_pdf_sin_gastos_omite_el_top3(logged_in_admin):
+    # Rango vacío: la subsección Top 3 se omite y la caja única de "sin gastos"
+    # se conserva (ver dashboard_reporte.py, sección GASTOS GENERALES Y
+    # OPERATIVOS).
+    resp = logged_in_admin.get("/api/dashboard/report.pdf?start_date=2020-01-01&end_date=2020-01-31")
+    texto = _texto(resp.content)
+    assert "Mayores Gastos Individuales del Período" not in texto
+    assert "Sin gastos generales ni operativos en este período." in texto
 
 
 def test_forbidden_para_creador(logged_in_creador):

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { EmptyState, GlassPanel, SkeletonShimmer, useToast, usePageTitle } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, useToast, usePageTitle, SortableHeaderCell, useSortable } from "@/design";
 import { esCodigo, ApiError } from "@/api";
 import { fetchLoans, fetchLoansExport } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -22,6 +22,15 @@ const ESTADO_BADGE = {
   cancelado: "go-badge-neutral",
 };
 
+const SORTABLE_COLUMNS = [
+  { key: "folio", label: "Folio", type: "string" },
+  { key: "responsable", label: "Responsable", type: "string", getValue: (l) => l.responsable?.nombre || "" },
+  { key: "motivo", label: "Motivo", type: "string" },
+  { key: "fecha_entrega", label: "Entrega", type: "date" },
+  { key: "fecha_regreso_esperada", label: "Regreso esperado", type: "date" },
+  { key: "estado", label: "Estado", type: "string", getValue: (l) => ESTADO_LABEL[l.estado] || l.estado },
+];
+
 export default function HistorialPage() {
   usePageTitle("Historial");
   const { puede } = usePermisos();
@@ -40,6 +49,11 @@ export default function HistorialPage() {
   const [hasta, setHasta] = useState("");
   const [offset, setOffset] = useState(0);
   const [limit, setLimit] = useState(20);
+
+  const { sortedItems: sortedLoans, sortKey, sortDir, cycleSort } = useSortable(
+    resultado?.items || [],
+    SORTABLE_COLUMNS
+  );
 
   useEffect(() => {
     const t = setTimeout(() => setQDebounced(qInput), 300);
@@ -207,16 +221,21 @@ export default function HistorialPage() {
             <table className="go-table w-full">
               <thead>
                 <tr>
-                  <th>Folio</th>
-                  <th>Responsable</th>
-                  <th>Motivo</th>
-                  <th>Entrega</th>
-                  <th>Regreso esperado</th>
-                  <th>Estado</th>
+                  {SORTABLE_COLUMNS.map((col) => (
+                    <SortableHeaderCell
+                      key={col.key}
+                      label={col.label}
+                      columnKey={col.key}
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onSort={cycleSort}
+                      align={col.align}
+                    />
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {resultado.items.map((loan) => (
+                {sortedLoans.map((loan) => (
                   <tr key={loan.id}>
                     <td className="font-mono">
                       <Link to={`/equipos/prestamo/${loan.folio}`} style={{ color: "var(--go-orange)" }}>

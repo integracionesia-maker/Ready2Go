@@ -1,7 +1,7 @@
 """Pydantic schemas for request/response validation."""
 
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -206,6 +206,21 @@ class DashboardSummary(BaseModel):
     active_brands: int
     pending_total: float = 0.0
     pending_count: int = 0
+
+
+class TopExpenseItem(BaseModel):
+    """Un gasto individual (general u operativo) — top por monto, sin sumatorias.
+
+    `fecha` se normaliza a date: `upload_date.date()` para generales y
+    `fecha_gasto` para operativos, para que la card y el PDF no ramifiquen.
+    `etiqueta` es el nombre de marca (generales) o de rubro (operativos)."""
+
+    tipo: Literal["general", "operativo"]
+    id: int
+    descripcion: str
+    monto: float
+    fecha: date
+    etiqueta: str
 
 
 # ── Autenticación ────────────────────────────────────────────────────────────

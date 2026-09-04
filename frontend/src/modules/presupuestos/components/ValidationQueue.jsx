@@ -5,7 +5,7 @@ import { PRIORITY_BADGE_CLASS, PRIORITY_LABELS } from "../utils/priority";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import MediaViewerModal from "./MediaViewerModal";
 import Modal from "./Modal";
-import { GlassPanel, RowActions, ICONS, usePageTitle } from "@/design";
+import { GlassPanel, RowActions, ICONS, usePageTitle, SortableHeaderCell, useSortable } from "@/design";
 
 import { formatMXN } from "@/design";
 
@@ -20,6 +20,20 @@ function formatDate(iso) {
 
 const UNDO_SECONDS = 5;
 
+const SORTABLE_COLUMNS = [
+  { key: "creator_name", label: "Creador", type: "string" },
+  { key: "brand_name", label: "Marca", type: "string" },
+  { key: "amount", label: "Monto", type: "number", align: "right" },
+  { key: "upload_date", label: "Fecha", type: "date" },
+  {
+    key: "cycle_remaining",
+    label: "Ciclo restante",
+    type: "number",
+    align: "right",
+    getValue: (t) => (t.cycle_amount != null ? t.cycle_amount - t.cycle_spent : null),
+  },
+];
+
 export default function ValidationQueue({ onChange }) {
   usePageTitle("Validación");
   const [tickets, setTickets] = useState([]);
@@ -32,6 +46,8 @@ export default function ValidationQueue({ onChange }) {
   const [rejectReason, setRejectReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const { sortedItems: sortedTickets, sortKey, sortDir, cycleSort } = useSortable(tickets, SORTABLE_COLUMNS);
 
   // ── Undo toast ──────────────────────────────────────────────────────
   const location = useLocation();
@@ -174,16 +190,22 @@ export default function ValidationQueue({ onChange }) {
           <table className="go-table">
             <thead>
               <tr>
-                <th>Creador</th>
-                <th>Marca</th>
-                <th className="text-right">Monto</th>
-                <th>Fecha</th>
-                <th className="text-right">Ciclo restante</th>
+                {SORTABLE_COLUMNS.map((col) => (
+                  <SortableHeaderCell
+                    key={col.key}
+                    label={col.label}
+                    columnKey={col.key}
+                    activeKey={sortKey}
+                    dir={sortDir}
+                    onSort={cycleSort}
+                    align={col.align}
+                  />
+                ))}
                 <th className="text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {tickets.map((t) => {
+              {sortedTickets.map((t) => {
                 const cycleRemaining = t.cycle_amount != null ? t.cycle_amount - t.cycle_spent : null;
                 return (
                   <tr key={t.id}>

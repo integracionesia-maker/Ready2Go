@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../components/Modal";
 import DateRangeFilter from "../components/DateRangeFilter";
-import { GlassPanel, ICONS, usePageTitle } from "@/design";
+import { GlassPanel, ICONS, usePageTitle, SortableHeaderCell, useSortable } from "@/design";
 import { fetchAuditLogs, fetchUsers } from "@/api";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
@@ -60,6 +60,21 @@ function fmtDateParam(d) {
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
+const SORTABLE_COLUMNS = [
+  { key: "created_at", label: "Fecha/Hora", type: "date" },
+  {
+    key: "actor",
+    label: "Usuario",
+    type: "string",
+    getValue: (l) => l.actor_full_name || (l.actor_user_id ? `ID ${l.actor_user_id}` : ""),
+  },
+  { key: "action", label: "Acción", type: "string" },
+  { key: "http_method", label: "Método", type: "string", align: "center" },
+  { key: "endpoint_path", label: "Endpoint", type: "string" },
+  { key: "response_status", label: "Status", type: "number", align: "center" },
+  { key: "duration_ms", label: "Duración", type: "number", align: "right" },
+];
+
 function emptyFilters() {
   return { search: "", actor_user_id: "", http_method: "", response_status: "", startDate: null, endDate: null };
 }
@@ -84,6 +99,8 @@ export default function AuditLogPage() {
   const [error, setError] = useState(null);
 
   const [detailLog, setDetailLog] = useState(null);
+
+  const { sortedItems: sortedLogs, sortKey, sortDir, cycleSort } = useSortable(logs, SORTABLE_COLUMNS);
 
   useEffect(() => {
     fetchUsers({ page_size: 200 }).then((data) => setUsers(data.items)).catch(() => setUsers([]));
@@ -255,18 +272,22 @@ export default function AuditLogPage() {
               <table className="go-table w-full">
                 <thead>
                   <tr>
-                    <th>Fecha/Hora</th>
-                    <th>Usuario</th>
-                    <th>Acción</th>
-                    <th className="text-center">Método</th>
-                    <th>Endpoint</th>
-                    <th className="text-center">Status</th>
-                    <th className="text-right">Duración</th>
+                    {SORTABLE_COLUMNS.map((col) => (
+                      <SortableHeaderCell
+                        key={col.key}
+                        label={col.label}
+                        columnKey={col.key}
+                        activeKey={sortKey}
+                        dir={sortDir}
+                        onSort={cycleSort}
+                        align={col.align}
+                      />
+                    ))}
                     <th aria-label="Acciones" />
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log) => (
+                  {sortedLogs.map((log) => (
                     <tr key={log.id} className="cursor-pointer" onClick={() => setDetailLog(log)}>
                       <td className="font-mono text-xs" style={{ color: "var(--go-text-secondary)" }}>
                         {formatDate(log.created_at)}

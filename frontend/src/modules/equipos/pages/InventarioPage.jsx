@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { EmptyState, GlassPanel, SkeletonShimmer, RowActions, ICONS, usePageTitle } from "@/design";
+import { EmptyState, GlassPanel, SkeletonShimmer, RowActions, ICONS, usePageTitle, SortableHeaderCell, useSortable } from "@/design";
 import { esCodigo } from "@/api";
 import { fetchEquipmentList } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
@@ -13,6 +13,14 @@ import EquipmentFichaModal from "../components/EquipmentFichaModal";
 const LIMIT = 20;
 
 const CONDICION_BADGE = { bueno: "go-badge-success", atencion: "go-badge-warning" };
+
+const SORTABLE_COLUMNS = [
+  { key: "nombre", label: "Nombre", type: "string" },
+  { key: "categoria", label: "Categoría", type: "string" },
+  { key: "condicion", label: "Condición", type: "string", getValue: (e) => e.condicion || "sin auditar" },
+  { key: "disponible", label: "Disponibilidad", type: "string", getValue: (e) => (e.disponible ? "Disponible" : "No disponible") },
+  { key: "tenedor", label: "Con", type: "string", getValue: (e) => e.tenedor_actual?.nombre || "" },
+];
 
 function useUrlFilters() {
   const [params, setParams] = useSearchParams();
@@ -73,6 +81,11 @@ export default function InventarioPage() {
   const [modalEditar, setModalEditar] = useState(null);
   const [modalAuditar, setModalAuditar] = useState(null);
   const [fichaId, setFichaId] = useState(null);
+
+  const { sortedItems: sortedEquipos, sortKey, sortDir, cycleSort } = useSortable(
+    resultado?.items || [],
+    SORTABLE_COLUMNS
+  );
 
   async function cargar() {
     setLoading(true);
@@ -268,16 +281,22 @@ export default function InventarioPage() {
               <table className="go-table w-full">
                 <thead>
                   <tr>
-                    <th>Nombre</th>
-                    <th>Categoría</th>
-                    <th>Condición</th>
-                    <th>Disponibilidad</th>
-                    <th>Con</th>
+                    {SORTABLE_COLUMNS.map((col) => (
+                      <SortableHeaderCell
+                        key={col.key}
+                        label={col.label}
+                        columnKey={col.key}
+                        activeKey={sortKey}
+                        dir={sortDir}
+                        onSort={cycleSort}
+                        align={col.align}
+                      />
+                    ))}
                     <th aria-label="Acciones" />
                   </tr>
                 </thead>
                 <tbody>
-                  {resultado.items.map((eq) => (
+                  {sortedEquipos.map((eq) => (
                     <tr key={eq.id} className="cursor-pointer" onClick={() => setFichaId(eq.id)}>
                       <td>{eq.nombre}</td>
                       <td>{eq.categoria}</td>
