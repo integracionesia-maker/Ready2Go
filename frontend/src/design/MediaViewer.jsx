@@ -19,7 +19,13 @@ import { useMobile } from "./useMobile";
  * | Encuadre | arrastrar con el mouse      | arrastrar con un dedo  |
  * | Alternar | doble clic                  | doble toque            |
  * | Ajustar  | botón, tecla 0              | botón                  |
+ * | Rotar    | botón, tecla R              | botón                  |
  * | Cerrar   | Esc, botón, clic afuera     | botón                  |
+ *
+ * La rotación (0°/90°/180°/270°, solo para fotos subidas de lado — algunos
+ * comprobantes llegan así de la cámara del celular) es puramente de vista:
+ * no se manda al backend ni se persiste, se reinicia a 0 con cada archivo
+ * nuevo, igual que el zoom/encuadre.
  *
  * Los controles de zoom flotan abajo al centro (no en el encabezado) para que
  * en móvil queden al alcance del pulgar.
@@ -50,6 +56,7 @@ export default function MediaViewer({
 
   const [vista, setVista] = useState(VISTA_INICIAL);
   const [imgError, setImgError] = useState(false);
+  const [rotacion, setRotacion] = useState(0); // 0 | 90 | 180 | 270, solo vista
 
   const escenarioRef = useRef(null);
   const naturalRef = useRef(null); // { w, h } tamaño real del archivo
@@ -101,6 +108,8 @@ export default function MediaViewer({
   );
 
   const ajustar = useCallback(() => aplicar(VISTA_INICIAL), [aplicar]);
+
+  const girar = useCallback(() => setRotacion((r) => (r + 90) % 360), []);
 
   /** Zoom conservando bajo el cursor/pellizco el punto que se está mirando. */
   const zoomHacia = useCallback(
@@ -166,6 +175,7 @@ export default function MediaViewer({
       if (e.key === "+" || e.key === "=") zoomHacia(v.escala + PASO_BOTON);
       else if (e.key === "-" || e.key === "_") zoomHacia(v.escala - PASO_BOTON);
       else if (e.key === "0") ajustar();
+      else if (e.key === "r" || e.key === "R") girar();
       else if (e.key === "ArrowLeft") aplicar({ ...v, x: v.x + paso });
       else if (e.key === "ArrowRight") aplicar({ ...v, x: v.x - paso });
       else if (e.key === "ArrowUp") aplicar({ ...v, y: v.y + paso });
@@ -175,15 +185,16 @@ export default function MediaViewer({
     };
     window.addEventListener("keydown", alPulsar);
     return () => window.removeEventListener("keydown", alPulsar);
-  }, [esImagen, onClose, zoomHacia, ajustar, aplicar]);
+  }, [esImagen, onClose, zoomHacia, ajustar, aplicar, girar]);
 
-  // Reinicia el encuadre al cambiar de archivo.
+  // Reinicia encuadre y rotación al cambiar de archivo.
   useEffect(() => {
     naturalRef.current = null;
     cajaRef.current = null;
     vistaRef.current = VISTA_INICIAL;
     setVista(VISTA_INICIAL);
     setImgError(false);
+    setRotacion(0);
   }, [url]);
 
   const alCargarImagen = (e) => {
@@ -366,9 +377,14 @@ export default function MediaViewer({
                 draggable={false}
                 className="max-h-full max-w-full select-none object-contain"
                 style={{
-                  transform: `translate(${vista.x}px, ${vista.y}px) scale(${vista.escala})`,
+                  // rotate() afuera: gira el resultado ya encuadrado/zoomeado
+                  // alrededor del centro del escenario, en vez de rotar el
+                  // sistema de coordenadas donde viven x/y (eso volvería
+                  // contraintuitivo el arrastre en 90°/270°).
+                  transform: `rotate(${rotacion}deg) translate(${vista.x}px, ${vista.y}px) scale(${vista.escala})`,
                   // Sin transición mientras se arrastra o se pellizca: el
-                  // retardo se siente como lag en el dedo.
+                  // retardo se siente como lag en el dedo. Girar nunca coincide
+                  // con un arrastre/pellizco en curso, así que igual anima.
                   transition: arrastreRef.current || pellizcoRef.current ? "none" : "transform 120ms",
                 }}
               />
@@ -446,6 +462,20 @@ export default function MediaViewer({
                       strokeLinejoin="round"
                       d="M9 9V4.5M9 9H4.5M15 9h4.5M15 9V4.5M15 15v4.5M15 15h4.5M9 15H4.5M9 15v4.5"
                     />
+                  </svg>
+                </button>
+                <div className="mx-0.5 h-5 w-px" style={{ background: "var(--go-border)" }} aria-hidden="true" />
+                <button
+                  type="button"
+                  onClick={girar}
+                  className={botonZoom}
+                  style={{ color: "var(--go-text-secondary)" }}
+                  title="Rotar 90° (tecla R)"
+                  aria-label="Rotar 90°"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M23 4v6h-6" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
                   </svg>
                 </button>
               </div>
