@@ -228,8 +228,12 @@ export default function ActivosPage() {
               </thead>
               <tbody>
                 {pageItems.map((loan) => (
-                  <tr key={loan.id}>
-                    <td className="font-mono">
+                  <tr
+                    key={loan.id}
+                    className={loan.folio ? "cursor-pointer" : undefined}
+                    onClick={loan.folio ? () => navigate(`/equipos/prestamo/${loan.folio}`) : undefined}
+                  >
+                    <td className="font-mono" onClick={(e) => e.stopPropagation()}>
                       <Link to={`/equipos/prestamo/${loan.folio}`} style={{ color: "var(--go-orange)" }}>
                         {loan.folio}
                       </Link>
@@ -247,7 +251,7 @@ export default function ActivosPage() {
                         )}
                       </div>
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <RowActions
                         actions={[
                           {
