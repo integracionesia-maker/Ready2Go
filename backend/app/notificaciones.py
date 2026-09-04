@@ -97,6 +97,34 @@ def aprobadores(db: Session) -> list[User]:
 # ── Datos para las plantillas ───────────────────────────────────────────────
 
 
+# Etiqueta legible para el correo — no el `kind` crudo (`firma_entrega`).
+# `firma_entrega` es ahora la firma del APROBADOR (paquete APROBADOR_EQUIPO —
+# Melisa u otra persona con el mismo paquete), no de quien entrega el equipo
+# fisicamente; `firma_responsable` es la del beneficiario (§1b loan_state.py).
+_ETIQUETA_FIRMA = {
+    "firma_entrega": "el aprobador",
+    "firma_responsable": "el beneficiario",
+}
+
+
+def _firma_pendiente(db: Session, prestamo: Loan) -> str | None:
+    """Que firmas faltan, en texto para el correo — o None si ya estan las
+    dos o el prestamo todavia no se confirma (§1b de loan_state.py).
+
+    `confirmar` nunca pide ninguna firma, asi que al momento de este correo lo
+    normal es que falten LAS DOS — el texto tiene que cubrir 0, 1 o 2
+    faltantes, no solo el caso de una sola."""
+    from . import crud_loans
+
+    if prestamo.estado not in ("prestado", "pendiente_confirmacion", "incompleto"):
+        return None
+    _, firmas = crud_loans._mapa_media(db, prestamo.id)
+    faltantes = [_ETIQUETA_FIRMA.get(k, k) for k in crud_loans.KINDS_FIRMA if k not in firmas]
+    if not faltantes:
+        return None
+    return " y ".join(faltantes)
+
+
 def datos_de_prestamo(db: Session, prestamo: Loan) -> dict:
     equipos = [
         nombre
@@ -128,6 +156,7 @@ def datos_de_prestamo(db: Session, prestamo: Loan) -> dict:
         "equipos": equipos,
         "incidencias": incidencias,
         "dias_atraso": dias,
+        "firma_pendiente": _firma_pendiente(db, prestamo),
         "url_publica": mailer.config().url_publica,
     }
 
@@ -321,7 +350,7 @@ def reintentar_fallidos(db: Session, limite: int = 50) -> int:
         adjuntos = (
             _adjunto_responsiva(db, prestamo)
             if fila.tipo
-            in (pl.TIPO_CONFIRMADO_APROBADOR, pl.TIPO_CONFIRMADO_RESPONSABLE)
+            in (pl.TIPO_CONFIRMADO_APROBADOR, pl.TIPO_CONFIRMADO_RESPONSABLE, pl.TIPO_FIRMA_COMPLETADA)
             else []
         )
         if procesar_pendiente(fila.id, cuerpo, adjuntos):

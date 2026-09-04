@@ -228,8 +228,12 @@ export default function ActivosPage() {
               </thead>
               <tbody>
                 {pageItems.map((loan) => (
-                  <tr key={loan.id}>
-                    <td className="font-mono">
+                  <tr
+                    key={loan.id}
+                    className={loan.folio ? "cursor-pointer" : undefined}
+                    onClick={loan.folio ? () => navigate(`/equipos/prestamo/${loan.folio}`) : undefined}
+                  >
+                    <td className="font-mono" onClick={(e) => e.stopPropagation()}>
                       <Link to={`/equipos/prestamo/${loan.folio}`} style={{ color: "var(--go-orange)" }}>
                         {loan.folio}
                       </Link>
@@ -242,9 +246,12 @@ export default function ActivosPage() {
                         <span className={`go-badge ${ESTADO_BADGE[loan.estado]}`}>{ESTADO_LABEL[loan.estado]}</span>
                         {loan.atrasado && <span className="go-badge go-badge-error">Atrasado {loan.dias_atraso}d</span>}
                         {!loan.entrega_autorizada && <span className="go-badge go-badge-neutral">Entrega no autorizada</span>}
+                        {(loan.firma_entrega_pendiente || loan.firma_responsable_pendiente) && (
+                          <span className="go-badge go-badge-warning">Firma pendiente</span>
+                        )}
                       </div>
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <RowActions
                         actions={[
                           {

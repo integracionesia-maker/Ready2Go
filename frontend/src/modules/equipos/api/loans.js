@@ -12,6 +12,9 @@ export async function fetchLoanById(id) {
 export async function fetchLoanByFolio(folio) {
   return (await backend).fetchLoanByFolio(folio);
 }
+export async function fetchTitularFirmaEquipo() {
+  return (await backend).fetchTitularFirmaEquipo();
+}
 export async function addLoanItem(loanId, data) {
   return (await backend).addLoanItem(loanId, data);
 }

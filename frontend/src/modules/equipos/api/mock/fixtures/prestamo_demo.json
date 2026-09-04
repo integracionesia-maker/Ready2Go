@@ -38,6 +38,6 @@
   "firmas": { "firma_entrega": 39, "firma_responsable": 40 },
   "responsiva": { "version": 1, "url": "/api/loans/7/responsiva.pdf" },
   "eventos": [
-    { "id": 21, "tipo": "creado", "actor": "Ana Ruiz", "detalle": "Prestamo confirmado. Carta responsiva firmada por ambas partes.", "created_at": "2026-07-25T10:14:00-06:00" }
+    { "id": 21, "tipo": "creado", "actor": "Ana Ruiz", "detalle": "Prestamo confirmado.", "created_at": "2026-07-25T10:14:00-06:00" }
   ]
 }

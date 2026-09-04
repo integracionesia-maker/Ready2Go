@@ -28,7 +28,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate
 from sqlalchemy.orm import Session
 
-from .. import crud_empresas, tz
+from .. import crud_empresas, crud_rbac, tz
 from ..models import User
 from ..models_equipos import Equipment, EquipmentAudit, KindMedia, Loan, MediaAsset
 from . import estilos as est
@@ -99,15 +99,28 @@ def _accesorios_texto(item) -> str:
     return ", ".join(partes) if partes else plantilla.SIN_ACCESORIOS
 
 
-def _rutas_de_firma(db: Session, loan_id: int) -> dict[str, str | None]:
-    """Rutas en disco de las dos firmas del prestamo.
+def _firmas_de(db: Session, loan_id: int) -> dict[str, dict]:
+    """Ruta en disco y nombre de quien firmo, por kind de firma.
 
     Se leen de `media_asset` por `loan_id` con `loan_item_id` nulo: las firmas
-    son de las personas, no de un equipo.
+    son de las personas, no de un equipo. El nombre de quien firma
+    `firma_entrega` (el aprobador — Melisa u otra persona con el paquete
+    `APROBADOR_EQUIPO`, ver §1b de loan_state.py) sale de quien SUBIO esa fila
+    (`created_by_user_id`), no de `loan.entregado_por_user_id`: ese campo
+    registra quien entrego el equipo fisicamente, que puede ser una persona
+    distinta de quien aprueba y firma.
+
+    Mientras nadie haya subido `firma_entrega` todavia, el nombre se rellena
+    con el titular del paquete singleton `TITULAR_FIRMA_EQUIPO` (si hay uno
+    asignado) — la carta dice a quien le corresponde firmar en vez de un
+    espacio anonimo, sin inventar una firma: `ruta` se queda en None y
+    `_bloque_firma` sigue pintando "(FIRMA PENDIENTE)". En cuanto exista una
+    firma real (de este titular o de cualquier otra persona con
+    `APROBADOR_EQUIPO`), esa firma real manda y este relleno ya no aplica.
     """
-    salida: dict[str, str | None] = {
-        KindMedia.FIRMA_RESPONSABLE.value: None,
-        KindMedia.FIRMA_ENTREGA.value: None,
+    salida: dict[str, dict] = {
+        KindMedia.FIRMA_RESPONSABLE.value: {"ruta": None, "firmante": None},
+        KindMedia.FIRMA_ENTREGA.value: {"ruta": None, "firmante": None},
     }
     filas = (
         db.query(MediaAsset)
@@ -117,8 +130,15 @@ def _rutas_de_firma(db: Session, loan_id: int) -> dict[str, str | None]:
         .all()
     )
     for fila in filas:
-        if Path(fila.file_path).exists():
-            salida[fila.kind] = fila.file_path
+        ruta = fila.file_path if Path(fila.file_path).exists() else None
+        firmante = db.get(User, fila.created_by_user_id) if fila.created_by_user_id else None
+        salida[fila.kind] = {"ruta": ruta, "firmante": firmante.full_name if firmante else None}
+
+    if salida[KindMedia.FIRMA_ENTREGA.value]["firmante"] is None:
+        titular = crud_rbac.titular_firma_equipo(db)
+        if titular:
+            salida[KindMedia.FIRMA_ENTREGA.value]["firmante"] = titular.full_name
+
     return salida
 
 
@@ -131,7 +151,7 @@ def datos_de(db: Session, prestamo: Loan, version: int = 1) -> dict:
             "Siembrala antes de generar cartas responsivas (seed_equipos.py)."
         )
 
-    firmas = _rutas_de_firma(db, prestamo.id)
+    firmas = _firmas_de(db, prestamo.id)
 
     equipos: list[dict] = []
     for item in prestamo.items:
@@ -151,12 +171,6 @@ def datos_de(db: Session, prestamo: Loan, version: int = 1) -> dict:
             }
         )
 
-    entregado_por = (
-        db.get(User, prestamo.entregado_por_user_id)
-        if prestamo.entregado_por_user_id
-        else None
-    )
-
     return {
         "folio": prestamo.folio,
         "version": version,
@@ -174,9 +188,12 @@ def datos_de(db: Session, prestamo: Loan, version: int = 1) -> dict:
         "motivo": prestamo.motivo,
         "notas": prestamo.notas_responsiva,
         "equipos": equipos,
-        "entregado_por": entregado_por.full_name if entregado_por else None,
-        "firma_responsable": firmas[KindMedia.FIRMA_RESPONSABLE.value],
-        "firma_entrega": firmas[KindMedia.FIRMA_ENTREGA.value],
+        # Nombre impreso bajo la firma del aprobador: quien de verdad firmo
+        # (ver docstring de `_firmas_de`), no `entregado_por` — ese es otro dato
+        # (quien entrego el equipo fisicamente) que puede ser otra persona.
+        "aprobador_firmante": firmas[KindMedia.FIRMA_ENTREGA.value]["firmante"],
+        "firma_responsable": firmas[KindMedia.FIRMA_RESPONSABLE.value]["ruta"],
+        "firma_entrega": firmas[KindMedia.FIRMA_ENTREGA.value]["ruta"],
     }
 
 

@@ -47,6 +47,7 @@ const NAV_ITEMS = [
       ["equipos_aprobacion", "confirmar_devolucion"],
       ["equipos_aprobacion", "cerrar_incidencia"],
     ],
+    badgeKey: "pendingCount",
   },
   {
     to: "/equipos/historial",
@@ -68,7 +69,7 @@ const PROFILE_ITEM = {
  * Filtra por `usePermisos` en vez de `roles`: cada item lista su
  * (modulo, accion); "Aprobaciones" acepta un array de pares (OR).
  */
-export default function EquiposSidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }) {
+export default function EquiposSidebar({ collapsed, onToggle, mobileOpen, onCloseMobile, pendingCount = 0 }) {
   const asideRef = useRef(null);
   const { puede } = usePermisos();
 
@@ -129,7 +130,7 @@ export default function EquiposSidebar({ collapsed, onToggle, mobileOpen, onClos
               end={item.end}
               title={item.label}
               onClick={onCloseMobile}
-              className="flex items-center gap-3 rounded-go px-3 py-3 md:py-2.5 font-display text-sm font-semibold tracking-wide transition-all duration-200"
+              className="relative flex items-center gap-3 rounded-go px-3 py-3 md:py-2.5 font-display text-sm font-semibold tracking-wide transition-all duration-200"
               style={({ isActive }) => ({
                 background: isActive ? "var(--go-surface-sunken)" : "transparent",
                 color: isActive ? "var(--go-orange)" : "var(--go-text-secondary)",
@@ -145,6 +146,22 @@ export default function EquiposSidebar({ collapsed, onToggle, mobileOpen, onClos
                 <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
               </svg>
               <span className={`${labelClass} truncate flex-1`}>{item.label}</span>
+              {item.badgeKey === "pendingCount" && pendingCount > 0 && (
+                collapsed ? (
+                  <span
+                    className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full"
+                    style={{ background: "var(--go-orange)" }}
+                    aria-label={`${pendingCount} pendientes`}
+                  />
+                ) : (
+                  <span
+                    className="flex h-5 min-w-[1.25rem] flex-shrink-0 items-center justify-center rounded-full px-1 font-display text-[10px] font-bold text-white"
+                    style={{ background: "var(--go-orange)" }}
+                  >
+                    {pendingCount}
+                  </span>
+                )
+              )}
             </NavLink>
           ))}
 

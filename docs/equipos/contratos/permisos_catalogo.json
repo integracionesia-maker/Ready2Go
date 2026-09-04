@@ -24,7 +24,8 @@
     "APROBADOR_EQUIPO": {"kind":"aditivo","permisos":{"equipos_aprobacion":["autorizar_entrega","confirmar_devolucion","cerrar_incidencia"],"equipos_prestamos":["ver_global"]}},
     "CUSTODIO_EQUIPO":  {"kind":"aditivo","permisos":{"equipos_inventario":["crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["ver_global"]}},
     "AUDITOR":          {"kind":"aditivo","permisos":{"presupuestos":["ver_global"],"equipos_inventario":["ver"],"equipos_prestamos":["ver_global"]}},
-    "APROBADOR_PRESUPUESTOS": {"kind":"aditivo","permisos":{"presupuestos":["validar_ticket","borrar_ticket"]}}
+    "APROBADOR_PRESUPUESTOS": {"kind":"aditivo","permisos":{"presupuestos":["validar_ticket","borrar_ticket"]}},
+    "TITULAR_FIRMA_EQUIPO": {"kind":"aditivo","permisos":{}}
   },
   "reglas": [
     "Permisos efectivos = UNION de los paquetes de [_PISO, rol base, ...aditivos concedidos].",

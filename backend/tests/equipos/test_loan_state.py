@@ -141,6 +141,18 @@ def test_autorizar_si_se_acepta_en_incompleto():
     assert loan_state.acepta_autorizacion("pendiente_confirmacion") is True
 
 
+# ── firmas_completas (§1b) ──────────────────────────────────────────────────
+
+
+def test_solo_completado_exige_firmas_completas():
+    """Mismo patron que entrega_autorizada: `confirmar` acepta una sola firma,
+    pero llegar a `completado` exige las dos."""
+    assert loan_state.exige_firmas_completas("completado") is True
+    assert loan_state.exige_firmas_completas("incompleto") is False
+    assert loan_state.exige_firmas_completas("prestado") is False
+    assert loan_state.exige_firmas_completas("pendiente_confirmacion") is False
+
+
 # ── devuelto_at ─────────────────────────────────────────────────────────────
 
 
@@ -173,11 +185,25 @@ def test_solo_el_borrador_acepta_items():
             assert loan_state.acepta_items(estado) is False, estado
 
 
-def test_las_fotos_de_entrega_y_las_firmas_solo_en_borrador():
+def test_las_fotos_de_entrega_solo_en_borrador():
     for kind in loan_state.kinds_de_entrega():
         assert loan_state.acepta_media("borrador", kind) is True, kind
         for estado in ESTADOS:
             if estado != "borrador":
+                assert loan_state.acepta_media(estado, kind) is False, (estado, kind)
+
+
+def test_las_firmas_nunca_en_borrador_pero_si_hasta_incompleto():
+    """`confirmar` ya no pide ninguna firma (revision 2): las dos se completan
+    siempre despues, con el prestamo ya confirmado. Firmar un borrador que
+    todavia puede ganar o perder equipos no tiene sentido, asi que `borrador`
+    queda fuera — a diferencia de la version anterior de esta regla."""
+    ACEPTA = ("prestado", "pendiente_confirmacion", "incompleto")
+    for kind in loan_state.kinds_de_firma():
+        for estado in ACEPTA:
+            assert loan_state.acepta_media(estado, kind) is True, (estado, kind)
+        for estado in ESTADOS:
+            if estado not in ACEPTA:
                 assert loan_state.acepta_media(estado, kind) is False, (estado, kind)
 
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EmptyState, GlassPanel, SkeletonShimmer, useToast, usePageTitle } from "@/design";
 import { esCodigo, fetchBrands } from "@/api";
@@ -16,9 +16,8 @@ import {
 } from "../api";
 import AccesoriosPicker from "../components/AccesoriosPicker";
 import PhotoCapture from "../components/PhotoCapture";
-import SignaturePad from "../components/SignaturePad";
 
-const PASOS = ["Datos", "Equipos", "Fotos", "Firmas"];
+const PASOS = ["Datos", "Equipos", "Fotos"];
 
 function itemListo(item) {
   return Boolean(item.media.foto_entrega_frente && item.media.foto_entrega_atras);
@@ -45,6 +44,14 @@ export default function NuevoPrestamoPage() {
   const [motivo, setMotivo] = useState("");
   const [fechaRegreso, setFechaRegreso] = useState("");
   const [notas, setNotas] = useState("");
+  // Beneficiario: quien va a recibir el equipo — NO necesariamente quien
+  // llena este formulario (revisión 2: cualquiera puede pedir equipo para
+  // otra persona). Texto libre, no un usuario del sistema: el beneficiario
+  // puede no tener cuenta en GOCreate. Se manda como `responsable_nombre`/
+  // `responsable_email` (el modelo ya los tenía; antes el wizard los llenaba
+  // en silencio con la sesión actual).
+  const [beneficiarioNombre, setBeneficiarioNombre] = useState("");
+  const [beneficiarioEmail, setBeneficiarioEmail] = useState("");
   const [enviandoPaso1, setEnviandoPaso1] = useState(false);
   const [errorPaso1, setErrorPaso1] = useState(null);
 
@@ -55,8 +62,6 @@ export default function NuevoPrestamoPage() {
   const [accesoriosTmp, setAccesoriosTmp] = useState({});
   const [guardandoItem, setGuardandoItem] = useState(false);
 
-  const firmaEntregaRef = useRef(null);
-  const firmaResponsableRef = useRef(null);
   const [confirmando, setConfirmando] = useState(false);
   const [errorConfirmar, setErrorConfirmar] = useState(null);
 
@@ -115,9 +120,9 @@ export default function NuevoPrestamoPage() {
       setMotivo(borrador.motivo || "");
       setFechaRegreso(borrador.fecha_regreso_esperada || "");
       setNotas(borrador.notas_responsiva || "");
-      if (borrador.items.length === 0) setPaso(2);
-      else if (!borrador.items.every(itemListo)) setPaso(3);
-      else setPaso(4);
+      setBeneficiarioNombre(borrador.responsable?.nombre || "");
+      setBeneficiarioEmail(borrador.responsable?.email || "");
+      setPaso(borrador.items.length === 0 ? 2 : 3);
       setBorradorPrevio(null);
     } catch (e) {
       push({ tone: "error", title: "No se pudo continuar el borrador", message: e.detail || e.message });
@@ -158,20 +163,12 @@ export default function NuevoPrestamoPage() {
     setErrorPaso1(null);
     setEnviandoPaso1(true);
     try {
-      // I8 lote 1 (bug latente, R-I14): `LoanCreate` espera las tres claves
-      // de responsable PLANAS (`responsable_user_id/nombre/email`), no un
-      // objeto anidado. Pydantic ignora silenciosamente una clave `responsable`
-      // desconocida y el servidor cae a `current_user` — hoy coincide
-      // siempre (el wizard es autoservicio, nadie pide equipo para otra
-      // persona), así que nada se ve roto. El día que exista un selector de
-      // "pedir para alguien más", el préstamo se habría asignado a quien
-      // llena el formulario, no a quien realmente lo va a usar, sin un solo
-      // error visible.
       const nuevo = await conManejoDeSesion(() =>
         createLoan({
-          responsable_user_id: user.id,
-          responsable_nombre: user.full_name,
-          responsable_email: user.email,
+          // Sin `responsable_user_id`: el beneficiario es texto libre, no
+          // necesariamente una cuenta de GOCreate.
+          responsable_nombre: beneficiarioNombre.trim(),
+          responsable_email: beneficiarioEmail.trim(),
           area,
           empresa: empresaSel,
           motivo,
@@ -256,25 +253,21 @@ export default function NuevoPrestamoPage() {
     setLoan(await fetchLoanById(loan.id));
   }
 
+  // `confirmar` ya no pide ninguna firma (revisión 2): quien llena este
+  // formulario no es necesariamente ni quien aprueba (Melisa/aprobador) ni
+  // el beneficiario. Las dos firmas se completan después, cada una por su
+  // lado — la del aprobador desde Aprobaciones, la del beneficiario desde la
+  // ficha del préstamo — sin bloquear la reserva del equipo.
   async function handleConfirmar() {
     setErrorConfirmar(null);
-    if (firmaEntregaRef.current.isEmpty() || firmaResponsableRef.current.isEmpty()) {
-      setErrorConfirmar("Faltan una o las dos firmas.");
-      return;
-    }
     setConfirmando(true);
     try {
-      const firmaEntregaBlob = await firmaEntregaRef.current.getBlob();
-      const firmaResponsableBlob = await firmaResponsableRef.current.getBlob();
-
-      await conManejoDeSesion(() =>
-        uploadMedia(loan.id, { file: new File([firmaEntregaBlob], "firma_entrega.png", { type: "image/png" }), kind: "firma_entrega" })
-      );
-      await conManejoDeSesion(() =>
-        uploadMedia(loan.id, { file: new File([firmaResponsableBlob], "firma_responsable.png", { type: "image/png" }), kind: "firma_responsable" })
-      );
       const confirmado = await conManejoDeSesion(() => confirmLoan(loan.id));
-      push({ tone: "success", title: "Préstamo confirmado", message: `Folio ${confirmado.folio}` });
+      push({
+        tone: "success",
+        title: "Préstamo confirmado",
+        message: `Folio ${confirmado.folio} — pendiente de firma del aprobador y del beneficiario.`,
+      });
       navigate(`/equipos/prestamo/${confirmado.folio}`);
     } catch (e) {
       // 409 TRANSICION_INVALIDA trae en `detail` justo lo que falta — se
@@ -327,13 +320,6 @@ export default function NuevoPrestamoPage() {
 
   return (
     <div className="space-y-6">
-      {/* I8 lote 2 (hallazgo): con las 4 etiquetas completas ("Datos",
-          "Equipos", "Fotos", "Firmas") el stepper mide ~428px — más que los
-          390px del viewport móvil de referencia, y sin overflow-x-auto que
-          lo contenga: la PÁGINA ENTERA quedaba con scroll horizontal
-          (confirmado con scrollWidth 428 vs clientWidth 390). Debajo de
-          `sm:` se esconde la etiqueta y el conector se acorta — el círculo
-          numerado solo ya identifica el paso activo. */}
       <div className="flex items-center justify-center gap-1 sm:gap-2">
         {PASOS.map((label, i) => (
           <div key={label} className="flex items-center gap-1 sm:gap-2">
@@ -360,11 +346,44 @@ export default function NuevoPrestamoPage() {
       {paso === 1 && (
         <GlassPanel as="form" onSubmit={handleSubmitPaso1} className="mx-auto max-w-xl space-y-4 p-5">
           <div>
-            <p className="go-eyebrow mb-1.5">Responsable</p>
+            <p className="go-eyebrow mb-1.5">Solicitado por</p>
             <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
               {user.full_name} <span style={{ color: "var(--go-text-secondary)" }}>({user.email})</span>
             </p>
           </div>
+
+          <div className="space-y-3 border-t pt-3" style={{ borderColor: "var(--go-border)" }}>
+            <p className="go-eyebrow">
+              Beneficiario <span className="font-normal normal-case" style={{ color: "var(--go-text-muted)" }}>(quien recibe el equipo)</span>
+            </p>
+            <div>
+              <label className="go-eyebrow mb-1.5 block">Nombre</label>
+              <input
+                type="text"
+                value={beneficiarioNombre}
+                onChange={(e) => setBeneficiarioNombre(e.target.value)}
+                placeholder="Nombre de quien va a usar el equipo..."
+                className="go-input"
+                required
+              />
+            </div>
+            <div>
+              <label className="go-eyebrow mb-1.5 block">Correo</label>
+              <input
+                type="email"
+                value={beneficiarioEmail}
+                onChange={(e) => setBeneficiarioEmail(e.target.value)}
+                placeholder="correo@grupo-ortiz.com"
+                className="go-input"
+                required
+              />
+            </div>
+            <p className="font-body text-[10px]" style={{ color: "var(--go-text-muted)" }}>
+              Puede ser distinto de quien llena este formulario — no necesita cuenta en GOCreate. Este préstamo va a
+              quedar pendiente de la firma del aprobador y de la del beneficiario; ninguna de las dos se pide aquí.
+            </p>
+          </div>
+
           <div>
             <label className="go-eyebrow mb-1.5 block">Área</label>
             <input type="text" value={area} onChange={(e) => setArea(e.target.value)} className="go-input" required />
@@ -483,13 +502,13 @@ export default function NuevoPrestamoPage() {
               <ul className="space-y-2" data-testid="equipos-seleccionados">
                 {loan.items.map((it) => (
                   <li key={it.id}>
-                    <GlassPanel className="flex items-center justify-between">
-                    <span className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
-                      {it.equipo_nombre}
-                    </span>
-                    <button type="button" onClick={() => handleQuitarItem(it)} className="btn-go-ghost text-xs px-2 py-1" style={{ color: "var(--go-error)" }}>
-                      Quitar
-                    </button>
+                    <GlassPanel className="flex items-center justify-between gap-3 p-4">
+                      <span className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
+                        {it.equipo_nombre}
+                      </span>
+                      <button type="button" onClick={() => handleQuitarItem(it)} className="btn-go-ghost text-xs px-2 py-1" style={{ color: "var(--go-error)" }}>
+                        Quitar
+                      </button>
                     </GlassPanel>
                   </li>
                 ))}
@@ -525,27 +544,14 @@ export default function NuevoPrestamoPage() {
               </div>
             </GlassPanel>
           ))}
-          <div className="flex justify-between">
-            <button type="button" onClick={() => setPaso(2)} className="btn-go-ghost">
-              Atrás
-            </button>
-            <button type="button" disabled={!loan.items.every(itemListo)} onClick={() => setPaso(4)} className="btn-go disabled:opacity-40">
-              Siguiente
-            </button>
-          </div>
-        </div>
-      )}
 
-      {paso === 4 && loan && (
-        <div className="mx-auto max-w-xl space-y-6">
-          <GlassPanel className="p-4">
-            <p className="go-eyebrow mb-2">Firma de quien entrega</p>
-            <SignaturePad ref={firmaEntregaRef} />
-          </GlassPanel>
-          <GlassPanel className="p-4">
-            <p className="go-eyebrow mb-2">Firma del responsable</p>
-            <SignaturePad ref={firmaResponsableRef} />
-          </GlassPanel>
+          <div
+            className="rounded-go border px-4 py-3 font-body text-sm"
+            style={{ background: "rgba(245,158,11,0.08)", borderColor: "rgba(245,158,11,0.25)", color: "var(--go-warning)" }}
+          >
+            Al confirmar, el préstamo queda pendiente de dos firmas: la del aprobador (se le notifica al entrar a
+            Equipos) y la del beneficiario (se completa cuando esté disponible, desde la ficha del préstamo).
+          </div>
 
           {errorConfirmar && (
             <div
@@ -557,10 +563,10 @@ export default function NuevoPrestamoPage() {
           )}
 
           <div className="flex justify-between">
-            <button type="button" onClick={() => setPaso(3)} className="btn-go-ghost">
+            <button type="button" onClick={() => setPaso(2)} className="btn-go-ghost">
               Atrás
             </button>
-            <button type="button" disabled={confirmando} onClick={handleConfirmar} className="btn-go">
+            <button type="button" disabled={!loan.items.every(itemListo) || confirmando} onClick={handleConfirmar} className="btn-go">
               {confirmando ? "Confirmando..." : "Confirmar préstamo"}
             </button>
           </div>

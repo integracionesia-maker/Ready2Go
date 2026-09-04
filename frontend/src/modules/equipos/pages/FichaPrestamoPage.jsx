@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState, GlassPanel, SkeletonShimmer, Timeline, MediaViewer, usePageTitle } from "@/design";
 import { esCodigo } from "@/api";
-import { fetchLoanByFolio, mediaUrl, loanResponsivaUrl } from "../api";
+import { fetchLoanByFolio, fetchTitularFirmaEquipo, mediaUrl, loanResponsivaUrl } from "../api";
+import CompletarFirmaModal from "../components/CompletarFirmaModal";
+import { usePermisos } from "../permisos/usePermisos";
+
+// Estados donde una firma todavia se puede completar (§1b de loan_state.py):
+// cualquiera no terminal. `borrador` no aplica aqui — este folio no existe
+// hasta `confirmar`.
+const ESTADOS_CON_FIRMA_COMPLETABLE = ["prestado", "pendiente_confirmacion", "incompleto"];
 
 const ESTADO_LABEL = {
   borrador: "Borrador",
@@ -83,11 +90,20 @@ function Miniatura({ mediaId, label, onExpand }) {
 export default function FichaPrestamoPage() {
   usePageTitle("Ficha de Préstamo");
   const { folio } = useParams();
+  const { puede } = usePermisos();
   const [loan, setLoan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [permisosNoDisponibles, setPermisosNoDisponibles] = useState(false);
   const [error, setError] = useState(null);
   const [ampliada, setAmpliada] = useState(null); // { mediaId, label }
+  const [completarFirma, setCompletarFirma] = useState(null); // "firma_entrega" | "firma_responsable" | null
+  const [titular, setTitular] = useState(null); // { user_id, nombre, soy_titular } | null
+
+  useEffect(() => {
+    fetchTitularFirmaEquipo()
+      .then(setTitular)
+      .catch(() => {}); // informativo — si falla, el botón simplemente no aparece
+  }, []);
 
   async function cargar() {
     setLoading(true);
@@ -150,6 +166,18 @@ export default function FichaPrestamoPage() {
 
   if (!loan) return null;
 
+  const faltaEntrega = !loan.firmas?.firma_entrega;
+  const faltaResponsable = !loan.firmas?.firma_responsable;
+  const firmaPendiente = faltaEntrega || faltaResponsable;
+  const estadoAceptaFirma = ESTADOS_CON_FIRMA_COMPLETABLE.includes(loan.estado);
+  // La firma de aprobador es identidad, no permiso (ver
+  // routers/loans.py::subir_media): solo la puede subir quien tiene el
+  // paquete SINGLETON TITULAR_FIRMA_EQUIPO, ni siquiera otro APROBADOR_EQUIPO
+  // vale — ocultar el botón para cualquiera más evita un 403 confuso; el
+  // candado real sigue en el servidor.
+  const puedeFirmarAprobador = estadoAceptaFirma && titular?.soy_titular === true;
+  const puedeFirmarBeneficiario = estadoAceptaFirma && puede("equipos_prestamos", "solicitar");
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -169,6 +197,11 @@ export default function FichaPrestamoPage() {
             <span data-testid="badge-autorizacion" className={`go-badge ${loan.entrega_autorizada ? "go-badge-success" : "go-badge-neutral"}`}>
               {loan.entrega_autorizada ? "Entrega autorizada" : "Entrega no autorizada"}
             </span>
+            {firmaPendiente && (
+              <span data-testid="badge-firma-pendiente" className="go-badge go-badge-warning">
+                Firma pendiente
+              </span>
+            )}
           </div>
         </div>
         {loan.responsiva && (
@@ -183,7 +216,7 @@ export default function FichaPrestamoPage() {
           Datos del préstamo
         </h2>
         <dl className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          <Dato label="Responsable">{loan.responsable?.nombre}</Dato>
+          <Dato label="Beneficiario">{loan.responsable?.nombre}</Dato>
           <Dato label="Área">{loan.area}</Dato>
           <Dato label="Empresa">{loan.empresa}</Dato>
           <Dato label="Motivo">{loan.motivo}</Dato>
@@ -221,15 +254,42 @@ export default function FichaPrestamoPage() {
         <div className="flex flex-wrap gap-4">
           <div>
             <p className="mb-1.5 font-body text-xs uppercase tracking-wider" style={{ color: "var(--go-text-muted)" }}>
-              Quien entrega
+              Aprobador
             </p>
-            <Miniatura mediaId={loan.firmas?.firma_entrega} label="Firma de quien entrega" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
+            <Miniatura mediaId={loan.firmas?.firma_entrega} label="Firma del aprobador" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
+            {faltaEntrega && puedeFirmarAprobador && (
+              <button
+                type="button"
+                onClick={() => setCompletarFirma("firma_entrega")}
+                className="btn-go-ghost mt-2 text-xs px-2.5 py-1"
+                style={{ color: "var(--go-warning)" }}
+              >
+                Firmar
+              </button>
+            )}
+            {faltaEntrega && !puedeFirmarAprobador && (
+              <p className="mt-2 font-body text-xs" style={{ color: "var(--go-text-muted)" }}>
+                {titular?.nombre
+                  ? `Solo puede firmar: ${titular.nombre}`
+                  : "Nadie tiene asignado el paquete TITULAR_FIRMA_EQUIPO todavía."}
+              </p>
+            )}
           </div>
           <div>
             <p className="mb-1.5 font-body text-xs uppercase tracking-wider" style={{ color: "var(--go-text-muted)" }}>
-              Responsable
+              Beneficiario
             </p>
-            <Miniatura mediaId={loan.firmas?.firma_responsable} label="Firma del responsable" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
+            <Miniatura mediaId={loan.firmas?.firma_responsable} label="Firma del beneficiario" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
+            {faltaResponsable && puedeFirmarBeneficiario && (
+              <button
+                type="button"
+                onClick={() => setCompletarFirma("firma_responsable")}
+                className="btn-go-ghost mt-2 text-xs px-2.5 py-1"
+                style={{ color: "var(--go-warning)" }}
+              >
+                Completar firma
+              </button>
+            )}
           </div>
         </div>
       </GlassPanel>
@@ -300,6 +360,18 @@ export default function FichaPrestamoPage() {
       </GlassPanel>
 
       {ampliada && <FotoCompleta {...ampliada} onClose={() => setAmpliada(null)} />}
+
+      {completarFirma && (
+        <CompletarFirmaModal
+          loanId={loan.id}
+          kind={completarFirma}
+          onClose={() => setCompletarFirma(null)}
+          onSuccess={() => {
+            setCompletarFirma(null);
+            cargar();
+          }}
+        />
+      )}
     </div>
   );
 }

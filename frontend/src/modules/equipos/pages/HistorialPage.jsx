@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { EmptyState, GlassPanel, SkeletonShimmer, useToast, usePageTitle, SortableHeaderCell, useSortable } from "@/design";
 import { esCodigo, ApiError } from "@/api";
 import { fetchLoans, fetchLoansExport } from "../api";
@@ -35,6 +35,7 @@ export default function HistorialPage() {
   usePageTitle("Historial");
   const { puede } = usePermisos();
   const { push } = useToast();
+  const navigate = useNavigate();
 
   const [resultado, setResultado] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -236,8 +237,12 @@ export default function HistorialPage() {
               </thead>
               <tbody>
                 {sortedLoans.map((loan) => (
-                  <tr key={loan.id}>
-                    <td className="font-mono">
+                  <tr
+                    key={loan.id}
+                    className={loan.folio ? "cursor-pointer" : undefined}
+                    onClick={loan.folio ? () => navigate(`/equipos/prestamo/${loan.folio}`) : undefined}
+                  >
+                    <td className="font-mono" onClick={(e) => e.stopPropagation()}>
                       <Link to={`/equipos/prestamo/${loan.folio}`} style={{ color: "var(--go-orange)" }}>
                         {loan.folio || "—"}
                       </Link>
@@ -250,6 +255,9 @@ export default function HistorialPage() {
                       <div className="flex flex-wrap gap-1.5">
                         <span className={`go-badge ${ESTADO_BADGE[loan.estado]}`}>{ESTADO_LABEL[loan.estado] || loan.estado}</span>
                         {loan.atrasado && <span className="go-badge go-badge-error">Atrasado {loan.dias_atraso}d</span>}
+                        {(loan.firma_entrega_pendiente || loan.firma_responsable_pendiente) && (
+                          <span className="go-badge go-badge-warning">Firma pendiente</span>
+                        )}
                       </div>
                     </td>
                   </tr>

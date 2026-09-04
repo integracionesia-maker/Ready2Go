@@ -152,6 +152,7 @@ class TipoEvento(str, enum.Enum):
     DEVOLUCION_CONFIRMADA = "devolucion_confirmada"
     INCIDENCIA_CERRADA = "incidencia_cerrada"
     RESPONSIVA_GENERADA = "responsiva_generada"
+    FIRMA_COMPLETADA = "firma_completada"
 
 
 # ── Inventario ──────────────────────────────────────────────────────────────

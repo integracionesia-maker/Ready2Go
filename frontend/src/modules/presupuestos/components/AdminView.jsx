@@ -35,6 +35,22 @@ export default function AdminView({ creators, brands, onChange }) {
 
   const [section, setSection] = useState("creators");
 
+  /* Creator form modal (create when editingCreator === null, edit otherwise) */
+  const [creatorFormOpen, setCreatorFormOpen] = useState(false);
+  const [editingCreator, setEditingCreator] = useState(null);
+
+  /* Brand form modal */
+  const [brandFormOpen, setBrandFormOpen] = useState(false);
+  const [editingBrand, setEditingBrand] = useState(null);
+
+  /* Activation toggle confirmation: { type: "creator"|"brand", item, newActive } */
+  const [confirmToggle, setConfirmToggle] = useState(null);
+
+  /* Cycle history modal */
+  const [cycleHistoryCreator, setCycleHistoryCreator] = useState(null);
+  const [cycleHistory, setCycleHistory] = useState([]);
+  const [cycleHistoryLoading, setCycleHistoryLoading] = useState(false);
+
   const {
     sortedItems: sortedCreators,
     sortKey: creatorSortKey,
@@ -53,22 +69,6 @@ export default function AdminView({ creators, brands, onChange }) {
     sortDir: cycleHistorySortDir,
     cycleSort: cycleCycleHistorySort,
   } = useSortable(cycleHistory, CYCLE_HISTORY_COLUMNS);
-
-  /* Creator form modal (create when editingCreator === null, edit otherwise) */
-  const [creatorFormOpen, setCreatorFormOpen] = useState(false);
-  const [editingCreator, setEditingCreator] = useState(null);
-
-  /* Brand form modal */
-  const [brandFormOpen, setBrandFormOpen] = useState(false);
-  const [editingBrand, setEditingBrand] = useState(null);
-
-  /* Activation toggle confirmation: { type: "creator"|"brand", item, newActive } */
-  const [confirmToggle, setConfirmToggle] = useState(null);
-
-  /* Cycle history modal */
-  const [cycleHistoryCreator, setCycleHistoryCreator] = useState(null);
-  const [cycleHistory, setCycleHistory] = useState([]);
-  const [cycleHistoryLoading, setCycleHistoryLoading] = useState(false);
 
   /* Shared form state (only one modal is open at a time) */
   const [formName, setFormName] = useState("");

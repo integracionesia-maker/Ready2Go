@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState, GlassPanel, SkeletonShimmer, useToast, usePageTitle } from "@/design";
 import { esCodigo } from "@/api";
-import { fetchLoans, fetchLoanById, authorizeDelivery } from "../api";
+import { fetchLoans, fetchLoanById, authorizeDelivery, fetchTitularFirmaEquipo } from "../api";
 import { usePermisos } from "../permisos/usePermisos";
 import ConfirmarDevolucionModal from "../components/ConfirmarDevolucionModal";
 import CerrarIncidenciaModal from "../components/CerrarIncidenciaModal";
+import CompletarFirmaModal from "../components/CompletarFirmaModal";
 
 const ESTADOS_ABIERTOS_NO_TERMINALES = ["borrador", "cancelado"];
 
@@ -31,6 +32,14 @@ export default function AprobacionesPage() {
   const [modalDevolucion, setModalDevolucion] = useState(null);
   const [modalIncidencia, setModalIncidencia] = useState(null);
   const [abriendoDevolucionId, setAbriendoDevolucionId] = useState(null);
+  const [firmandoLoan, setFirmandoLoan] = useState(null); // Loan (fila) | null
+  const [titular, setTitular] = useState(null); // { user_id, nombre, soy_titular } | null
+
+  useEffect(() => {
+    fetchTitularFirmaEquipo()
+      .then(setTitular)
+      .catch(() => {}); // informativo — si falla, el botón "Firmar" simplemente no aparece
+  }, []);
 
   // GET /loans/ devuelve LoanRow (sin `items`) — ConfirmarDevolucionModal
   // necesita el detalle completo (LoanDetail) para decidir por renglon. El
@@ -67,9 +76,13 @@ export default function AprobacionesPage() {
     cargar();
   }, []);
 
-  // Tres colas SEPARADAS a propósito (regla dura del prompt) — mezclarlas
-  // en una sola tabla escondería que son tres permisos y tres acciones
-  // distintas del contrato (§4).
+  // Colas SEPARADAS a propósito (regla dura del prompt) — mezclarlas en una
+  // sola tabla escondería que son permisos y acciones distintas del
+  // contrato (§4) / de §1b de loan_state.py.
+  const firmasPendientes = useMemo(
+    () => todos.filter((l) => l.firma_entrega_pendiente && !ESTADOS_ABIERTOS_NO_TERMINALES.includes(l.estado)),
+    [todos]
+  );
   const entregasPendientes = useMemo(
     () => todos.filter((l) => !l.entrega_autorizada && !ESTADOS_ABIERTOS_NO_TERMINALES.includes(l.estado)),
     [todos]
@@ -138,7 +151,51 @@ export default function AprobacionesPage() {
     <>
     <GlassPanel className="space-y-6 p-4 sm:p-6">
       {puede("equipos_aprobacion", "autorizar_entrega") && (
-        <div>
+        <div data-testid="cola-firmas-pendientes">
+          <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
+            Firmas pendientes ({firmasPendientes.length})
+          </h2>
+          {firmasPendientes.length === 0 ? (
+            <ColaVacia mensaje="Nada pendiente de tu firma." />
+          ) : (
+            <ul className="space-y-2">
+              {firmasPendientes.map((loan) => (
+                <li key={loan.id} className="flex flex-wrap items-center justify-between gap-3 rounded-go border p-3" style={{ borderColor: "var(--go-border)", background: "var(--go-surface-sunken)" }}>
+                  <div>
+                    <Link to={`/equipos/prestamo/${loan.folio}`} className="font-mono text-sm font-semibold" style={{ color: "var(--go-orange)" }}>
+                      {loan.folio}
+                    </Link>
+                    <span className="ml-2 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
+                      {loan.responsable?.nombre} · {loan.motivo}
+                    </span>
+                  </div>
+                  {titular?.soy_titular ? (
+                    <button
+                      type="button"
+                      onClick={() => setFirmandoLoan(loan)}
+                      className="btn-go text-xs px-3 py-1.5"
+                    >
+                      Firmar
+                    </button>
+                  ) : (
+                    // La firma del aprobador es identidad, no permiso (ver
+                    // routers/loans.py::subir_media): solo el titular del
+                    // paquete singleton TITULAR_FIRMA_EQUIPO puede darla, ni
+                    // siquiera otro APROBADOR_EQUIPO — se avisa quién es en
+                    // vez de mostrar un botón que siempre daría 403.
+                    <span className="font-body text-xs" style={{ color: "var(--go-text-muted)" }}>
+                      {titular?.nombre ? `Solo puede firmar: ${titular.nombre}` : "Sin titular asignado"}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {puede("equipos_aprobacion", "autorizar_entrega") && (
+        <div data-testid="cola-autorizaciones">
           <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
             Autorizaciones de entrega ({entregasPendientes.length})
           </h2>
@@ -155,6 +212,7 @@ export default function AprobacionesPage() {
                     <span className="ml-2 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
                       {loan.responsable?.nombre} · {loan.motivo}
                     </span>
+                    {(loan.firma_entrega_pendiente || loan.firma_responsable_pendiente) && <span className="go-badge go-badge-warning ml-2">Firma pendiente</span>}
                   </div>
                   <button
                     type="button"
@@ -172,7 +230,7 @@ export default function AprobacionesPage() {
       )}
 
       {puede("equipos_aprobacion", "confirmar_devolucion") && (
-        <div>
+        <div data-testid="cola-devoluciones">
           <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
             Devoluciones por confirmar ({devolucionesPendientes.length})
           </h2>
@@ -190,6 +248,7 @@ export default function AprobacionesPage() {
                       {loan.responsable?.nombre}
                     </span>
                     {!loan.entrega_autorizada && <span className="go-badge go-badge-warning ml-2">Entrega no autorizada</span>}
+                    {(loan.firma_entrega_pendiente || loan.firma_responsable_pendiente) && <span className="go-badge go-badge-warning ml-2">Firma pendiente</span>}
                   </div>
                   <button
                     type="button"
@@ -207,7 +266,7 @@ export default function AprobacionesPage() {
       )}
 
       {puede("equipos_aprobacion", "cerrar_incidencia") && (
-        <div>
+        <div data-testid="cola-incidencias">
           <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-[0.06em]" style={{ color: "var(--go-text-primary)" }}>
             Incidencias abiertas ({incidencias.length})
           </h2>
@@ -224,6 +283,7 @@ export default function AprobacionesPage() {
                     <span className="ml-2 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
                       {loan.responsable?.nombre}
                     </span>
+                    {(loan.firma_entrega_pendiente || loan.firma_responsable_pendiente) && <span className="go-badge go-badge-warning ml-2">Firma pendiente</span>}
                   </div>
                   <button type="button" onClick={() => setModalIncidencia(loan)} className="btn-go-ghost text-xs px-3 py-1.5" style={{ color: "var(--go-error)" }}>
                     Cerrar incidencia
@@ -236,6 +296,18 @@ export default function AprobacionesPage() {
       )}
     </GlassPanel>
 
+      {firmandoLoan && (
+        <CompletarFirmaModal
+          loanId={firmandoLoan.id}
+          kind="firma_entrega"
+          onClose={() => setFirmandoLoan(null)}
+          onSuccess={() => {
+            setFirmandoLoan(null);
+            push({ tone: "success", title: `Firma registrada — ${firmandoLoan.folio}` });
+            cargar();
+          }}
+        />
+      )}
       {modalDevolucion && (
         <ConfirmarDevolucionModal
           loan={modalDevolucion}

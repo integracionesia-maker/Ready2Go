@@ -60,6 +60,13 @@ export async function fetchLoanByFolio(folio) {
   return clone(loan);
 }
 
+// El mock no simula el RBAC aditivo (paquetes/concesiones): nadie es titular
+// por default, mismo comportamiento que el servidor real sin nadie asignado.
+export async function fetchTitularFirmaEquipo() {
+  checkGlobalInjection();
+  return { user_id: null, nombre: null, soy_titular: false };
+}
+
 export async function createLoan(data = {}) {
   checkGlobalInjection();
   const id = ++state.loanIdCounter;
@@ -93,6 +100,8 @@ export async function createLoan(data = {}) {
     confirmada_por: null,
     fecha_confirmacion: null,
     items: [],
+    firma_entrega_pendiente: false,
+    firma_responsable_pendiente: false,
     firmas: { firma_entrega: null, firma_responsable: null },
     responsiva: null,
     eventos: [
@@ -145,22 +154,25 @@ export async function confirmLoan(loanId) {
   const loan = findLoan(loanId);
   if (loan.estado !== "borrador") throwFixtureError("TRANSICION_INVALIDA");
 
+  // `confirmar` NUNCA pide ninguna firma (§1b de loan_state.py, servidor
+  // real, revisión 2): quien llena el formulario no es necesariamente ni
+  // quien aprueba ni el beneficiario. Las dos se completan después.
   const faltaAlgo =
     loan.items.length === 0 ||
-    loan.items.some((it) => !it.media.foto_entrega_frente || !it.media.foto_entrega_atras) ||
-    !loan.firmas.firma_entrega ||
-    !loan.firmas.firma_responsable;
+    loan.items.some((it) => !it.media.foto_entrega_frente || !it.media.foto_entrega_atras);
   if (faltaAlgo) throwFixtureError("TRANSICION_INVALIDA");
 
   loan.estado = "prestado";
   loan.folio = `CE-${String(++state.folioCounter).padStart(4, "0")}`;
   loan.fecha_entrega = new Date().toISOString().slice(0, 10);
+  loan.firma_entrega_pendiente = !loan.firmas.firma_entrega;
+  loan.firma_responsable_pendiente = !loan.firmas.firma_responsable;
   loan.responsiva = { version: 1, url: `/api/loans/${loan.id}/responsiva.pdf` };
   loan.eventos.push({
     id: Date.now(),
     tipo: "confirmado",
     actor: loan.responsable?.nombre || "—",
-    detalle: "Préstamo confirmado. Carta responsiva firmada por ambas partes.",
+    detalle: "Préstamo confirmado. Pendiente la firma del aprobador y la del beneficiario.",
     created_at: ahora(),
   });
   return clone(loan);

@@ -107,6 +107,8 @@ class LoanRow(BaseModel):
     atrasado: bool = False
     dias_atraso: int = 0
     entrega_autorizada: bool = False
+    firma_entrega_pendiente: bool = False
+    firma_responsable_pendiente: bool = False
     total_equipos: int = 0
     equipos: List[str] = []
 
@@ -194,3 +196,15 @@ class MediaResponse(BaseModel):
     id: int
     kind: str
     sha256: str
+
+
+class TitularFirmaEquipoResponse(BaseModel):
+    """Quien tiene hoy el paquete singleton TITULAR_FIRMA_EQUIPO, para que el
+    cliente sepa a quien mostrarle el boton de "Firmar" del aprobador —
+    `firma_entrega` es identidad, no permiso (ver routers/loans.py:subir_media),
+    asi que ni siquiera un APROBADOR_EQUIPO cualquiera debe ver el boton si no
+    es el titular."""
+
+    user_id: Optional[int] = None
+    nombre: Optional[str] = None
+    soy_titular: bool = False

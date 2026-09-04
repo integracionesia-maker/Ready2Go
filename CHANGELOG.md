@@ -4,6 +4,37 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 
 ---
 
+## 2026-09-04 — Firma pendiente al confirmar, revisión 2 + titular de la firma (Control de Equipos)
+
+Luz verde explícita de Jose para los tres cambios de este bloque.
+
+### Actualizado
+
+- **Rediseño de las firmas de préstamo (revisión 2)**: `POST /api/loans/{id}/confirmar` ya no exige ninguna firma (antes exigía al menos una) — solo las fotos de entrega siguen siendo obligatorias. El préstamo pasa a `prestado` con las dos firmas pendientes siempre; se completan después, cada una por su lado, sin bloquear la reserva del equipo ni la devolución. `firmas_completas` sigue bloqueando únicamente las dos rutas a `completado` (`confirmar-devolucion`, `cerrar-incidencia`).
+  - Las firmas ya nunca se aceptan en `borrador` (antes sí); solo en `prestado`/`pendiente_confirmacion`/`incompleto`.
+  - `firma_entrega` (aprobador) y `firma_responsable` (beneficiario) dejan de ser una sola pareja simétrica: cada una tiene su propio dueño y su propio candado (ver el paquete `TITULAR_FIRMA_EQUIPO` más abajo para `firma_entrega`; `firma_responsable` sigue abierta a cualquiera con `equipos_prestamos:solicitar`, porque el beneficiario puede no tener cuenta en GOCreate).
+  - `LoanRow.firma_pendiente` (booleano único) se separó en `firma_entrega_pendiente` / `firma_responsable_pendiente` — Activos, Historial y las tres colas de Aprobaciones ya no pueden confundir cuál firma falta.
+  - El formulario de préstamo (`/equipos/nuevo`) ya no tiene paso de Firmas (quedan 3 pasos: Datos, Equipos, Fotos) y ahora pide los datos del **Beneficiario** (nombre + correo, texto libre) en el paso 1 — el solicitante ya no se asume como beneficiario.
+  - Aprobaciones tiene una cola nueva, "Firmas pendientes", y el sidebar de Equipos muestra un badge numérico contándolas (mismo patrón que Presupuestos).
+  - Detalle completo y ejemplos: `docs/equipos/firma-pendiente-al-confirmar.md` (reescrito de punta a punta; la revisión 1 documentada ahí antes nunca llegó a producción).
+
+- **Nuevo paquete aditivo `TITULAR_FIRMA_EQUIPO`, kind singleton**: solo un usuario a la vez puede tenerlo — concederlo a alguien nuevo revoca automáticamente al anterior (`crud_rbac.conceder`). Se asigna en `/administracion-sistema` → Asignaciones, igual que cualquier otro paquete (con aviso en la UI de que es único). Sirve para dos cosas: (1) mientras nadie ha firmado `firma_entrega`, su nombre aparece por default en la carta responsiva en vez de un espacio en blanco; (2) es, en la práctica, el único que puede subir `firma_entrega` — verificado por **identidad** (`current_user.id == titular.id`), no por permiso.
+  - Nuevo endpoint `GET /api/loans/titular-firma-equipo` (`{user_id, nombre, soy_titular}`) para que la Ficha del préstamo y Aprobaciones sepan a quién pintarle el botón "Firmar" del aprobador.
+
+### Corregido
+
+- **CRÍTICO: superadmin (y cualquier `APROBADOR_EQUIPO` que no fuera el titular) podía firmar `firma_entrega`.** El candado original validaba por `rbac.tiene_permiso()`, que tiene el bypass de superadmin (`*` abre todo) integrado — una firma que "cualquier admin puede poner" no es una firma. Corregido comparando identidad directa contra el titular (`crud_rbac.titular_firma_equipo`), sin pasar por el motor de permisos genérico. El resto de acciones de aprobación (autorizar entrega, confirmar devolución, cerrar incidencia) siguen abiertas a cualquiera con `APROBADOR_EQUIPO`, sin cambio — la restricción es solo sobre la firma en sí.
+- **`AdminView.jsx` (`/administracion`) tiraba la pantalla completa** con `ReferenceError: Cannot access 'cycleHistory' before initialization` — un `useSortable(cycleHistory, ...)` quedó declarado antes que el `useState` de `cycleHistory` al agregar los encabezados ordenables de tablas. Reordenado.
+- **`/equipos/nuevo`, paso 2**: el card de "En este préstamo" (columna derecha) le faltaba el padding (`p-4`) que sí tiene el de la izquierda — se veía sin estilos ("delgado") en cuanto se agregaba un equipo.
+
+### Pruebas
+
+- Backend: 794 passed, 1 skipped (antes 786) — nuevos/actualizados en `test_loan_state.py`, `test_api_prestamos.py`, `test_aprobacion.py`, `test_media.py`, `test_notificaciones.py`, `test_responsiva_pdf.py`, `test_migracion_y_endpoints.py`.
+- E2E (`equipos-flujo-completo.spec.js`, servidor real, 8 casos): actualizado para el wizard de 3 pasos y verificado en vivo contra un backend+DB aislados; de paso se corrigieron dos desfases preexistentes del archivo (selector de foto obsoleto, scoping de colas de Aprobaciones por `data-testid` en vez de `<section>`, que no existía en el markup real).
+- De paso, corregido un drift preexistente no relacionado: a `frontend/.../mock/fixtures/permisos_catalogo.json` le faltaba `APROBADOR_PRESUPUESTOS` frente a su contrato congelado — ya sincronizados (`contrato-fixtures.spec.js` en verde).
+
+---
+
 ## 2026-08-21 — Módulo Gastos Operativos
 
 ### Agregado

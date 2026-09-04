@@ -61,11 +61,12 @@ Módulo de préstamo de equipo de grabación. **Plan aprobado, en construcción 
 | Documento | Contenido |
 |-----------|-----------|
 | [`equipos/plan-quirurgico.md`](equipos/plan-quirurgico.md) | Plan maestro de integración: RBAC aditivo, modelo de datos (10 tablas), API, PDF, correo. **Lectura obligatoria antes de tocar cualquier cosa de Equipos.** |
+| [`equipos/firma-pendiente-al-confirmar.md`](equipos/firma-pendiente-al-confirmar.md) | `confirmar` ya no exige ninguna firma; cada una (aprobador/beneficiario) se completa después por su lado. Paquete singleton `TITULAR_FIRMA_EQUIPO`: quién puede firmar `firma_entrega` de verdad (identidad, no permiso) y de quién es el nombre por default en la carta antes de que exista una firma. |
 | [`equipos/asignacion-trabajo.md`](equipos/asignacion-trabajo.md) | Reparto de tareas: carril servidor (Damian) + carril interfaz (Beni). Paquetes WP1-WP6. |
 | [`equipos/rbac-aditivo.md`](equipos/rbac-aditivo.md) | Diseño del RBAC aditivo: motor, catálogo, tablas, endpoints de roles y paquetes. |
 | [`equipos/contratos/API_EQUIPOS_v1.md`](equipos/contratos/API_EQUIPOS_v1.md) | Contrato de API v1 **congelado**. 24 endpoints, matriz de permisos, máquina de estados, reglas de media. |
 | [`equipos/contratos/openapi_equipos_v1.json`](equipos/contratos/openapi_equipos_v1.json) | OpenAPI 3.0 del servidor real (22 endpoints, 35 schemas). Companion técnico del contrato. |
-| [`equipos/contratos/permisos_catalogo.json`](equipos/contratos/permisos_catalogo.json) | Catálogo de permisos RBAC: 7 módulos, 8 paquetes, 5 reglas. **Congelado.** |
+| [`equipos/contratos/permisos_catalogo.json`](equipos/contratos/permisos_catalogo.json) | Catálogo de permisos RBAC: 8 módulos, 15 paquetes (incluye el singleton `TITULAR_FIRMA_EQUIPO`), 5 reglas. **Congelado.** |
 | [`equipos/contratos/tokens_marca.md`](equipos/contratos/tokens_marca.md) | Tokens visuales para el PDF de responsiva (colores, fuentes). |
 | [`equipos/contratos/auth_me.json`](equipos/contratos/auth_me.json) | Forma exacta de `GET /api/auth/me` con campo `permisos`. |
 | [`equipos/contratos/fixtures/`](equipos/contratos/fixtures/) | Fixtures: empresas (3), equipos (8), errores (7 códigos), préstamo demo. |

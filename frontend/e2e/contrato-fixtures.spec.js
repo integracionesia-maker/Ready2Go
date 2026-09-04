@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 // producción, y así corre junto al resto de la suite con el mismo comando.
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CONTRATO_DIR = path.join(__dirname, "..", "..", "docs", "contratos");
+const CONTRATO_DIR = path.join(__dirname, "..", "..", "docs", "equipos", "contratos");
 const MOCK_DIR = path.join(__dirname, "..", "src", "modules", "equipos", "api", "mock", "fixtures");
 
 const PARES = [

@@ -29,6 +29,13 @@ def ana(inventario, db):
     return usuario_con(db, username="ana.ruiz")
 
 
+@pytest.fixture
+def melisa(inventario, db):
+    # `firma_entrega` es identidad (titular del paquete singleton
+    # TITULAR_FIRMA_EQUIPO), no permiso.
+    return usuario_con(db, username="melisa", aditivos=("APROBADOR_EQUIPO", "TITULAR_FIRMA_EQUIPO"))
+
+
 def _confirmado(cliente, equipment_ids=(1,)):
     loan_id = cliente.post(
         "/api/loans/",
@@ -52,8 +59,9 @@ def _confirmado(cliente, equipment_ids=(1,)):
         item_id = ficha["items"][-1]["id"]
         subir(cliente, loan_id, "foto_entrega_frente", item_id)
         subir(cliente, loan_id, "foto_entrega_atras", item_id)
-    subir(cliente, loan_id, "firma_entrega")
-    subir(cliente, loan_id, "firma_responsable")
+    # Sin firmas: `confirmar` ya no pide ninguna (revision 2, §1b de
+    # loan_state.py). Los tests de contenido del PDF no dependen de que
+    # esten — los que si (firma pendiente/completada) arman su propio flujo.
     cliente.post(f"/api/loans/{loan_id}/confirmar")
     return loan_id
 
@@ -113,6 +121,77 @@ def test_el_pdf_dice_lo_que_la_carta_tiene_que_decir(inventario, ana, db):
     assert "iPhone 17 Pro" in texto                   # modelo del equipo
     assert "Cargador, Funda" in texto                 # accesorios del renglon
     assert "Se lo lleva el responsable" in texto      # cargador_con legible
+
+
+def test_el_nombre_bajo_la_firma_del_aprobador_es_quien_firmo(inventario, ana, melisa, db):
+    """El nombre impreso bajo `firma_entrega` sale de quien de verdad firmo
+    (`media_asset.created_by_user_id`), no de `entregado_por_user_id` — son
+    dos personas distintas a proposito: quien entrega el equipo fisicamente
+    puede no ser quien aprueba el prestamo."""
+    cliente = logueado("ana.ruiz")
+    loan_id = _confirmado(cliente)
+    subir(logueado("melisa"), loan_id, "firma_entrega")
+    subir(cliente, loan_id, "firma_responsable")
+
+    doc = db.query(ResponsivaDoc).filter(ResponsivaDoc.loan_id == loan_id, ResponsivaDoc.version == 2).one()
+    # `usuario_con` no fija `full_name`: cae al username tal cual (ver
+    # `conftest.make_user`) — no es "Melisa Avendano" (eso es solo el fixture
+    # de demo en seed_prestamo_demo.py), es literal "melisa".
+    assert "melisa" in _texto(doc.file_path)
+
+
+def test_titular_firma_equipo_aparece_por_default_antes_de_que_nadie_firme(inventario, ana, db):
+    """Antes de que exista una firma_entrega real, la carta muestra el nombre
+    del titular del paquete singleton TITULAR_FIRMA_EQUIPO en vez de dejarlo
+    vacio — sigue diciendo "(FIRMA PENDIENTE)" porque nadie ha firmado de
+    verdad, no se inventa una firma."""
+    usuario_con(db, username="titular.default", aditivos=("TITULAR_FIRMA_EQUIPO",))
+    loan_id = _confirmado(logueado("ana.ruiz"))
+
+    doc = db.query(ResponsivaDoc).filter(ResponsivaDoc.loan_id == loan_id, ResponsivaDoc.version == 1).one()
+    texto = _texto(doc.file_path)
+    assert "titular.default" in texto
+    assert texto.count("FIRMA PENDIENTE") == 2
+
+
+def test_cambiar_de_titular_no_reescribe_una_firma_ya_capturada(inventario, ana, melisa, db):
+    """El relleno del titular solo aplica ANTES de que exista una firma real
+    (ver `test_titular_firma_equipo_aparece_por_default...` arriba). Si
+    despues alguien mas toma el paquete (melisa deja el puesto, por ejemplo),
+    la firma ya capturada de quien firmo de verdad no cambia de nombre con
+    efecto retroactivo — `_firmas_de` solo rellena cuando `firmante is None`."""
+    cliente = logueado("ana.ruiz")
+    loan_id = _confirmado(cliente)
+    subir(logueado("melisa"), loan_id, "firma_entrega")
+    subir(cliente, loan_id, "firma_responsable")
+
+    # Singleton: esto le quita el paquete a melisa y se lo da a otra persona.
+    usuario_con(db, username="titular.nuevo", aditivos=("TITULAR_FIRMA_EQUIPO",))
+
+    doc = db.query(ResponsivaDoc).filter(ResponsivaDoc.loan_id == loan_id, ResponsivaDoc.version == 2).one()
+    texto = _texto(doc.file_path)
+    assert "melisa" in texto
+    assert "titular.nuevo" not in texto
+
+
+def test_ninguna_firma_al_confirmar_se_marca_pendiente_no_se_disimula(inventario, ana, db):
+    """§1b de loan_state.py: `confirmar` ya no pide ninguna firma (revision
+    2). La v1 de la responsiva tiene que decirlo explicito para las DOS, no
+    dejar el espacio en blanco sin explicacion (honestidad tecnica, §6)."""
+    loan_id = _confirmado(logueado("ana.ruiz"))
+
+    doc = db.query(ResponsivaDoc).filter(ResponsivaDoc.loan_id == loan_id, ResponsivaDoc.version == 1).one()
+    assert _texto(doc.file_path).count("FIRMA PENDIENTE") == 2
+
+
+def test_al_completar_las_dos_firmas_la_v2_ya_no_dice_pendiente(inventario, ana, melisa, db):
+    cliente = logueado("ana.ruiz")
+    loan_id = _confirmado(cliente)
+    subir(logueado("melisa"), loan_id, "firma_entrega")
+    subir(cliente, loan_id, "firma_responsable")
+
+    doc = db.query(ResponsivaDoc).filter(ResponsivaDoc.loan_id == loan_id, ResponsivaDoc.version == 2).one()
+    assert "FIRMA PENDIENTE" not in _texto(doc.file_path)
 
 
 def test_la_razon_social_emisora_sale_de_la_tabla(inventario, ana, db):

@@ -32,6 +32,18 @@ def borrador(inventario, db):
     return cliente, loan_id, ficha["items"][0]["id"]
 
 
+@pytest.fixture
+def confirmado(borrador):
+    """Como `borrador`, pero ya confirmado (2 fotos + `POST /confirmar`) — las
+    firmas ya NO se aceptan en `borrador` (§1b de loan_state.py), asi que
+    cualquier prueba que necesite subir una firma de verdad parte de aqui."""
+    cliente, loan_id, item_id = borrador
+    subir(cliente, loan_id, "foto_entrega_frente", item_id)
+    subir(cliente, loan_id, "foto_entrega_atras", item_id)
+    cliente.post(f"/api/loans/{loan_id}/confirmar")
+    return cliente, loan_id, item_id
+
+
 # ── Validacion por magic bytes ──────────────────────────────────────────────
 
 
@@ -100,13 +112,16 @@ def test_el_limite_depende_del_kind():
     assert media_manager.limite_de("firma_responsable") == 250 * 1024
 
 
-def test_una_firma_de_mas_de_250kb_da_413(borrador, monkeypatch):
-    cliente, loan_id, _ = borrador
+def test_una_firma_de_mas_de_250kb_da_413(confirmado, monkeypatch):
+    # `firma_responsable`, no `firma_entrega`: esta prueba es sobre el limite
+    # de tamano (generico a cualquier firma), no sobre el permiso especial de
+    # `firma_entrega` (ver test_api_prestamos.py para ese).
+    cliente, loan_id, _ = confirmado
     monkeypatch.setattr(media_manager, "LIMITE_FIRMA", 100)
 
     resp = cliente.post(
         f"/api/loans/{loan_id}/media",
-        data={"kind": "firma_entrega"},
+        data={"kind": "firma_responsable"},
         files={"file": ("firma.png", png_bytes(200, 200), "image/png")},
     )
     assert resp.status_code == 413
@@ -209,9 +224,9 @@ def test_un_kind_inventado_es_422(borrador):
     assert resp.json()["codigo"] == "VALOR_INVALIDO"
 
 
-def test_una_firma_no_lleva_loan_item_id(borrador):
-    cliente, loan_id, item_id = borrador
-    resp = subir(cliente, loan_id, "firma_entrega", item_id)
+def test_una_firma_no_lleva_loan_item_id(confirmado):
+    cliente, loan_id, item_id = confirmado
+    resp = subir(cliente, loan_id, "firma_responsable", item_id)
     assert resp.status_code == 422
 
 
@@ -230,8 +245,6 @@ def test_no_se_sube_una_foto_de_entrega_a_un_prestamo_ya_confirmado(inventario, 
     item_id = cliente.post(f"/api/loans/{loan_id}/items", json={"equipment_id": 1}).json()["items"][0]["id"]
     subir(cliente, loan_id, "foto_entrega_frente", item_id)
     subir(cliente, loan_id, "foto_entrega_atras", item_id)
-    subir(cliente, loan_id, "firma_entrega")
-    subir(cliente, loan_id, "firma_responsable")
     cliente.post(f"/api/loans/{loan_id}/confirmar")
 
     resp = subir(cliente, loan_id, "foto_entrega_frente", item_id)
@@ -273,9 +286,14 @@ def test_resubir_el_mismo_kind_reemplaza(borrador, db):
     assert ficha["items"][0]["media"]["foto_entrega_frente"] == segundo["id"]
 
 
-def test_las_firmas_cuelgan_del_prestamo_no_del_renglon(borrador, db):
-    cliente, loan_id, item_id = borrador
-    media_id = subir(cliente, loan_id, "firma_entrega").json()["id"]
+def test_las_firmas_cuelgan_del_prestamo_no_del_renglon(confirmado, db):
+    cliente, loan_id, item_id = confirmado
+    # `firma_entrega` es identidad, no permiso — solo la titular del paquete
+    # singleton TITULAR_FIRMA_EQUIPO puede subirla (ver test_api_prestamos.py
+    # para ese candado en detalle) — aqui solo importa que la firma cuelga del
+    # prestamo, no del renglon, asi que se crea una titular de paso.
+    usuario_con(db, username="aprobadora.media", aditivos=("APROBADOR_EQUIPO", "TITULAR_FIRMA_EQUIPO"))
+    media_id = subir(logueado("aprobadora.media"), loan_id, "firma_entrega").json()["id"]
 
     assert db.get(MediaAsset, media_id).loan_item_id is None
     ficha = cliente.get(f"/api/loans/{loan_id}").json()
@@ -369,11 +387,11 @@ def test_la_miniatura_pesa_mucho_menos_que_el_original(borrador):
     assert len(thumb.content) < len(original.content)
 
 
-def test_la_miniatura_conserva_el_formato(borrador):
+def test_la_miniatura_conserva_el_formato(confirmado):
     """Pasar una firma PNG a JPEG le pone fondo negro y llena el trazo de
     artefactos: el canvas de firma es transparente."""
-    cliente, loan_id, _ = borrador
-    media_id = subir(cliente, loan_id, "firma_entrega").json()["id"]
+    cliente, loan_id, _ = confirmado
+    media_id = subir(cliente, loan_id, "firma_responsable").json()["id"]
     resp = cliente.get(f"/api/media/{media_id}", params={"tamano": "thumb"})
     assert resp.headers["content-type"].startswith("image/png")
 

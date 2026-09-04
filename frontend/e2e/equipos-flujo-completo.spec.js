@@ -13,9 +13,9 @@ import { pngReal, firmaPng } from "./helpers/imagen.mjs";
 // Dos ajustes de fondo, no solo de selector, encontrados al escribir esto:
 //
 // 1. La UI real tiene guardas del lado del cliente que el archivo
-//    aspiracional no anticipaba: el botón "Siguiente" del paso 3 (Fotos)
-//    está DESHABILITADO mientras falte una sola foto de cualquier equipo
-//    (`disabled={!loan.items.every(itemListo)}`), y
+//    aspiracional no anticipaba: el botón "Confirmar préstamo" del paso 3
+//    (Fotos) está DESHABILITADO mientras falte una sola foto de cualquier
+//    equipo (`disabled={!loan.items.every(itemListo)}`), y
 //    `ConfirmarDevolucionModal` ni siquiera pinta el formulario de
 //    decisiones si `entrega_autorizada` es falso (solo una advertencia,
 //    sin footer con botones). Ambas reglas SÍ existen en el servidor (409
@@ -25,6 +25,11 @@ import { pngReal, firmaPng } from "./helpers/imagen.mjs";
 //    servidor (llamada directa a la API con el `request` fixture,
 //    exactamente el mismo body que mandaría el cliente si el botón no
 //    estuviera deshabilitado).
+//    Revisión 2 (firma-pendiente): `confirmar` ya NO exige ninguna firma —
+//    el wizard de 3 pasos (Datos/Equipos/Fotos) ya no tiene un cuarto paso
+//    de Firmas; ambas se completan después, cada una por su lado. El paso 1
+//    ahora también pide los datos del Beneficiario (nombre/correo, texto
+//    libre) antes de Área/Motivo.
 // 2. El rol base `admin` NO tiene ningún permiso de `equipos_aprobacion`
 //    (`rbac_catalog.py`: "Sin aprobacion de equipos") — un admin real
 //    jamás puede autorizar entregas ni confirmar devoluciones. La persona
@@ -63,13 +68,13 @@ async function crearUsuarioDefinitivo(request, { usuario, password, email, fullN
   return id;
 }
 
-/** Fila de un préstamo dentro de UNA sección de Aprobaciones, identificada
- * por su encabezado — un mismo préstamo (p.ej. nunca autorizado + con
- * devolución ya registrada) puede aparecer en más de una cola a la vez, así
- * que matchear "li con este texto" en toda la página es ambiguo. */
-function filaEnSeccion(page, tituloSeccion, texto) {
-  const seccion = page.locator("section", { has: page.getByRole("heading", { name: tituloSeccion }) });
-  return seccion.locator("li", { hasText: texto });
+/** Fila de un préstamo dentro de UNA cola de Aprobaciones, identificada por
+ * su `data-testid` — un mismo préstamo (p.ej. nunca autorizado + con
+ * devolución ya registrada, o autorización pendiente + firma pendiente)
+ * puede aparecer en más de una cola a la vez, así que matchear "li con este
+ * texto" en toda la página es ambiguo. */
+function filaEnSeccion(page, testId, texto) {
+  return page.getByTestId(testId).locator("li", { hasText: texto });
 }
 
 test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extremo, servidor real)", () => {
@@ -119,6 +124,16 @@ test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extre
       expect.arrayContaining(["autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"])
     );
 
+    // `firma_entrega` es identidad, no permiso (ver
+    // routers/loans.py::subir_media): solo la titular del paquete SINGLETON
+    // TITULAR_FIRMA_EQUIPO puede subirla, ni siquiera con APROBADOR_EQUIPO
+    // alcanza. Sin este segundo grant, melisa dejaría de poder firmar en los
+    // casos 9 y 10 de más abajo.
+    const grantTitular = await request.post(`/api/users/${idAprobadora}/roles`, {
+      data: { role_name: "TITULAR_FIRMA_EQUIPO" },
+    });
+    expect(grantTitular.ok(), await grantTitular.text()).toBeTruthy();
+
     // El 3er equipo disponible en el listado real (mismo orden que pinta
     // el picker del paso 2: GET /equipment/?disponible=true, sin params de
     // orden propios) es el que se usa para forzar EQUIPO_OCUPADO más
@@ -136,9 +151,18 @@ test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extre
     await expect(page.getByRole("heading", { name: /Inventario/i })).toBeVisible();
 
     await page.goto("/equipos/nuevo");
-    await page.locator('input[type="text"]').first().fill("Contenido");
-    await page.locator("select.go-select").first().selectOption({ index: 1 });
-    await page.locator('input[type="text"]').nth(1).fill(MOTIVO);
+    // Revisión 2: el paso 1 ahora pide Beneficiario (nombre + correo) ANTES
+    // de Área/Motivo — desplaza los índices de `input[type="text"]`. Se
+    // usa el mismo nombre del solicitante como beneficiario a propósito:
+    // las aserciones de más abajo (Activos, Aprobaciones) buscan filas por
+    // "Colaborador Equipos E2E", que ahora es el nombre del BENEFICIARIO,
+    // no el de quien llena el formulario (son roles distintos desde este
+    // cambio, aunque aquí coincidan en la misma persona).
+    await page.locator('input[type="text"]').nth(0).fill("Colaborador Equipos E2E"); // Beneficiario · nombre
+    await page.locator('input[type="email"]').fill(`${SOLICITANTE.usuario}@test.com`); // Beneficiario · correo
+    await page.locator('input[type="text"]').nth(1).fill("Contenido"); // Área
+    await page.locator("select.go-select").first().selectOption({ index: 1 }); // Marca
+    await page.locator('input[type="text"]').nth(2).fill(MOTIVO); // Motivo
     await page.locator('input[type="date"]').fill("2026-09-15");
     await page.locator('button[type="submit"]').click();
     await page.waitForSelector("text=Equipos disponibles", { timeout: 10_000 });
@@ -196,31 +220,30 @@ test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extre
     await context.close();
   });
 
-  test("3: sube fotos y firmas, confirma → folio real; el 409 TRANSICION_INVALIDA por foto faltante se verifica en ambos lados", async ({ browser, request }) => {
+  test("3: sube fotos y confirma → folio real; el 409 TRANSICION_INVALIDA por foto faltante se verifica en ambos lados", async ({ browser, request }) => {
     const context = await contextoDe(browser, { usuario: SOLICITANTE.usuario, password: SOLICITANTE.password });
     const page = await context.newPage();
 
     await page.goto("/equipos/nuevo"); // continúa el borrador (GET /loans/?estado=borrador&mios=1)
     await page.getByRole("button", { name: "Continuar borrador" }).click({ timeout: 10_000 });
-    await page.waitForSelector('button:has-text("Tomar / elegir foto")', { timeout: 10_000 });
+    await page.waitForSelector('button:has-text("Elegir archivo")', { timeout: 10_000 });
 
     // Lado del cliente: mientras falte UNA foto de CUALQUIER equipo,
-    // "Siguiente" queda deshabilitado — no hay forma de llegar a Firmas
-    // con un renglón a medias desde la UI.
-    const siguienteFotos = page.getByRole("button", { name: "Siguiente" });
-    await expect(siguienteFotos).toBeDisabled();
+    // "Confirmar préstamo" queda deshabilitado — no hay forma de confirmar
+    // con un renglón a medias desde la UI. Revisión 2: ya no hay paso de
+    // Firmas, así que este es el único botón de avance del paso 3.
+    const confirmarPrestamo = page.getByRole("button", { name: "Confirmar préstamo" });
+    await expect(confirmarPrestamo).toBeDisabled();
 
-    const totalBotones = await page.getByRole("button", { name: "Tomar / elegir foto" }).count();
+    const totalBotones = await page.getByRole("button", { name: "Elegir archivo" }).count();
     for (let i = 0; i < totalBotones; i++) {
       const fileChooserPromise = page.waitForEvent("filechooser");
-      await page.getByRole("button", { name: "Tomar / elegir foto" }).first().click();
+      await page.getByRole("button", { name: "Elegir archivo" }).first().click();
       const fileChooser = await fileChooserPromise;
       await fileChooser.setFiles({ name: `foto-${i}.png`, mimeType: "image/png", buffer: pngReal(400, 300) });
       await page.waitForTimeout(700);
     }
-    await expect(siguienteFotos).toBeEnabled();
-    await siguienteFotos.click();
-    await page.waitForTimeout(400);
+    await expect(confirmarPrestamo).toBeEnabled();
 
     // Lado del servidor: el mismo 409 que el cliente ya no deja disparar
     // por clic. El borrador de este test ya quedó completo (todas las
@@ -255,20 +278,11 @@ test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extre
     const cuerpoError = await confirmarSinFotos.json();
     expect(cuerpoError.codigo).toBe("TRANSICION_INVALIDA");
     expect(cuerpoError.detail).toMatch(/Faltan las fotos de frente de 1 equipo/i);
-    expect(cuerpoError.detail).toMatch(/Falta la firma/i);
+    // Revisión 2: `confirmar` ya no exige ninguna firma (ambas quedan
+    // pendientes después, cada una por su lado) — solo las fotos bloquean.
 
-    // De vuelta al flujo real: firmas del préstamo bueno y confirmar.
-    const canvases = page.locator("canvas");
-    for (const idx of [0, 1]) {
-      const box = await canvases.nth(idx).boundingBox();
-      await page.mouse.move(box.x + 20, box.y + box.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(box.x + 100, box.y + box.height / 2 - 20);
-      await page.mouse.move(box.x + 150, box.y + box.height / 2 + 20);
-      await page.mouse.up();
-    }
-
-    await page.getByRole("button", { name: "Confirmar préstamo" }).click();
+    // De vuelta al flujo real: confirmar directo, sin firmas en el wizard.
+    await confirmarPrestamo.click();
     await page.waitForURL(/\/equipos\/prestamo\//, { timeout: 15_000 });
     await expect(page.getByText(/CE-\d{4,}/)).toBeVisible();
     await expect(page.getByRole("button", { name: /Ver responsiva/i })).toBeVisible();
@@ -281,7 +295,10 @@ test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extre
     const page = await context.newPage();
 
     await page.goto("/equipos/aprobaciones");
-    const fila = page.locator("li", { hasText: MOTIVO });
+    // Revisión 2: este préstamo también aparece en "Firmas pendientes" (le
+    // falta firma_entrega, la de la propia aprobadora) — se escopa a
+    // "Autorizaciones de entrega" explícitamente para no ser ambiguo.
+    const fila = filaEnSeccion(page, "cola-autorizaciones", MOTIVO);
     await expect(fila).toBeVisible();
     // El folio se captura ANTES de autorizar: la fila sale de esta cola en
     // cuanto entrega_autorizada pasa a true (deja de matchear el filtro de
@@ -313,7 +330,7 @@ test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extre
     // Sube ambas fotos del primer equipo.
     for (let i = 0; i < 2; i++) {
       const fileChooserPromise = page.waitForEvent("filechooser");
-      await items.nth(0).getByRole("button", { name: "Tomar / elegir foto" }).first().click();
+      await items.nth(0).getByRole("button", { name: "Elegir archivo" }).first().click();
       const fileChooser = await fileChooserPromise;
       await fileChooser.setFiles({ name: `dev-${i}.png`, mimeType: "image/png", buffer: pngReal(400, 300) });
       await page.waitForTimeout(700);
@@ -338,7 +355,7 @@ test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extre
     // "Devoluciones por confirmar" solo pinta responsable, no motivo (a
     // diferencia de "Autorizaciones de entrega") — se matchea por nombre,
     // escopado a su sección.
-    const fila = filaEnSeccion(page, /Devoluciones por confirmar/i, "Colaborador Equipos E2E");
+    const fila = filaEnSeccion(page, "cola-devoluciones", "Colaborador Equipos E2E");
     await fila.getByRole("button", { name: /Confirmar devolución/i }).click();
 
     const decisiones = page.getByTestId("decisiones-devolucion").locator("li");
@@ -364,9 +381,26 @@ test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extre
     const context = await contextoDe(browser, { usuario: APROBADORA.usuario, password: APROBADORA.password });
     const page = await context.newPage();
 
+    // Revisión 2: `cerrar-incidencia` es una de las dos únicas rutas a
+    // `completado` y `firmas_completas` la bloquea igual que a
+    // `confirmar-devolucion` — este préstamo llegó hasta aquí sin ninguna
+    // firma (nunca se piden en el wizard). Se completan las dos por API
+    // antes de cerrar la incidencia; el rol de la aprobadora (`colaborador_mkt`
+    // + paquete `APROBADOR_EQUIPO`) ya cubre ambos permisos de `/media`
+    // (`solicitar` para `firma_responsable`, `autorizar_entrega` para
+    // `firma_entrega`), así que la misma sesión alcanza para las dos.
+    const loans = await (await context.request.get("/api/loans/?limit=200")).json();
+    const loanIncidencia = loans.items.find((l) => l.motivo === MOTIVO);
+    for (const kind of ["firma_entrega", "firma_responsable"]) {
+      const subida = await context.request.post(`/api/loans/${loanIncidencia.id}/media`, {
+        multipart: { file: { name: `${kind}.png`, mimeType: "image/png", buffer: Buffer.from(firmaPng()) }, kind },
+      });
+      expect(subida.ok(), await subida.text()).toBeTruthy();
+    }
+
     await page.goto("/equipos/aprobaciones");
     // "Incidencias abiertas" tampoco pinta motivo, solo responsable.
-    const fila = filaEnSeccion(page, /Incidencias abiertas/i, "Colaborador Equipos E2E");
+    const fila = filaEnSeccion(page, "cola-incidencias", "Colaborador Equipos E2E");
     await expect(fila).toBeVisible();
     await fila.getByRole("button", { name: /Cerrar incidencia/i }).click();
 
@@ -420,11 +454,11 @@ test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extre
         multipart: { file: { name: `${kind}.png`, mimeType: "image/png", buffer: Buffer.from(pngReal(300, 300)) }, kind, loan_item_id: String(idItemSinAutorizar) },
       });
     }
-    for (const kind of ["firma_entrega", "firma_responsable"]) {
-      await request.post(`/api/loans/${prestamo.id}/media`, {
-        multipart: { file: { name: `${kind}.png`, mimeType: "image/png", buffer: Buffer.from(firmaPng()) }, kind },
-      });
-    }
+    // Revisión 2: `confirmar` ya no exige ninguna firma — este préstamo llega
+    // a `prestado` sin firma_entrega ni firma_responsable. Lo que este test
+    // verifica es exclusivamente el candado de `entrega_autorizada`, que
+    // corre antes que el de firmas completas en `_exigir_autorizacion` /
+    // `approvals.py`, así que da igual que las firmas sigan pendientes.
     await request.post(`/api/loans/${prestamo.id}/confirmar`);
     for (const kind of ["foto_dev_frente", "foto_dev_atras"]) {
       await request.post(`/api/loans/${prestamo.id}/media`, {
@@ -455,7 +489,7 @@ test.describe.serial("Flujo completo de un préstamo de Equipos (extremo a extre
     // Este préstamo aparece en DOS colas a la vez (nunca autorizado +
     // devolución ya registrada) — se escopa a "Devoluciones por confirmar"
     // explícitamente, no basta con el nombre del responsable.
-    const fila = filaEnSeccion(page, /Devoluciones por confirmar/i, "Admin Equipos E2E");
+    const fila = filaEnSeccion(page, "cola-devoluciones", "Admin Equipos E2E");
     await expect(fila).toBeVisible();
     await fila.getByRole("button", { name: /Confirmar devolución/i }).click();
     await expect(page.getByText(/todavía no tiene autorizada su entrega/i)).toBeVisible();
