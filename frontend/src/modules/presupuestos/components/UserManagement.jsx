@@ -460,10 +460,10 @@ export default function UserManagement({ creators, onCreatorsChange }) {
               <col className="w-[100px]" />
               <col className="w-[130px]" />
               <col className="w-[170px]" />
-              <col className="w-[85px]" />
-              <col className="w-[120px]" />
-              <col className="w-[75px]" />
-              <col className="w-[95px]" />
+              <col className="w-[140px]" />
+              <col className="w-[170px]" />
+              <col className="w-[65px]" />
+              <col className="w-[80px]" />
               <col className="w-[105px]" />
             </colgroup>
             <thead>
@@ -520,8 +520,12 @@ export default function UserManagement({ creators, onCreatorsChange }) {
                       {u.email}
                     </td>
                     <td>
+                      {/* Columnas anchas a propósito (a costa de Estado/Acceso):
+                          en escritorio el rol tiene que leerse completo, no
+                          recortado — por eso el badge envuelve en vez de
+                          truncar (`whitespace-normal`, sin nowrap/ellipsis). */}
                       <span
-                        className="go-badge whitespace-nowrap"
+                        className="go-badge whitespace-normal text-center"
                         style={{ background: "var(--go-surface-sunken)", color: "var(--go-text-secondary)" }}
                       >
                         {ROLE_LABELS[u.role] || u.role}
@@ -531,7 +535,7 @@ export default function UserManagement({ creators, onCreatorsChange }) {
                       {(rolesPorUsuario[u.id] || []).length === 0 ? (
                         <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>—</span>
                       ) : (
-                        <span className="go-badge go-badge-warning whitespace-nowrap" title={rolesPorUsuario[u.id].map(a => a.role_name).join(", ")}>
+                        <span className="go-badge go-badge-warning whitespace-normal text-center">
                           {rolesPorUsuario[u.id].map(a => a.role_name).join(", ")}
                         </span>
                       )}
