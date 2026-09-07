@@ -35,9 +35,14 @@ TIPO_DEVOLUCION_CONFIRMADA = "devolucion_confirmada"
 # recordatorio es DIARIO y el UNIQUE lo bloquearia para siempre despues del
 # primer envio. Ver `notificaciones.tipo_vencimiento()`.
 TIPO_VENCIMIENTO = "vencimiento"
-# Se dispara cuando se sube la firma que faltaba al confirmar (prestamo ya en
-# `prestado`, ver `crud_loans.completar_firma_faltante`). Sin sufijo de dia:
-# pasa una sola vez en la vida del prestamo, exactamente como confirmado_*.
+# Se dispara con CADA firma que se sube post-confirmacion (prestamo ya en
+# `prestado`/`pendiente_confirmacion`/`incompleto`, ver
+# `crud_loans.completar_firma_faltante`). A diferencia de confirmado_*, esto
+# SI puede pasar dos veces en la vida del prestamo (una por firma) — se manda
+# siempre con sufijo `:{kind}` (`firma_completada:firma_entrega` /
+# `:firma_responsable`) para que la idempotencia de `notification_log`
+# (UNIQUE loan_id+tipo+destinatario) no bloquee la segunda. Mismo patron que
+# el sufijo de dia de TIPO_VENCIMIENTO.
 TIPO_FIRMA_COMPLETADA = "firma_completada"
 
 PIE = (
@@ -112,12 +117,18 @@ def confirmado_responsable(d: dict) -> tuple[str, str]:
 
 
 def firma_completada(d: dict) -> tuple[str, str]:
+    """Se dispara con CADA firma que se sube (revision 3, 07/09/2026), no
+    solo con la última — `firma_pendiente` ya viene calculado DESPUES de
+    guardar esta firma, así que `_aviso_firma_pendiente` dice honestamente
+    si todavía falta la otra (mismo helper que usa el aviso de confirmación,
+    ya resuelve el "de el" con guion en vez de preposición)."""
     asunto = f"[GOCreate] Firma completada — carta responsiva {d['folio']} actualizada"
     cuerpo = (
-        f"Se completo la firma que faltaba en el prestamo {d['folio']}.\n\n"
+        f"Se registro una firma del prestamo {d['folio']}.\n\n"
         f"Responsable: {d['responsable']}\n"
         f"Equipos:\n{_lista(d.get('equipos') or [])}\n\n"
-        f"La carta responsiva actualizada, ya con las dos firmas, va adjunta.\n"
+        f"La carta responsiva actualizada va adjunta.\n"
+        f"{_aviso_firma_pendiente(d)}"
         f"Consulta el prestamo en: "
         f"{_enlace(d['url_publica'], RUTA_PRESTAMO.format(folio=d['folio']))}"
         f"{PIE}"

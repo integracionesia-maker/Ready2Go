@@ -28,10 +28,15 @@ def test_ver_inventario_lo_puede_cualquiera_de_marketing(inventario, db):
     assert resp.json()["total"] == 8
 
 
-def test_un_creador_no_ve_el_inventario(inventario, db, creador_user):
+def test_un_creador_ve_el_inventario_pero_no_puede_crear(inventario, db, creador_user):
+    """I9 (07/09/2026): el rol base `creador` ya trae `equipos_inventario:ver`
+    (antes de este cambio, un creador recibia 403 aqui) — pero sigue sin
+    `crear`, es de solo lectura."""
     from ..conftest import PASSWORD_CREADOR
 
-    resp = logueado("creador.a", PASSWORD_CREADOR).get("/api/equipment/")
+    cliente = logueado("creador.a", PASSWORD_CREADOR)
+    assert cliente.get("/api/equipment/").status_code == 200
+    resp = cliente.post("/api/equipment/", json={"nombre": "Camara nueva"})
     assert resp.status_code == 403
     assert resp.json()["codigo"] == "SIN_PERMISO"
 

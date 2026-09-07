@@ -4,6 +4,7 @@ import { EmptyState, GlassPanel, SkeletonShimmer, Timeline, MediaViewer, usePage
 import { esCodigo } from "@/api";
 import { fetchLoanByFolio, fetchTitularFirmaEquipo, mediaUrl, loanResponsivaUrl } from "../api";
 import CompletarFirmaModal from "../components/CompletarFirmaModal";
+import RegistrarDevolucionModal from "../components/RegistrarDevolucionModal";
 import { usePermisos } from "../permisos/usePermisos";
 
 // Estados donde una firma todavia se puede completar (§1b de loan_state.py):
@@ -98,6 +99,7 @@ export default function FichaPrestamoPage() {
   const [ampliada, setAmpliada] = useState(null); // { mediaId, label }
   const [completarFirma, setCompletarFirma] = useState(null); // "firma_entrega" | "firma_responsable" | null
   const [titular, setTitular] = useState(null); // { user_id, nombre, soy_titular } | null
+  const [mostrarDevolucion, setMostrarDevolucion] = useState(false);
 
   useEffect(() => {
     fetchTitularFirmaEquipo()
@@ -177,6 +179,10 @@ export default function FichaPrestamoPage() {
   // candado real sigue en el servidor.
   const puedeFirmarAprobador = estadoAceptaFirma && titular?.soy_titular === true;
   const puedeFirmarBeneficiario = estadoAceptaFirma && puede("equipos_prestamos", "solicitar");
+  // Único lugar donde un creador puede registrar su propia devolución: no
+  // tiene la pestaña "Activos" (I9, 07/09/2026), así que la acción vive
+  // aquí, en la ficha, para quien sí tenga el permiso.
+  const puedeRegistrarDevolucion = loan.estado === "prestado" && puede("equipos_prestamos", "registrar_devolucion");
 
   return (
     <div className="space-y-6">
@@ -204,11 +210,18 @@ export default function FichaPrestamoPage() {
             )}
           </div>
         </div>
-        {loan.responsiva && (
-          <button type="button" onClick={verResponsiva} className="btn-go-ghost">
-            Ver responsiva (PDF)
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {puedeRegistrarDevolucion && (
+            <button type="button" onClick={() => setMostrarDevolucion(true)} className="btn-go">
+              Registrar devolución
+            </button>
+          )}
+          {loan.responsiva && (
+            <button type="button" onClick={verResponsiva} className="btn-go-ghost">
+              Ver responsiva (PDF)
+            </button>
+          )}
+        </div>
       </div>
 
       <GlassPanel as="section" className="p-4 sm:p-6">
@@ -368,6 +381,17 @@ export default function FichaPrestamoPage() {
           onClose={() => setCompletarFirma(null)}
           onSuccess={() => {
             setCompletarFirma(null);
+            cargar();
+          }}
+        />
+      )}
+
+      {mostrarDevolucion && (
+        <RegistrarDevolucionModal
+          loan={loan}
+          onClose={() => setMostrarDevolucion(false)}
+          onSuccess={() => {
+            setMostrarDevolucion(false);
             cargar();
           }}
         />

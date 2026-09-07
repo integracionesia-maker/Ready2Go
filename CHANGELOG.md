@@ -4,6 +4,53 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 
 ---
 
+## 2026-09-07 — Dos bugs de la carta responsiva (centrado de firma + número de versión)
+
+### Corregido
+
+- **La imagen de la firma salía pegada a la izquierda de su columna** en vez de centrada, aunque el trazo dentro de la imagen ya estuviera centrado. La tabla de firmas (`plantilla.py`) no tenía ningún `ALIGN` en su `TableStyle` — dentro de una celda de `Table`, el `hAlign="CENTER"` propio del flowable de imagen no se respeta; ReportLab usa la alineación de la celda, que por default es izquierda. Se agregó `("ALIGN", (0, 0), (-1, -1), "CENTER")`.
+- **El pie del PDF siempre decía "Versión 1"**, sin importar la versión real (v2, v3…). `crud_loans.generar_responsiva()` calculaba bien la versión para el nombre del archivo y la fila de `responsiva_doc`, pero nunca se la pasaba a `responsiva.generar_a_disco()` — que tiene `version: int = 1` de default y nadie lo sobreescribía. Encontrado al verificar visualmente el fix anterior (regeneré una responsiva real para confirmar el centrado y noté que decía "Versión 1" en un archivo que ya era v3/v4).
+
+### Pruebas
+
+- Backend: 801 passed, 1 skipped (antes 800). Nuevo: `test_responsiva_pdf.py::test_el_pdf_imprime_su_propio_numero_de_version`.
+- Verificado visualmente: se regeneró la responsiva de un préstamo real (renderizada a imagen con PyMuPDF) confirmando que la firma queda centrada y el pie dice la versión correcta.
+
+---
+
+## 2026-09-07 — La responsiva refleja cada firma de inmediato (revisión 3)
+
+### Corregido
+
+- **La carta responsiva no mostraba una firma ya capturada hasta que la otra persona también firmara.** El PDF solo se regeneraba cuando `firmas_completas` pasaba a `True` (la segunda de las dos firmas) — quien firmaba primero no veía su propia firma reflejada, aunque ya estuviera guardada (`media_asset` la tenía; el PDF no). Ahora `POST /api/loans/{id}/media` regenera la responsiva con **cada** firma que se sube, en el orden que sea: la v2 (tras la primera) muestra esa firma y sigue diciendo "FIRMA PENDIENTE" solo para la que falta; la v3 (tras la segunda) ya no dice nada. Nunca se sobrescribe una versión anterior.
+- El correo "Firma completada" ahora se manda con **cada** firma, no solo la última, con el mensaje ajustado ("sigue pendiente la firma de…" cuando aplica). Requirió agregar un sufijo `:{kind}` al tipo de aviso (`firma_completada:firma_entrega` / `:firma_responsable`) para no chocar con la idempotencia de `notification_log` (antes solo podía pasar una vez en la vida del préstamo). De paso se corrigió un bug de regresión que este mismo cambio habría introducido: `reintentar_fallidos` comparaba el tipo completo contra la lista de "lleva adjunto", así que un reintento de un correo con sufijo perdía el PDF adjunto — ahora compara contra el tipo base.
+- Documentación actualizada: `docs/equipos/firma-pendiente-al-confirmar.md` ya describía este comportamiento como el deseado (aspiracional, nunca verificado contra el código real) — el código ahora sí lo cumple.
+
+### Pruebas
+
+- Backend: 800 passed, 1 skipped (antes 799). Actualizados/renombrados: `test_api_prestamos.py::test_cada_firma_genera_su_propia_version_de_responsiva`, `test_aprobacion.py::test_la_bitacora_registra_el_ciclo_completo`, `test_responsiva_pdf.py::test_cada_firma_actualiza_la_responsiva_de_inmediato`. Nuevo: `test_notificaciones.py::test_reintentar_conserva_el_adjunto_con_el_sufijo_de_firma` (regresión del bug de `reintentar_fallidos`).
+
+---
+
+## 2026-09-07 — Creadores como beneficiarios de Equipos (I9)
+
+Luz verde explícita de Jose.
+
+### Agregado
+
+- **El rol base `creador` gana acceso a Control de Equipos**: `equipos_inventario:ver` + `equipos_prestamos:{solicitar,ver_propios,registrar_devolucion}` (mismo set que ya tenía `colaborador_mkt`, nunca `equipos_aprobacion`). Aplica automáticamente a todo creador tras `migrate_rbac_aditivo.py`, sin asignación por persona.
+  - Menú reducido a 4 vistas: Inicio, Inventario (solo lectura), Nuevo préstamo, Historial — Dashboard y Activos se ocultan **por rol** en `EquiposSidebar.jsx` (comparten permiso con Inicio/Historial, no eran ocultables solo con permisos).
+  - El formulario de préstamo ya no pide el beneficiario en texto libre: se elige de una lista de creadores reales (`GET /api/creators/`, extendido con `user_id`/`email` del `User` vinculado — sin endpoint nuevo) — con una opción "Otro (no es creador)" que conserva el texto libre para cuando el beneficiario de verdad no tiene cuenta. Si quien llena el formulario **es** un creador, se autoasigna sin elegir nada, reforzado también en el servidor (`crud_loans.crear()` ignora cualquier `responsable_user_id` ajeno que mande un creador).
+  - Nuevo botón "Registrar devolución" en la Ficha del préstamo (antes solo vivía en la tabla de Activos) — resuelve que un creador, sin esa pestaña, pueda registrar la suya; de paso queda disponible para cualquier rol.
+  - Detalle completo: `docs/equipos/creadores-como-beneficiarios.md` (nuevo).
+
+### Pruebas
+
+- Backend: 799 passed, 1 skipped (antes 786) — nuevos en `test_permisos_efectivos.py`, `test_catalogo_contrato.py`, `test_api_prestamos.py`, `test_api_inventario.py`, `test_permissions.py`; dos conteos/premisas preexistentes que este cambio invalidaba a propósito se actualizaron (`test_migracion_y_seeds.py` esperaba 115 filas de permisos, ahora 119; un test afirmaba que un creador no veía nada de Equipos).
+- E2E nuevo: `frontend/e2e/equipos-creador.spec.js` (4 casos, servidor real) — menú de 4 vistas, Inventario de solo lectura, flujo completo (crear → fotos → confirmar → firmar → Historial → registrar devolución desde la Ficha).
+
+---
+
 ## 2026-09-04 — Firma pendiente al confirmar, revisión 2 + titular de la firma (Control de Equipos)
 
 Luz verde explícita de Jose para los tres cambios de este bloque.

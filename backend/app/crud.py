@@ -160,6 +160,10 @@ def update_creator(
 
 def creator_to_response(db: Session, creator: models.Creator) -> schemas.CreatorResponse:
     cycle = get_or_create_cycle_for_date(db, creator, date.today())
+    # Uno por creador (indice parcial unico en `models.py`) — nunca hay
+    # ambiguedad de cual `User` es. `None` si el creador no tiene cuenta
+    # vinculada todavia (dato historico o de transicion).
+    usuario = db.query(models.User).filter(models.User.creator_id == creator.id).first()
     return schemas.CreatorResponse(
         id=creator.id,
         name=creator.name,
@@ -174,6 +178,8 @@ def creator_to_response(db: Session, creator: models.Creator) -> schemas.Creator
         cycle_remaining=cycle.amount - cycle.spent,
         cycle_start_date=cycle.start_date,
         cycle_end_date=cycle.end_date,
+        user_id=usuario.id if usuario else None,
+        email=usuario.email if usuario else None,
     )
 
 

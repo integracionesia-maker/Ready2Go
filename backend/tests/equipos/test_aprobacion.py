@@ -526,8 +526,11 @@ def test_la_bitacora_registra_el_ciclo_completo(inventario, ana, melisa):
         "confirmado",
         "responsiva_generada",
         # `_prestado` completa las dos firmas despues de confirmar (revision
-        # 2: confirmar ya no las pide) — la segunda deja `firmas_completas`
-        # en True y dispara una v2 de la responsiva.
+        # 2: confirmar ya no las pide). Revision 3 (07/09/2026): CADA firma
+        # genera su propia version de la responsiva, no solo la segunda —
+        # dos pares (firma_completada, responsiva_generada), uno por firma.
+        "firma_completada",
+        "responsiva_generada",
         "firma_completada",
         "responsiva_generada",
         "devolucion_registrada",

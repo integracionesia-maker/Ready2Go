@@ -105,9 +105,13 @@ PAQUETES: dict[str, dict] = {
     },
     "creador": {
         "kind": KIND_BASE,
-        "descripcion": "Creador de contenido: sube sus tickets y ve lo suyo. Aislado del resto de Presupuestos.",
+        "descripcion": "Creador de contenido: sube sus tickets y ve lo suyo en Presupuestos. En Equipos, "
+        "es el beneficiario típico de un préstamo: puede solicitar los suyos, consultarlos y registrar "
+        "su devolución, pero no ve inventario editable ni préstamos de otros creadores.",
         "permisos": {
             "presupuestos": ("ver_propio", "subir_ticket"),
+            "equipos_inventario": ("ver",),
+            "equipos_prestamos": ("solicitar", "ver_propios", "registrar_devolucion"),
         },
     },
     "marketing_presupuestos": {

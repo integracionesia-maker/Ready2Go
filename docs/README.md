@@ -62,6 +62,7 @@ Módulo de préstamo de equipo de grabación. **Plan aprobado, en construcción 
 |-----------|-----------|
 | [`equipos/plan-quirurgico.md`](equipos/plan-quirurgico.md) | Plan maestro de integración: RBAC aditivo, modelo de datos (10 tablas), API, PDF, correo. **Lectura obligatoria antes de tocar cualquier cosa de Equipos.** |
 | [`equipos/firma-pendiente-al-confirmar.md`](equipos/firma-pendiente-al-confirmar.md) | `confirmar` ya no exige ninguna firma; cada una (aprobador/beneficiario) se completa después por su lado. Paquete singleton `TITULAR_FIRMA_EQUIPO`: quién puede firmar `firma_entrega` de verdad (identidad, no permiso) y de quién es el nombre por default en la carta antes de que exista una firma. |
+| [`equipos/creadores-como-beneficiarios.md`](equipos/creadores-como-beneficiarios.md) | El rol base `creador` gana acceso a Equipos (menú de 4 vistas, beneficiario elegido de la lista de creadores en vez de texto libre, autoasignado sin elegir si quien llena el formulario es el propio creador). |
 | [`equipos/asignacion-trabajo.md`](equipos/asignacion-trabajo.md) | Reparto de tareas: carril servidor (Damian) + carril interfaz (Beni). Paquetes WP1-WP6. |
 | [`equipos/rbac-aditivo.md`](equipos/rbac-aditivo.md) | Diseño del RBAC aditivo: motor, catálogo, tablas, endpoints de roles y paquetes. |
 | [`equipos/contratos/API_EQUIPOS_v1.md`](equipos/contratos/API_EQUIPOS_v1.md) | Contrato de API v1 **congelado**. 24 endpoints, matriz de permisos, máquina de estados, reglas de media. |

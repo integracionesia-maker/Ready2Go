@@ -392,12 +392,17 @@ def registrar_evento(
 
 
 def crear(db: Session, datos: dict, actor: User) -> Loan:
+    # Un creador SIEMPRE es su propio beneficiario (I9, 07/09/2026): el
+    # frontend ya no le da a elegir, pero esto lo cierra tambien contra una
+    # llamada directa a la API que intente poner a otro creador como
+    # responsable — no es solo cuestion de UI, es una regla del rol.
+    es_creador = actor.role == "creador"
     prestamo = Loan(
         estado=EstadoPrestamo.BORRADOR.value,
         folio=None,
-        responsable_user_id=datos.get("responsable_user_id") or actor.id,
-        responsable_nombre=datos.get("responsable_nombre") or actor.full_name,
-        responsable_email=datos.get("responsable_email") or actor.email,
+        responsable_user_id=actor.id if es_creador else (datos.get("responsable_user_id") or actor.id),
+        responsable_nombre=actor.full_name if es_creador else (datos.get("responsable_nombre") or actor.full_name),
+        responsable_email=actor.email if es_creador else (datos.get("responsable_email") or actor.email),
         area=datos.get("area"),
         empresa=datos.get("empresa"),
         motivo=datos.get("motivo"),
@@ -593,7 +598,7 @@ def generar_responsiva(
     except ImportError:
         generador = None
     if generador is not None:
-        sha = generador.generar_a_disco(db, prestamo, destino)
+        sha = generador.generar_a_disco(db, prestamo, destino, version=version)
 
     documento = ResponsivaDoc(
         loan_id=prestamo.id,
@@ -617,26 +622,32 @@ def generar_responsiva(
 
 
 def completar_firma_faltante(db: Session, prestamo: Loan, actor: User) -> ResponsivaDoc:
-    """Se llama cuando la segunda de las dos firmas (aprobador + beneficiario)
-    por fin se sube, con el prestamo ya confirmado (`prestado`,
-    `pendiente_confirmacion` o `incompleto`). La v1 de la responsiva quedo con
-    ambas firmas en blanco — nunca se piden al confirmar, ver §1b de
-    loan_state.py — y esta genera la siguiente version, ya completa. Nunca pisa
-    la v1: es la misma regla de `generar_responsiva`, "un documento firmado es
-    evidencia".
+    """Se llama CADA VEZ que se sube una firma (aprobador o beneficiario, en
+    cualquier orden) con el prestamo ya confirmado (`prestado`,
+    `pendiente_confirmacion` o `incompleto`). Cada firma nueva genera su
+    propia version de la responsiva mostrando las firmas capturadas hasta
+    ese momento — nunca se espera a que existan las dos.
 
-    El router es quien decide CUANDO llamar a esto (justo despues de subir una
-    firma que deja `firmas_completas` en True) y quien encola el correo de
-    aviso — aqui solo se muta el prestamo.
+    Revision 3 (07/09/2026): antes esto solo se llamaba con la SEGUNDA firma
+    (`firmas_completas` en True), asi que la carta se quedaba con ambos
+    espacios en blanco mientras solo una persona hubiera firmado — confuso
+    para quien ya firmo y no veia su propia firma reflejada. Un documento
+    firmado es evidencia: tiene que reflejar la realidad tan pronto como
+    exista, no solo cuando este "completa".
+
+    Nunca pisa una version anterior: misma regla de `generar_responsiva`.
+    El router es quien decide CUANDO llamar a esto (justo despues de subir
+    cualquier firma) y quien encola el correo de aviso — aqui solo se muta
+    el prestamo.
     """
     registrar_evento(
         db,
         prestamo,
         TipoEvento.FIRMA_COMPLETADA.value,
-        "Firma pendiente completada. Carta responsiva actualizada.",
+        "Firma registrada. Carta responsiva actualizada.",
         actor,
     )
-    documento = generar_responsiva(db, prestamo, actor, motivo="Firma pendiente completada.")
+    documento = generar_responsiva(db, prestamo, actor, motivo="Firma registrada.")
     db.commit()
     db.refresh(prestamo)
     return documento
