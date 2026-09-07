@@ -86,12 +86,62 @@ def test_crear_borrador_nace_sin_folio_y_sin_items(inventario, ana):
     assert cuerpo["responsable"]["user_id"] == ana.id
 
 
-def test_un_creador_no_puede_pedir_equipo(inventario, db, creador_user):
+def test_un_creador_puede_crear_su_propio_prestamo(inventario, db, creador_user):
+    """I9 (07/09/2026): los beneficiarios reales de Equipos son los
+    creadores — el rol base `creador` ya trae `equipos_prestamos:solicitar`
+    (antes de este cambio, un creador recibia 403 aqui)."""
     from ..conftest import PASSWORD_CREADOR
 
-    resp = logueado("creador.a", PASSWORD_CREADOR).post("/api/loans/", json={})
-    assert resp.status_code == 403
-    assert resp.json()["codigo"] == "SIN_PERMISO"
+    resp = logueado("creador.a", PASSWORD_CREADOR).post("/api/loans/", json={"motivo": "Para mi"})
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["responsable"]["user_id"] == creador_user.id
+
+
+def test_un_creador_no_puede_poner_a_otro_como_beneficiario(inventario, db, creador_user, ana):
+    """Ni siquiera llamando la API directo, saltandose el formulario: un
+    creador siempre es su propio beneficiario. `crud_loans.crear()` lo
+    fuerza sin importar que mande el cliente."""
+    from ..conftest import PASSWORD_CREADOR
+
+    resp = logueado("creador.a", PASSWORD_CREADOR).post(
+        "/api/loans/",
+        json={
+            "motivo": "Intento de poner a otro beneficiario",
+            "responsable_user_id": ana.id,
+            "responsable_nombre": ana.full_name,
+            "responsable_email": ana.email,
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    cuerpo = resp.json()
+    assert cuerpo["responsable"]["user_id"] == creador_user.id
+    assert cuerpo["responsable"]["nombre"] == creador_user.full_name
+
+
+def test_un_creador_completa_su_propio_flujo_de_principio_a_fin(inventario, db, creador_user):
+    """Camino feliz completo para el nuevo beneficiario real: crear, subir
+    fotos, confirmar, verlo en su propio listado, firmar su parte y
+    registrar la devolución — todo con el rol base `creador`, sin ningún
+    paquete aditivo encima."""
+    from ..conftest import PASSWORD_CREADOR
+
+    cliente = logueado("creador.a", PASSWORD_CREADOR)
+    loan_id = _confirmado(cliente)
+
+    listado = cliente.get("/api/loans/").json()
+    assert any(f["id"] == loan_id for f in listado["items"])
+
+    assert subir(cliente, loan_id, "firma_responsable").status_code == 201
+
+    item_id = cliente.get(f"/api/loans/{loan_id}").json()["items"][0]["id"]
+    subir(cliente, loan_id, "foto_dev_frente", item_id)
+    subir(cliente, loan_id, "foto_dev_atras", item_id)
+    devolucion = cliente.post(
+        f"/api/loans/{loan_id}/devolucion",
+        json={"items": [{"loan_item_id": item_id, "no_devuelto": False}]},
+    )
+    assert devolucion.status_code == 200, devolucion.text
+    assert devolucion.json()["estado"] == "pendiente_confirmacion"
 
 
 def test_el_borrador_nace_con_evento_de_bitacora(inventario, ana):
@@ -284,21 +334,27 @@ def test_un_aprobador_puro_no_puede_subir_fotos_ni_la_firma_del_beneficiario(inv
     assert subir(logueado("aprobador.puro"), loan_id, "firma_entrega").status_code == 201
 
 
-def test_completar_las_dos_firmas_genera_responsiva_v2(inventario, ana, melisa):
+def test_cada_firma_genera_su_propia_version_de_responsiva(inventario, ana, melisa):
+    """Revision 3 (07/09/2026): la responsiva ya no espera a que existan las
+    dos firmas para reflejar la realidad — cada una genera su propia
+    version, nunca se pisa una anterior."""
     cliente_ana = logueado("ana.ruiz")
     loan_id = _borrador_listo(cliente_ana)
     cliente_ana.post(f"/api/loans/{loan_id}/confirmar")
 
     assert subir(logueado("melisa"), loan_id, "firma_entrega").status_code == 201
+    cuerpo_v2 = cliente_ana.get(f"/api/loans/{loan_id}").json()
+    assert cuerpo_v2["responsiva"]["version"] == 2  # la primera firma YA genera version nueva
+
     resp = subir(cliente_ana, loan_id, "firma_responsable")
     assert resp.status_code == 201
 
     cuerpo = cliente_ana.get(f"/api/loans/{loan_id}").json()
     assert cuerpo["firmas"]["firma_entrega"] is not None
     assert cuerpo["firmas"]["firma_responsable"] is not None
-    assert cuerpo["responsiva"]["version"] == 2
+    assert cuerpo["responsiva"]["version"] == 3
     tipos = [e["tipo"] for e in cuerpo["eventos"]]
-    assert "firma_completada" in tipos
+    assert tipos.count("firma_completada") == 2  # una por cada firma, no solo la ultima
 
     fila = next(i for i in cliente_ana.get("/api/loans/").json()["items"] if i["id"] == loan_id)
     assert fila["firma_entrega_pendiente"] is False

@@ -104,6 +104,34 @@ class TestCreatorsPermissions:
         ids = [c["id"] for c in resp.json()]
         assert ids == [creator_a.id]
 
+    def test_creators_list_incluye_user_id_y_email_del_usuario_vinculado(self, logged_in_admin, creator_a, creador_user):
+        """I9 (07/09/2026): el selector de beneficiario de Equipos necesita
+        `user_id` (apunta a `users.id`, no a `creators.id`) y `email` — ninguno
+        vive en `creators`, salen del `User` vinculado."""
+        resp = logged_in_admin.get("/api/creators/")
+        assert resp.status_code == 200
+        fila = next(c for c in resp.json() if c["id"] == creator_a.id)
+        assert fila["user_id"] == creador_user.id
+        assert fila["email"] == creador_user.email
+
+    def test_creador_se_ve_a_si_mismo_con_su_propio_user_id(self, logged_in_creador, creador_user):
+        resp = logged_in_creador.get("/api/creators/")
+        fila = resp.json()[0]
+        assert fila["user_id"] == creador_user.id
+        assert fila["email"] == creador_user.email
+
+    def test_creator_sin_usuario_vinculado_no_trae_user_id_ni_email(self, logged_in_admin, db):
+        """Dato historico/de transicion: un `Creator` sin cuenta de usuario
+        todavia no debe tronar, solo venir sin esos dos campos."""
+        from .conftest import make_creator
+
+        huerfano = make_creator(db, name="Sin Usuario Vinculado")
+        resp = logged_in_admin.get("/api/creators/")
+        assert resp.status_code == 200
+        fila = next(c for c in resp.json() if c["id"] == huerfano.id)
+        assert fila["user_id"] is None
+        assert fila["email"] is None
+
     def test_creador_cannot_see_other_creator_by_id(self, logged_in_creador, creator_b):
         assert logged_in_creador.get(f"/api/creators/{creator_b.id}").status_code == 403
 

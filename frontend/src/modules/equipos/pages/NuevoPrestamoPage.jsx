@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EmptyState, GlassPanel, SkeletonShimmer, useToast, usePageTitle } from "@/design";
-import { esCodigo, fetchBrands } from "@/api";
+import { esCodigo, fetchBrands, fetchCreators } from "@/api";
 import { useAuth } from "@/context/AuthContext";
 import {
   createLoan,
@@ -38,18 +38,23 @@ export default function NuevoPrestamoPage() {
   const [loan, setLoan] = useState(null);
   const [paso, setPaso] = useState(1);
 
+  // Los beneficiarios reales son los creadores (I9, 07/09/2026): si quien
+  // llena el formulario ya ES un creador, el beneficiario es él mismo, sin
+  // elegir nada. Cualquier otro rol elige de la lista de creadores — o
+  // "Otro" si el beneficiario no tiene cuenta en GOCreate (caso real que
+  // motivó el texto libre original; se conserva como válvula de escape).
+  const esCreador = user.role === "creador";
+
   // Paso 1
   const [area, setArea] = useState("");
   const [empresaSel, setEmpresaSel] = useState("");
   const [motivo, setMotivo] = useState("");
   const [fechaRegreso, setFechaRegreso] = useState("");
   const [notas, setNotas] = useState("");
-  // Beneficiario: quien va a recibir el equipo — NO necesariamente quien
-  // llena este formulario (revisión 2: cualquiera puede pedir equipo para
-  // otra persona). Texto libre, no un usuario del sistema: el beneficiario
-  // puede no tener cuenta en GOCreate. Se manda como `responsable_nombre`/
-  // `responsable_email` (el modelo ya los tenía; antes el wizard los llenaba
-  // en silencio con la sesión actual).
+  const [creadores, setCreadores] = useState([]);
+  const [cargandoCreadores, setCargandoCreadores] = useState(!esCreador);
+  const [beneficiarioModo, setBeneficiarioModo] = useState("creador"); // "creador" | "otro"
+  const [beneficiarioCreadorId, setBeneficiarioCreadorId] = useState(""); // user_id (string) del creador elegido
   const [beneficiarioNombre, setBeneficiarioNombre] = useState("");
   const [beneficiarioEmail, setBeneficiarioEmail] = useState("");
   const [enviandoPaso1, setEnviandoPaso1] = useState(false);
@@ -83,11 +88,15 @@ export default function NuevoPrestamoPage() {
   useEffect(() => {
     async function init() {
       try {
-        const [brandList, borradores] = await Promise.all([
+        const [brandList, borradores, creatorList] = await Promise.all([
           fetchBrands(),
           fetchLoans({ estado: "borrador", mios: true }),
+          // Un creador no elige beneficiario (es él mismo) — no hace falta
+          // pedir la lista completa solo para tirarla.
+          esCreador ? Promise.resolve([]) : fetchCreators(true),
         ]);
         setBrands(brandList.filter((b) => b.is_active));
+        if (!esCreador) setCreadores(creatorList);
         if (borradores.items.length > 0) {
           setBorradorPrevio(borradores.items[0]);
         }
@@ -96,9 +105,11 @@ export default function NuevoPrestamoPage() {
         else setErrorInicial("No se pudieron resolver los permisos. Reintenta en un momento.");
       } finally {
         setCargandoInicial(false);
+        setCargandoCreadores(false);
       }
     }
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function reanudarBorrador(borradorRow) {
@@ -120,8 +131,18 @@ export default function NuevoPrestamoPage() {
       setMotivo(borrador.motivo || "");
       setFechaRegreso(borrador.fecha_regreso_esperada || "");
       setNotas(borrador.notas_responsiva || "");
-      setBeneficiarioNombre(borrador.responsable?.nombre || "");
-      setBeneficiarioEmail(borrador.responsable?.email || "");
+      if (!esCreador) {
+        const idBeneficiario = borrador.responsable?.user_id;
+        const yaListado = idBeneficiario && creadores.some((c) => c.user_id === idBeneficiario);
+        if (yaListado) {
+          setBeneficiarioModo("creador");
+          setBeneficiarioCreadorId(String(idBeneficiario));
+        } else {
+          setBeneficiarioModo("otro");
+          setBeneficiarioNombre(borrador.responsable?.nombre || "");
+          setBeneficiarioEmail(borrador.responsable?.email || "");
+        }
+      }
       setPaso(borrador.items.length === 0 ? 2 : 3);
       setBorradorPrevio(null);
     } catch (e) {
@@ -161,14 +182,28 @@ export default function NuevoPrestamoPage() {
   async function handleSubmitPaso1(e) {
     e.preventDefault();
     setErrorPaso1(null);
+
+    let beneficiario;
+    if (esCreador) {
+      beneficiario = { responsable_user_id: user.id, responsable_nombre: user.full_name, responsable_email: user.email };
+    } else if (beneficiarioModo === "creador") {
+      const elegido = creadores.find((c) => String(c.user_id) === beneficiarioCreadorId);
+      if (!elegido) {
+        setErrorPaso1("Selecciona un beneficiario de la lista.");
+        return;
+      }
+      beneficiario = { responsable_user_id: elegido.user_id, responsable_nombre: elegido.name, responsable_email: elegido.email };
+    } else {
+      // "Otro": el beneficiario no tiene cuenta en GOCreate — texto libre,
+      // sin `responsable_user_id` (mismo camino que antes de este cambio).
+      beneficiario = { responsable_nombre: beneficiarioNombre.trim(), responsable_email: beneficiarioEmail.trim() };
+    }
+
     setEnviandoPaso1(true);
     try {
       const nuevo = await conManejoDeSesion(() =>
         createLoan({
-          // Sin `responsable_user_id`: el beneficiario es texto libre, no
-          // necesariamente una cuenta de GOCreate.
-          responsable_nombre: beneficiarioNombre.trim(),
-          responsable_email: beneficiarioEmail.trim(),
+          ...beneficiario,
           area,
           empresa: empresaSel,
           motivo,
@@ -356,31 +391,73 @@ export default function NuevoPrestamoPage() {
             <p className="go-eyebrow">
               Beneficiario <span className="font-normal normal-case" style={{ color: "var(--go-text-muted)" }}>(quien recibe el equipo)</span>
             </p>
-            <div>
-              <label className="go-eyebrow mb-1.5 block">Nombre</label>
-              <input
-                type="text"
-                value={beneficiarioNombre}
-                onChange={(e) => setBeneficiarioNombre(e.target.value)}
-                placeholder="Nombre de quien va a usar el equipo..."
-                className="go-input"
-                required
-              />
-            </div>
-            <div>
-              <label className="go-eyebrow mb-1.5 block">Correo</label>
-              <input
-                type="email"
-                value={beneficiarioEmail}
-                onChange={(e) => setBeneficiarioEmail(e.target.value)}
-                placeholder="correo@grupo-ortiz.com"
-                className="go-input"
-                required
-              />
-            </div>
+
+            {esCreador ? (
+              <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
+                {user.full_name} <span style={{ color: "var(--go-text-secondary)" }}>({user.email})</span>
+              </p>
+            ) : (
+              <>
+                <div>
+                  <label className="go-eyebrow mb-1.5 block">Selecciona un creador</label>
+                  <select
+                    value={beneficiarioModo === "creador" ? beneficiarioCreadorId : "otro"}
+                    onChange={(e) => {
+                      if (e.target.value === "otro") {
+                        setBeneficiarioModo("otro");
+                        setBeneficiarioCreadorId("");
+                      } else {
+                        setBeneficiarioModo("creador");
+                        setBeneficiarioCreadorId(e.target.value);
+                      }
+                    }}
+                    className="go-select"
+                    disabled={cargandoCreadores}
+                    required={beneficiarioModo === "creador"}
+                  >
+                    <option value="">{cargandoCreadores ? "Cargando..." : "Selecciona..."}</option>
+                    {creadores.map((c) => (
+                      <option key={c.id} value={c.user_id || ""} disabled={!c.user_id}>
+                        {c.name}
+                        {c.user_id ? (c.email ? ` — ${c.email}` : "") : " — sin cuenta vinculada"}
+                      </option>
+                    ))}
+                    <option value="otro">Otro (no es creador)</option>
+                  </select>
+                </div>
+
+                {beneficiarioModo === "otro" && (
+                  <>
+                    <div>
+                      <label className="go-eyebrow mb-1.5 block">Nombre</label>
+                      <input
+                        type="text"
+                        value={beneficiarioNombre}
+                        onChange={(e) => setBeneficiarioNombre(e.target.value)}
+                        placeholder="Nombre de quien va a usar el equipo..."
+                        className="go-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="go-eyebrow mb-1.5 block">Correo</label>
+                      <input
+                        type="email"
+                        value={beneficiarioEmail}
+                        onChange={(e) => setBeneficiarioEmail(e.target.value)}
+                        placeholder="correo@grupo-ortiz.com"
+                        className="go-input"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
             <p className="font-body text-[10px]" style={{ color: "var(--go-text-muted)" }}>
-              Puede ser distinto de quien llena este formulario — no necesita cuenta en GOCreate. Este préstamo va a
-              quedar pendiente de la firma del aprobador y de la del beneficiario; ninguna de las dos se pide aquí.
+              Este préstamo va a quedar pendiente de la firma del aprobador y de la del beneficiario; ninguna de las
+              dos se pide aquí.
             </p>
           </div>
 

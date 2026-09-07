@@ -184,14 +184,20 @@ def test_ninguna_firma_al_confirmar_se_marca_pendiente_no_se_disimula(inventario
     assert _texto(doc.file_path).count("FIRMA PENDIENTE") == 2
 
 
-def test_al_completar_las_dos_firmas_la_v2_ya_no_dice_pendiente(inventario, ana, melisa, db):
+def test_cada_firma_actualiza_la_responsiva_de_inmediato(inventario, ana, melisa, db):
+    """Revision 3 (07/09/2026): ya no se espera a la segunda firma para
+    reflejar la realidad — la v2 (tras la primera) sigue diciendo pendiente
+    SOLO para la que falta; la v3 (tras la segunda) ya no dice nada."""
     cliente = logueado("ana.ruiz")
     loan_id = _confirmado(cliente)
     subir(logueado("melisa"), loan_id, "firma_entrega")
-    subir(cliente, loan_id, "firma_responsable")
 
-    doc = db.query(ResponsivaDoc).filter(ResponsivaDoc.loan_id == loan_id, ResponsivaDoc.version == 2).one()
-    assert "FIRMA PENDIENTE" not in _texto(doc.file_path)
+    v2 = db.query(ResponsivaDoc).filter(ResponsivaDoc.loan_id == loan_id, ResponsivaDoc.version == 2).one()
+    assert _texto(v2.file_path).count("FIRMA PENDIENTE") == 1  # ya no la de melisa, sigue la del responsable
+
+    subir(cliente, loan_id, "firma_responsable")
+    v3 = db.query(ResponsivaDoc).filter(ResponsivaDoc.loan_id == loan_id, ResponsivaDoc.version == 3).one()
+    assert "FIRMA PENDIENTE" not in _texto(v3.file_path)
 
 
 def test_la_razon_social_emisora_sale_de_la_tabla(inventario, ana, db):
@@ -327,6 +333,21 @@ def test_la_version_2_no_pisa_la_1(inventario, ana, db):
     assert Path(ruta_v1).read_bytes() == bytes_v1
     assert docs[0].sha256 == sha_v1
     assert Path(docs[1].file_path).exists()
+
+
+def test_el_pdf_imprime_su_propio_numero_de_version(inventario, ana, db):
+    """Regresion: `crud_loans.generar_responsiva` calcula bien la version para
+    el nombre del archivo y la fila de `responsiva_doc`, pero nunca se la
+    pasaba a `generar_a_disco` — el pie del PDF (`Version {n}`) se quedaba
+    siempre en el default (1), aunque el archivo y la base ya dijeran v2."""
+    loan_id = _confirmado(logueado("ana.ruiz"))
+    prestamo = crud_loans.obtener(db, loan_id)
+    crud_loans.generar_responsiva(db, prestamo, ana, motivo="Se corrigio el area")
+    db.commit()
+
+    v2 = db.query(ResponsivaDoc).filter(ResponsivaDoc.loan_id == loan_id, ResponsivaDoc.version == 2).one()
+    assert "Versión 2" in _texto(v2.file_path)
+    assert "Versión 1" not in _texto(v2.file_path)
 
 
 def test_no_se_puede_escribir_encima_de_un_archivo_existente(inventario, ana, db):

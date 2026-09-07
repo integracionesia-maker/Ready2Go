@@ -321,6 +321,14 @@ def construir(datos: dict, ancho_util: float) -> list:
         TableStyle(
             [
                 ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
+                # Sin esto, una celda de Table se alinea a la izquierda por
+                # default — el `hAlign="CENTER"` que ya trae la imagen en
+                # `_bloque_firma` no se respeta dentro de una celda, solo
+                # cuando el flowable vive directo en el documento. Sin
+                # `ALIGN`, la firma (mas angosta que la columna) se veia
+                # pegada a la izquierda aunque el trazo dentro de la imagen
+                # estuviera centrado.
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 4),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 4),
             ]

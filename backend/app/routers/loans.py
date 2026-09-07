@@ -427,10 +427,12 @@ async def subir_media(
     db.commit()
     db.refresh(fila)
 
-    # Si esto acaba de completar la segunda firma, la responsiva pasa a v2
-    # (ya con las dos) y se avisa — no antes: con la primera firma sola no hay
-    # nada nuevo que contar por correo.
-    if es_firma and crud_loans.firmas_completas(db, prestamo.id):
+    # Cada firma nueva regenera la responsiva (revision 3, 07/09/2026): la
+    # carta siempre refleja lo que ya es evidencia real, sin esperar a que
+    # existan las dos — antes se quedaba con ambos espacios en blanco hasta
+    # que la segunda persona firmara, lo cual confundia a quien ya habia
+    # firmado ("ya firme pero no sale mi firma").
+    if es_firma:
         crud_loans.completar_firma_faltante(db, prestamo, current_user)
         crud.log_audit(
             db,
@@ -438,11 +440,17 @@ async def subir_media(
             action="loan.signature_completed",
             target_type="loan",
             target_id=prestamo.id,
-            details=prestamo.folio,
+            details=f"{prestamo.folio}:{kind}",
         )
+        # Sufijo de `kind` en el tipo de aviso: la idempotencia de
+        # `notification_log` es UNIQUE(loan_id, tipo, destinatario), y ahora
+        # este evento puede pasar dos veces en la vida del prestamo (una por
+        # cada firma) — mismo patron que el sufijo de dia de
+        # TIPO_VENCIMIENTO, `construir()` ya soporta el prefijo antes de ":".
+        tipo_aviso = f"{plantillas_correo.TIPO_FIRMA_COMPLETADA}:{kind}"
         notificaciones.encolar(
             db,
-            plantillas_correo.TIPO_FIRMA_COMPLETADA,
+            tipo_aviso,
             prestamo,
             background_tasks,
             con_responsiva=True,
@@ -450,7 +458,7 @@ async def subir_media(
         if prestamo.responsable_email:
             notificaciones.encolar(
                 db,
-                plantillas_correo.TIPO_FIRMA_COMPLETADA,
+                tipo_aviso,
                 prestamo,
                 background_tasks,
                 destinatarios=[prestamo.responsable_email],

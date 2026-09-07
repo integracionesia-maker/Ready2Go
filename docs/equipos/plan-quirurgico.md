@@ -144,7 +144,7 @@ Permisos efectivos = `UNION` de los paquetes de `['_PISO', users.role, *grants]`
 | `_PISO` | piso | `inicio:ver`, `perfil:ver`, `perfil:editar_propio` |
 | `superadmin` | base | todo (bypass explicito en el motor, ademas de sus filas) |
 | `admin` | base | todo `presupuestos:*` + `equipos_inventario:ver` + `equipos_prestamos:{solicitar,ver_propios,ver_global,registrar_devolucion,exportar}`. **Sin** `usuarios:*` (regla R4 vigente). **Sin** `equipos_aprobacion:*` |
-| `creador` | base | `presupuestos:{ver_propio,subir_ticket}` |
+| `creador` | base | `presupuestos:{ver_propio,subir_ticket}` + `equipos_inventario:ver` + `equipos_prestamos:{solicitar,ver_propios,registrar_devolucion}` (I9, 07/09/2026: los beneficiarios reales de Equipos son los creadores — mismo set que `colaborador_mkt`, sin `ver_global`). Ver `docs/equipos/creadores-como-beneficiarios.md` |
 | `colaborador_mkt` | base | `equipos_prestamos:{solicitar,ver_propios,registrar_devolucion}` + `equipos_inventario:ver`. **Nada** de presupuestos |
 | `APROBADOR_EQUIPO` | aditivo | `equipos_aprobacion:{autorizar_entrega,confirmar_devolucion,cerrar_incidencia}` + `equipos_prestamos:ver_global` |
 | `CUSTODIO_EQUIPO` | aditivo | `equipos_inventario:{crear,editar,auditar_condicion,dar_de_baja}` + `equipos_prestamos:ver_global` |
@@ -409,11 +409,11 @@ Todo dentro de `@media (prefers-reduced-motion: reduce)` → sin movimiento, sol
 |---|---|---|
 | Inicio | `/equipos` | KPIs (prestados, atrasados, pendientes, disponibles), "Requiere atencion", prestamos en curso, distribucion de estados |
 | Inventario | `/equipos/inventario` | Busqueda, filtros, tarjetas/tabla, ficha, alta/edicion, auditoria de condicion |
-| Nuevo prestamo | `/equipos/nuevo` | Wizard 3 pasos: datos (incluye beneficiario nombre+correo) → equipos → fotos+accesorios; confirma sin firmas; validacion por paso |
-| Prestamos activos | `/equipos/activos` | Tabla con atraso, registrar devolucion, ver responsiva |
+| Nuevo prestamo | `/equipos/nuevo` | Wizard 3 pasos: datos (beneficiario elegido de la lista de creadores, autoasignado sin elegir si quien llena es un creador — I9) → equipos → fotos+accesorios; confirma sin firmas; validacion por paso |
+| Prestamos activos | `/equipos/activos` | Tabla con atraso, registrar devolucion, ver responsiva. Oculta para `creador` (I9: usa Historial + la Ficha) |
 | Aprobaciones | `/equipos/aprobaciones` | Autorizaciones de entrega + firmas pendientes + devoluciones por confirmar (solo `APROBADOR_EQUIPO`) |
 | Historial | `/equipos/historial` | Filtros por estado/persona/fecha, exportar CSV |
-| Ficha de prestamo | `/equipos/prestamo/:folio` | Responsiva, fotos antes/despues lado a lado, bitacora completa |
+| Ficha de prestamo | `/equipos/prestamo/:folio` | Responsiva, fotos antes/despues lado a lado, bitacora completa, registrar devolucion (I9) |
 
 La pestana "Respaldo" de la maqueta **no se porta**. El respaldo es responsabilidad del servidor (dump de DB por superadmin en el runbook de deploy), no un boton de "borrar todo" en la UI.
 

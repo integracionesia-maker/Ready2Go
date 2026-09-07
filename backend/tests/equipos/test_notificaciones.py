@@ -12,7 +12,7 @@ import pytest
 import seed_equipos
 from app import mailer, notificaciones
 from app import plantillas_correo as pl
-from app.models_equipos import EstadoNotificacion, EstadoPrestamo, NotificationLog
+from app.models_equipos import EstadoNotificacion, EstadoPrestamo, Loan, NotificationLog
 
 from .conftest import crear_prestamo, logueado, subir, usuario_con
 from ..conftest import PASSWORD_SUPERADMIN
@@ -490,6 +490,38 @@ def test_el_recordatorio_dice_cuantos_dias(inventario, ana, melisa, db):
 
 
 # ── Reintentos ──────────────────────────────────────────────────────────────
+
+
+def test_reintentar_conserva_el_adjunto_con_el_sufijo_de_firma(
+    inventario, ana, melisa, db, monkeypatch, smtp_configurado
+):
+    """Regresion: `firma_completada` viaja con sufijo `:{kind}` (revision 3,
+    07/09/2026 — una fila distinta por cada firma, para no chocar con la
+    idempotencia UNIQUE(loan_id,tipo,destinatario)). Sin comparar contra el
+    tipo BASE en `reintentar_fallidos`, un reintento perdia el adjunto de la
+    responsiva."""
+    loan_id = _confirmado(logueado("ana.ruiz"))
+    prestamo = db.get(Loan, loan_id)
+    fila = notificaciones.encolar(
+        db, "firma_completada:firma_entrega", prestamo, None, destinatarios=[ana.email]
+    )[0]
+    assert fila.estado == EstadoNotificacion.PENDIENTE.value
+
+    capturados = []
+
+    def _capturar(destinatario, asunto, cuerpo, adjuntos=None):
+        capturados.append(adjuntos)
+        return mailer.Resultado(enviado=True)
+
+    monkeypatch.setattr(mailer, "enviar", _capturar)
+    notificaciones.reintentar_fallidos(db)
+
+    # `_confirmado()` ya deja sus propias filas fallidas (confirmado_aprobador/
+    # confirmado_responsable, sin servidor real que las reciba) — el punto no
+    # es contar cuantas se reintentan, sino que NINGUNA pierda su adjunto.
+    # Antes del fix, justo la de `firma_completada:firma_entrega` venia vacia.
+    assert capturados, "deberia haber al menos un intento capturado"
+    assert all(capturados), "ninguna lista de adjuntos deberia venir vacia (incluida firma_completada:kind)"
 
 
 def test_reintentar_reusa_la_misma_fila(inventario, ana, melisa, db, monkeypatch, smtp_configurado):

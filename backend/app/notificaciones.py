@@ -347,10 +347,14 @@ def reintentar_fallidos(db: Session, limite: int = 50) -> int:
         if prestamo is None:
             continue
         _, cuerpo = pl.construir(fila.tipo, datos_de_prestamo(db, prestamo))
+        # Comparar contra el tipo BASE, no la fila entera: `firma_completada`
+        # ahora viaja con sufijo `:{kind}` (una fila por cada firma, ver
+        # `plantillas_correo.TIPO_FIRMA_COMPLETADA`) — sin el split, un
+        # reintento perderia el adjunto de la responsiva.
+        tipo_base = fila.tipo.split(":", 1)[0]
         adjuntos = (
             _adjunto_responsiva(db, prestamo)
-            if fila.tipo
-            in (pl.TIPO_CONFIRMADO_APROBADOR, pl.TIPO_CONFIRMADO_RESPONSABLE, pl.TIPO_FIRMA_COMPLETADA)
+            if tipo_base in (pl.TIPO_CONFIRMADO_APROBADOR, pl.TIPO_CONFIRMADO_RESPONSABLE, pl.TIPO_FIRMA_COMPLETADA)
             else []
         )
         if procesar_pendiente(fila.id, cuerpo, adjuntos):

@@ -354,7 +354,9 @@ def test_la_secuencia_completa_corre_dos_veces_seguidas(tmp_path):
         # Gastos Operativos se fusionó a Gastos Generales (fuera del catálogo
         # RBAC aditivo, retirado junto con el rol `operativo`). +2 por el
         # paquete aditivo APROBADOR_PRESUPUESTOS (validar_ticket, borrar_ticket).
-        assert conn.execute(text("SELECT COUNT(*) FROM role_permissions")).scalar() == 115
+        # +4 por el rol base `creador` (I9, 07/09/2026): equipos_inventario:ver
+        # + equipos_prestamos:{solicitar,ver_propios,registrar_devolucion}.
+        assert conn.execute(text("SELECT COUNT(*) FROM role_permissions")).scalar() == 119
     motor.dispose()
 
 

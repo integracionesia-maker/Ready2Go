@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { usePermisos } from "../permisos/usePermisos";
+import { useAuth } from "@/context/AuthContext";
 import RequierePermiso from "../permisos/RequierePermiso";
 import { LiquidGlow } from "@/design";
 
@@ -17,6 +18,10 @@ const NAV_ITEMS = [
     label: "Dashboard",
     icon: "M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z",
     permiso: ["equipos_inventario", "ver"],
+    // Comparte permiso con Inicio/Inventario a propósito (mismo dato, KPIs
+    // globales) — pero un creador solo debe ver lo suyo, así que se oculta
+    // por rol y no por permiso (I9, 07/09/2026).
+    ocultoParaRoles: ["creador"],
   },
   {
     to: "/equipos/inventario",
@@ -35,6 +40,9 @@ const NAV_ITEMS = [
     label: "Activos",
     icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
     permiso: ["equipos_prestamos", "ver_propios"],
+    // Comparte permiso con Historial (mismo `ver_propios`) — un creador ve
+    // sus préstamos solo desde Historial, sin esta pestaña aparte.
+    ocultoParaRoles: ["creador"],
   },
   {
     to: "/equipos/aprobaciones",
@@ -72,10 +80,12 @@ const PROFILE_ITEM = {
 export default function EquiposSidebar({ collapsed, onToggle, mobileOpen, onCloseMobile, pendingCount = 0 }) {
   const asideRef = useRef(null);
   const { puede } = usePermisos();
+  const { user } = useAuth();
 
   const labelClass = collapsed ? "md:hidden" : "";
 
   const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.ocultoParaRoles?.includes(user.role)) return false;
     if (Array.isArray(item.permiso[0])) {
       return item.permiso.some(([mod, acc]) => puede(mod, acc));
     }

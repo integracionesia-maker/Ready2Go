@@ -44,6 +44,12 @@ class CreatorResponse(BaseModel):
     cycle_remaining: Optional[float] = None
     cycle_start_date: Optional[date] = None
     cycle_end_date: Optional[date] = None
+    # `user_id`/`email` salen del `User` vinculado (uno por creador, ver indice
+    # parcial unico en `models.py`), no de `creators` — Control de Equipos los
+    # necesita para el selector de beneficiario (`responsable_user_id` de un
+    # prestamo apunta a `users.id`, nunca a `creators.id`).
+    user_id: Optional[int] = None
+    email: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

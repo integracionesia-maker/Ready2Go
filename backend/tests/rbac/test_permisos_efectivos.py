@@ -47,6 +47,8 @@ BASE = {
     },
     "creador": {
         "presupuestos": {"ver_propio", "subir_ticket"},
+        "equipos_inventario": {"ver"},
+        "equipos_prestamos": {"solicitar", "ver_propios", "registrar_devolucion"},
     },
     "marketing_presupuestos": {
         "presupuestos": {

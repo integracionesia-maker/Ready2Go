@@ -90,12 +90,18 @@ def test_endpoint_me_devuelve_los_permisos_del_contrato(db, melisa, contrato_aut
     assert cuerpo["permisos"] == contrato_auth_me["permisos"]
 
 
-def test_me_de_un_creador_no_trae_nada_de_equipos(db, catalogo, creador_user):
+def test_me_de_un_creador_trae_equipos_ademas_de_presupuestos(db, catalogo, creador_user):
+    """I9 (07/09/2026): los beneficiarios reales de un préstamo son los
+    creadores — el rol base ya trae el equipos_prestamos/equipos_inventario
+    mínimo para solicitar lo suyo, verlo y registrar su devolución. Nunca
+    equipos_aprobacion ni el resto de equipos_inventario (crear/editar/etc.)."""
     from .conftest import logueado
     from ..conftest import PASSWORD_CREADOR
 
     cuerpo = logueado("creador.a", PASSWORD_CREADOR).get("/api/auth/me").json()
-    assert set(cuerpo["permisos"]) == {"inicio", "perfil", "presupuestos"}
+    assert set(cuerpo["permisos"]) == {"inicio", "perfil", "presupuestos", "equipos_inventario", "equipos_prestamos"}
+    assert cuerpo["permisos"]["equipos_inventario"] == ["ver"]
+    assert set(cuerpo["permisos"]["equipos_prestamos"]) == {"solicitar", "ver_propios", "registrar_devolucion"}
 
 
 def test_login_no_resuelve_permisos_los_deja_en_default(db, catalogo, colaborador):
