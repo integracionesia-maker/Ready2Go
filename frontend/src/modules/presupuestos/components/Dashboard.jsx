@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { GlassPanel, KpiTile, usePageTitle } from "@/design";
+import { GlassPanel, KpiTile, InfoTooltip, ICONS, usePageTitle } from "@/design";
 import DateRangeFilter from "./DateRangeFilter";
 import MonthlySpendChart from "./charts/MonthlySpendChart";
 import CreatorUsageChart from "./charts/CreatorUsageChart";
@@ -32,6 +32,60 @@ const ACCENTS = {
   sky: "#38BDF8",
   violet: "#A78BFA",
 };
+
+/** Cabecera compartida de cada panel de gráfica: título + ícono "i" (mismo
+ * InfoTooltip de los KpiTile) que explica qué se muestra y cómo se calcula,
+ * sin tener que adivinarlo mirando la gráfica sola. */
+function ChartHeader({ title, unit, info }) {
+  return (
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-2">
+        <h2
+          className="font-display text-sm font-bold uppercase tracking-[0.08em]"
+          style={{ color: "var(--go-text-primary)" }}
+        >
+          {title}
+        </h2>
+        <InfoTooltip text={info} />
+      </div>
+      {unit && <span className="go-eyebrow">{unit}</span>}
+    </div>
+  );
+}
+
+/** Agrupa las gráficas por lo que muestran (creadores, actividad, gastos
+ * generales/operativos) en vez de amontonarlas todas en una sola lista —
+ * cada grupo trae su propio ícono + una línea de contexto. */
+function DashboardSection({ icon, title, subtitle, children }) {
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center gap-3">
+        <span
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-go"
+          style={{ background: "var(--go-orange-tint)", color: "var(--go-orange)" }}
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
+          </svg>
+        </span>
+        <div>
+          <h2
+            className="font-display text-base font-bold uppercase tracking-[0.06em]"
+            style={{ color: "var(--go-text-primary)" }}
+          >
+            {title}
+          </h2>
+          {subtitle && (
+            <p className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="space-y-8">{children}</div>
+    </section>
+  );
+}
 
 function fmtDateParam(d) {
   if (!d) return undefined;
@@ -323,122 +377,107 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
             />
           </div>
 
-          {/* ── Top 3 gastos individuales del período (general + operativo) ── */}
+          {/* ── Mayores Gastos Individuales: siempre hasta arriba, es un dato
+              que el departamento revisa primero, antes de meterse a cada
+              sección agrupada de abajo. ─────────────────────────────────── */}
           <TopExpensesCard data={topExpenses} />
 
-          {/* ── Row: Monthly bar chart ────────────────────────────────── */}
-          <GlassPanel as="section" className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2
-                className="font-display text-sm font-bold uppercase tracking-[0.08em]"
-                style={{ color: "var(--go-text-primary)" }}
-              >
-                Transacciones por Mes
-              </h2>
-              <span className="go-eyebrow">MXN</span>
-            </div>
-            <MonthlySpendChart data={monthly} />
-          </GlassPanel>
-
-          {/* ── Row: Brand spend + Creator usage (side by side) ────────── */}
-          <div className="grid gap-8 lg:grid-cols-2">
+          {/* ── Sección: Presupuesto de Creadores ───────────────────────── */}
+          <DashboardSection
+            icon={ICONS.personas}
+            title="Presupuesto de Creadores"
+            subtitle="Ciclos, tickets y marcas de los creadores de contenido"
+          >
             <GlassPanel as="section" className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2
-                  className="font-display text-sm font-bold uppercase tracking-[0.08em]"
-                  style={{ color: "var(--go-text-primary)" }}
-                >
-                  Gastos por Marca
-                </h2>
-                <span className="go-eyebrow">MXN</span>
-              </div>
-              <BrandSpendApexChart data={brandSpend} />
+              <ChartHeader
+                title="Transacciones por Mes"
+                unit="MXN"
+                info="Gasto aprobado por mes (oficial, cuenta contra el ciclo) con el pendiente por confirmar superpuesto en ámbar — el pendiente nunca se suma al total aprobado."
+              />
+              <MonthlySpendChart data={monthly} />
             </GlassPanel>
 
-            <GlassPanel as="section" className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2
-                  className="font-display text-sm font-bold uppercase tracking-[0.08em]"
-                  style={{ color: "var(--go-text-primary)" }}
-                >
-                  Uso de Presupuesto por Creador
-                </h2>
-                <span className="go-eyebrow">% usado</span>
-              </div>
-              <CreatorUsageChart data={creatorUsage} />
-            </GlassPanel>
-          </div>
+            <div className="grid gap-8 lg:grid-cols-2">
+              <GlassPanel as="section" className="p-4 sm:p-6">
+                <ChartHeader
+                  title="Gastos por Marca"
+                  unit="MXN"
+                  info="Cómo se reparte el gasto aprobado del período entre las marcas activas — cada rebanada es el total de esa marca sobre el total del pie."
+                />
+                <BrandSpendApexChart data={brandSpend} />
+              </GlassPanel>
 
-          {/* ── Row: Cumulative spend trend ────────────────────────────── */}
-          <GlassPanel as="section" className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2
-                className="font-display text-sm font-bold uppercase tracking-[0.08em]"
-                style={{ color: "var(--go-text-primary)" }}
-              >
-                Tendencia de Gasto Acumulado
-              </h2>
-              <span className="go-eyebrow">MXN</span>
+              <GlassPanel as="section" className="p-4 sm:p-6">
+                <ChartHeader
+                  title="Uso de Presupuesto por Creador"
+                  unit="% usado"
+                  info="Porcentaje del ciclo vigente que cada creador ya usó (aprobado), con lo pendiente por confirmar superpuesto — el color pasa a ámbar/rojo según qué tan cerca está del límite del ciclo."
+                />
+                <CreatorUsageChart data={creatorUsage} />
+              </GlassPanel>
             </div>
-            <SpendTrendChart data={monthly} />
-          </GlassPanel>
-
-          {/* ── Row: General expenses by month ─────────────────────────── */}
-          <GlassPanel as="section" className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2
-                className="font-display text-sm font-bold uppercase tracking-[0.08em]"
-                style={{ color: "var(--go-text-primary)" }}
-              >
-                Gastos Generales por Mes
-              </h2>
-              <span className="go-eyebrow">MXN</span>
-            </div>
-            <GeneralExpensesChart data={generalExpensesMonthly} />
-          </GlassPanel>
-
-          {/* ── Row: Operational expenses by month + by rubro (side by side) ── */}
-          <div className="grid gap-8 lg:grid-cols-2">
-            <GlassPanel as="section" className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2
-                  className="font-display text-sm font-bold uppercase tracking-[0.08em]"
-                  style={{ color: "var(--go-text-primary)" }}
-                >
-                  Gastos Operativos por Mes
-                </h2>
-                <span className="go-eyebrow">MXN</span>
-              </div>
-              <OperationalExpensesChart data={operationalDashboard?.mensual} />
-            </GlassPanel>
 
             <GlassPanel as="section" className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2
-                  className="font-display text-sm font-bold uppercase tracking-[0.08em]"
-                  style={{ color: "var(--go-text-primary)" }}
-                >
-                  Gastos Operativos por Rubro
-                </h2>
-                <span className="go-eyebrow">MXN</span>
-              </div>
-              <OperationalByRubroChart data={operationalDashboard?.por_rubro} />
+              <ChartHeader
+                title="Tendencia de Gasto Acumulado"
+                unit="MXN"
+                info="Suma acumulada del gasto aprobado, mes a mes, dentro del período filtrado — por definición nunca baja, solo sube o se mantiene."
+              />
+              <SpendTrendChart data={monthly} />
             </GlassPanel>
-          </div>
+          </DashboardSection>
 
-          {/* ── Row: Tickets subidos por día ────────────────────────────── */}
-          <GlassPanel as="section" className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2
-                className="font-display text-sm font-bold uppercase tracking-[0.08em]"
-                style={{ color: "var(--go-text-primary)" }}
-              >
-                Tickets Subidos por Día
-              </h2>
-              <span className="go-eyebrow">Tickets</span>
+          {/* ── Sección: Actividad ──────────────────────────────────────── */}
+          <DashboardSection
+            icon={ICONS.actividad}
+            title="Actividad"
+            subtitle="Qué tan seguido se sube evidencia de gasto, sin importar si ya se validó"
+          >
+            <GlassPanel as="section" className="p-4 sm:p-6">
+              <ChartHeader
+                title="Tickets Subidos por Día"
+                unit="Tickets"
+                info="Cuántos tickets se subieron cada día del período, en cualquier estado (pendiente, aprobado o rechazado) — mide actividad, no gasto aprobado."
+              />
+              <TicketsPerDayChart data={ticketsPerDay} />
+            </GlassPanel>
+          </DashboardSection>
+
+          {/* ── Sección: Gastos Generales y Operativos ──────────────────── */}
+          <DashboardSection
+            icon={ICONS.recibo}
+            title="Gastos Generales y Operativos"
+            subtitle="Gastos fuera del ciclo de creadores: ligados a una marca o clasificados por rubro"
+          >
+            <GlassPanel as="section" className="p-4 sm:p-6">
+              <ChartHeader
+                title="Gastos Generales por Mes"
+                unit="MXN"
+                info="Gastos generales (ligados a una marca, sin ciclo ni validación) agrupados por el mes en que se subieron."
+              />
+              <GeneralExpensesChart data={generalExpensesMonthly} />
+            </GlassPanel>
+
+            <div className="grid gap-8 lg:grid-cols-2">
+              <GlassPanel as="section" className="p-4 sm:p-6">
+                <ChartHeader
+                  title="Gastos Operativos por Mes"
+                  unit="MXN"
+                  info="Gastos operativos (clasificados por rubro) agrupados por su fecha de gasto manual, no por fecha de subida."
+                />
+                <OperationalExpensesChart data={operationalDashboard?.mensual} />
+              </GlassPanel>
+
+              <GlassPanel as="section" className="p-4 sm:p-6">
+                <ChartHeader
+                  title="Gastos Operativos por Rubro"
+                  unit="MXN"
+                  info="Cómo se reparte el gasto operativo del período entre los rubros — el tamaño de cada bloque es proporcional a su monto."
+                />
+                <OperationalByRubroChart data={operationalDashboard?.por_rubro} />
+              </GlassPanel>
             </div>
-            <TicketsPerDayChart data={ticketsPerDay} />
-          </GlassPanel>
+          </DashboardSection>
         </>
       )}
     </div>

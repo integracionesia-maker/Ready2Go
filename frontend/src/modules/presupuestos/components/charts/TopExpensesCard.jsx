@@ -1,4 +1,4 @@
-import { GlassPanel, formatMXN } from "@/design";
+import { GlassPanel, InfoTooltip, formatMXN } from "@/design";
 
 // Fecha por split manual: `new Date("YYYY-MM-DD")` se interpreta como UTC y
 // puede mostrar el día anterior en México. "2026-08-15" -> "15/08/2026".
@@ -23,12 +23,15 @@ export default function TopExpensesCard({ data = [] }) {
   return (
     <GlassPanel as="section" className="p-4 sm:p-6" data-testid="top-expenses-card">
       <div className="flex items-center justify-between mb-6">
-        <h2
-          className="font-display text-sm font-bold uppercase tracking-[0.08em]"
-          style={{ color: "var(--go-text-primary)" }}
-        >
-          Mayores Gastos Individuales
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2
+            className="font-display text-sm font-bold uppercase tracking-[0.08em]"
+            style={{ color: "var(--go-text-primary)" }}
+          >
+            Mayores Gastos Individuales
+          </h2>
+          <InfoTooltip text="Los 3 gastos más grandes del período, mezclando Gastos Generales y Operativos — son montos individuales, no una suma por categoría." />
+        </div>
         <span className="go-eyebrow">MXN</span>
       </div>
 
