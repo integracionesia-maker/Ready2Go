@@ -1,38 +1,29 @@
 import { useMemo } from "react";
 import Chart from "react-apexcharts";
-import { createApexOptions, formatChartCurrency, GO_CHART_COLORS } from "@/design/apexTheme";
+import { createApexOptions, formatChartCurrency } from "@/design/apexTheme";
 import { useTheme } from "@/context/ThemeContext";
 import { useMobile } from "@/design";
 
-/** Gastos operativos por rubro (`operationalDashboard.por_rubro`). Mismo
- * patrón que BrandSpendApexChart.jsx (barras horizontales, distributed). */
+/** Gastos operativos por rubro (`operationalDashboard.por_rubro`) como
+ * treemap: cada bloque es un rubro, su tamaño es proporcional al monto —
+ * variación a propósito frente a la barra horizontal de "Gastos por Marca"
+ * (ahora pie), para que el dashboard no repita la misma forma dos veces. */
 export default function OperationalByRubroChart({ data }) {
   const { theme } = useTheme();
   const isMobile = useMobile();
+
+  const items = useMemo(() => (data || []).filter((d) => d.total > 0), [data]);
+
   const options = useMemo(() => {
-    const items = (data || []).filter((d) => d.total > 0);
     return createApexOptions({
-      chart: { type: "bar" },
+      chart: { type: "treemap" },
       plotOptions: {
-        bar: {
-          horizontal: true,
-          borderRadius: 4,
-          barHeight: "60%",
-          distributed: true,
-        },
-      },
-      xaxis: {
-        categories: items.map((d) => d.rubro_nombre),
-        title: { text: "MXN", style: { fontSize: "11px", fontFamily: "'Inter', sans-serif", color: "var(--go-text-secondary)" } },
-        labels: { formatter: formatChartCurrency },
-      },
-      yaxis: {
-        labels: { style: { fontWeight: 600, fontSize: "12px" } },
+        treemap: { distributed: true, enableShades: false },
       },
       dataLabels: {
         enabled: true,
-        formatter: formatChartCurrency,
-        style: { fontSize: "11px", fontWeight: 600 },
+        formatter: (text, opts) => [text, formatChartCurrency(opts.value)],
+        style: { fontSize: "12px", fontWeight: 600 },
       },
       tooltip: {
         y: {
@@ -46,22 +37,15 @@ export default function OperationalByRubroChart({ data }) {
         },
       },
       legend: { show: false },
-      grid: { xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
-      colors: [GO_CHART_COLORS[1]],
     }, theme);
-  }, [data, theme]);
+  }, [items, theme]);
 
   const series = useMemo(() => {
-    const items = (data || []).filter((d) => d.total > 0);
-    return [
-      {
-        name: "Gasto",
-        data: items.map((d) => d.total),
-      },
-    ];
-  }, [data]);
+    if (items.length === 0) return [];
+    return [{ data: items.map((d) => ({ x: d.rubro_nombre, y: d.total })) }];
+  }, [items]);
 
-  if (!data || data.length === 0 || series[0].data.length === 0) {
+  if (!data || data.length === 0 || series.length === 0) {
     return (
       <p className="py-10 text-center font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
         Sin datos de gastos operativos por rubro en este período.
@@ -70,6 +54,6 @@ export default function OperationalByRubroChart({ data }) {
   }
 
   return (
-    <Chart key={theme} options={options} series={series} type="bar" height={isMobile ? 220 : 320} width="100%" />
+    <Chart key={theme} options={options} series={series} type="treemap" height={isMobile ? 220 : 320} width="100%" />
   );
 }

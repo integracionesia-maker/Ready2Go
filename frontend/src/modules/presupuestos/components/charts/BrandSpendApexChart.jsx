@@ -1,56 +1,38 @@
 import { useMemo } from "react";
 import Chart from "react-apexcharts";
-import { createApexOptions, formatChartCurrency, GO_CHART_COLORS } from "@/design/apexTheme";
+import { createApexOptions } from "@/design/apexTheme";
 import { useTheme } from "@/context/ThemeContext";
 import { useMobile } from "@/design";
 
+/** Gasto por marca como pie chart: a diferencia del resto del dashboard (series
+ * por mes/día, o "% usado" por creador), esto es una sola cifra por categoría
+ * sobre un total — el caso clásico de pie, y variación a propósito para no
+ * repetir barra horizontal en cada gráfico del dashboard. */
 export default function BrandSpendApexChart({ data }) {
   const { theme } = useTheme();
   const isMobile = useMobile();
+
+  const items = useMemo(() => (data || []).filter((d) => d.total_spent > 0), [data]);
+
   const options = useMemo(() => {
-    const items = (data || []).filter((d) => d.total_spent > 0);
     return createApexOptions({
-      chart: { type: "bar" },
-      plotOptions: {
-        bar: {
-          horizontal: true,
-          borderRadius: 4,
-          barHeight: "60%",
-          distributed: true,
-        },
-      },
-      xaxis: {
-        categories: items.map((d) => d.brand_name),
-        title: { text: "MXN", style: { fontSize: "11px", fontFamily: "'Inter', sans-serif", color: "var(--go-text-secondary)" } },
-        labels: { formatter: formatChartCurrency },
-      },
-      yaxis: {
-        labels: { style: { fontWeight: 600, fontSize: "12px" } },
-      },
+      chart: { type: "pie" },
+      labels: items.map((d) => d.brand_name),
       dataLabels: {
         enabled: true,
-        formatter: formatChartCurrency,
+        formatter: (val) => `${val.toFixed(1)}%`,
         style: { fontSize: "11px", fontWeight: 600 },
       },
       tooltip: {
         y: { formatter: (v) => `$${v.toLocaleString("es-MX", { minimumFractionDigits: 2 })}` },
       },
-      legend: { show: false },
-      grid: { xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
+      legend: { show: true, position: "bottom", horizontalAlign: "center" },
     }, theme);
-  }, [data, theme]);
+  }, [items, theme]);
 
-  const series = useMemo(() => {
-    const items = (data || []).filter((d) => d.total_spent > 0);
-    return [
-      {
-        name: "Gasto",
-        data: items.map((d) => d.total_spent),
-      },
-    ];
-  }, [data]);
+  const series = useMemo(() => items.map((d) => d.total_spent), [items]);
 
-  if (!data || data.length === 0 || series[0].data.length === 0) {
+  if (!data || data.length === 0 || series.length === 0) {
     return (
       <p className="py-10 text-center font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
         Sin datos de gastos por marca en este período.
@@ -59,6 +41,6 @@ export default function BrandSpendApexChart({ data }) {
   }
 
   return (
-    <Chart key={theme} options={options} series={series} type="bar" height={isMobile ? 220 : 320} width="100%" />
+    <Chart key={theme} options={options} series={series} type="pie" height={isMobile ? 280 : 340} width="100%" />
   );
 }
