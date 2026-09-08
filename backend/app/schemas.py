@@ -26,6 +26,11 @@ class CreatorUpdate(BaseModel):
     is_active: Optional[bool] = None
     cycle_budget_amount: Optional[float] = Field(None, gt=0)
     cycle_period: Optional[str] = None
+    # Si viene junto con `cycle_budget_amount`, además de quedar configurado
+    # para ciclos futuros (comportamiento default, sin cambios) sobreescribe
+    # el monto del ciclo YA vigente de inmediato. Ver crud.update_creator y
+    # doc/presupuestos-y-validacion.md §2.1.
+    aplicar_ahora: bool = False
 
 
 class CreatorResponse(BaseModel):

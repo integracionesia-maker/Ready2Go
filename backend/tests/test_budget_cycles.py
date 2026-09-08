@@ -1,9 +1,9 @@
 """Lógica de ciclos de presupuesto (R7): apertura perezosa, límites de semana/mes,
 relleno de huecos, y que cambiar la config no toca ciclos ya creados."""
 
-from datetime import date
+from datetime import date, timedelta
 
-from app import crud, models
+from app import crud, models, schemas
 
 from .conftest import make_creator, make_user
 
@@ -173,3 +173,62 @@ def test_soft_delete_reverts_cycle_spent(db, brand_a):
     crud.soft_delete_ticket(db, ticket, actor_user_id=approver.id)
     db.refresh(cycle)
     assert cycle.spent == 0
+
+
+def test_update_creator_without_aplicar_ahora_only_affects_next_cycle(db):
+    """Default (sin `aplicar_ahora`): crud.update_creator no toca el ciclo
+    vigente (el de HOY, que es lo que resuelve `aplicar_ahora` internamente),
+    solo el que se materialice después — mismo comportamiento de siempre,
+    ahora verificado pasando por el flujo real de edición."""
+    creator = make_creator(db, name="C12", cycle_budget_amount=1000, cycle_period="semanal")
+    current = crud.get_or_create_cycle_for_date(db, creator, date.today())
+    assert current.amount == 1000
+
+    crud.update_creator(db, creator, schemas.CreatorUpdate(cycle_budget_amount=5000))
+
+    db.refresh(current)
+    assert current.amount == 1000  # sin cambios
+
+    next_cycle = crud.get_or_create_cycle_for_date(db, creator, current.end_date + timedelta(days=1))
+    assert next_cycle.amount == 5000
+
+
+def test_update_creator_con_aplicar_ahora_sobreescribe_ciclo_vigente(db):
+    """`aplicar_ahora=True`: el nuevo monto rige de inmediato en el ciclo YA
+    en curso (el de HOY), sin esperar a que abra el siguiente."""
+    creator = make_creator(db, name="C13", cycle_budget_amount=1000, cycle_period="semanal")
+    current = crud.get_or_create_cycle_for_date(db, creator, date.today())
+    assert current.amount == 1000
+
+    crud.update_creator(
+        db, creator, schemas.CreatorUpdate(cycle_budget_amount=5000, aplicar_ahora=True)
+    )
+
+    db.refresh(current)
+    assert current.amount == 5000
+
+    # El siguiente ciclo también usa el monto nuevo (comportamiento normal).
+    next_cycle = crud.get_or_create_cycle_for_date(db, creator, current.end_date + timedelta(days=1))
+    assert next_cycle.amount == 5000
+
+
+def test_aplicar_ahora_no_revierte_lo_ya_gastado(db, brand_a):
+    """Aplicar ahora un monto menor a lo ya gastado deja el ciclo en negativo
+    (mismo principio que R7 §2.5: nunca se bloquea ni se ajusta `spent`)."""
+    creator = make_creator(db, name="C14", cycle_budget_amount=1000, cycle_period="mensual")
+    approver = make_user(db, username="revisor4", password="ClaveValida123!", role="admin")
+    ticket = crud.create_ticket(
+        db=db, creator=creator, brand=brand_a, amount=800,
+        file_name="f.pdf", file_path=__file__, mime_type="application/pdf",
+        notes=None, status="aprobado", actor_user_id=approver.id,
+    )
+    cycle = ticket.budget_cycle
+    assert cycle.spent == 800
+
+    crud.update_creator(
+        db, creator, schemas.CreatorUpdate(cycle_budget_amount=500, aplicar_ahora=True)
+    )
+    db.refresh(cycle)
+    assert cycle.amount == 500
+    assert cycle.spent == 800  # no se toca
+    assert cycle.amount - cycle.spent == -300  # negativo, permitido

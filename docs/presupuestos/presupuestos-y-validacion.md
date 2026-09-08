@@ -64,6 +64,8 @@ El admin/superadmin configura por creador: `cycle_budget_amount` (monto) + `cycl
 
 > Ejemplo: un creador tiene un ciclo mensual de $10,000 vigente (del 1 al 31 de julio), ya gastó $6,000. El admin le sube el monto a $15,000 el día 20 de julio. El ciclo de julio sigue con $10,000 de tope (restante $4,000); el ciclo de agosto abrirá con $15,000.
 
+**Excepción explícita — "Aplicar ahora" (confusión real de Sara, 08/09/2026):** el formulario de edición de creador (`AdminView.jsx`) siempre muestra la fecha exacta en que el nuevo monto entrará en vigor ("El cambio se aplicará a partir del [fecha]"), y un botón separado **"Aplicar ahora"** junto a "Guardar". Ese botón manda `aplicar_ahora: true` en el `PUT /api/creators/{id}` — `crud.update_creator` entonces sobreescribe también el `amount` del ciclo YA vigente (materializándolo primero si todavía no existía), sin tocar `spent` ni el estado de ningún ticket. Igual que aprobar (§2.5), aplicar un monto menor a lo ya gastado deja el ciclo en negativo sin bloquear nada. `aplicar_ahora` no es un campo de `Creator`, se descarta antes de hacer `setattr`. No aplica a `cycle_period`: cambiar la periodicidad a medio ciclo requeriría recalcular fechas de inicio/fin, fuera de alcance de este cambio — solo rige para ciclos futuros, sin excepción. Ver `test_budget_cycles.py` (`test_update_creator_con_aplicar_ahora_sobreescribe_ciclo_vigente`, `test_aplicar_ahora_no_revierte_lo_ya_gastado`).
+
 ### 2.2 Apertura perezosa (sin cron)
 
 No existe un job programado que abra ciclos. `crud.get_or_create_cycle_for_date(db, creator, fecha)` se llama:

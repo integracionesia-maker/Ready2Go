@@ -148,6 +148,10 @@ def update_creator(
     db: Session, creator: models.Creator, data: schemas.CreatorUpdate
 ) -> models.Creator:
     update_data = data.model_dump(exclude_unset=True)
+    # No es un campo de `Creator`: controla si `cycle_budget_amount` también
+    # sobreescribe el ciclo YA vigente en vez de esperar al próximo (default).
+    # Ver doc/presupuestos-y-validacion.md §2.1.
+    aplicar_ahora = update_data.pop("aplicar_ahora", False)
     if "initial_budget" in update_data:
         delta = update_data["initial_budget"] - creator.initial_budget
         creator.remaining_budget += delta
@@ -155,6 +159,13 @@ def update_creator(
         setattr(creator, field, value)
     db.commit()
     db.refresh(creator)
+
+    nuevo_monto = update_data.get("cycle_budget_amount")
+    if aplicar_ahora and nuevo_monto:
+        cycle = get_or_create_cycle_for_date(db, creator, date.today())
+        cycle.amount = nuevo_monto
+        db.commit()
+
     return creator
 
 

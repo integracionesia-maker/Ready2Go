@@ -23,6 +23,29 @@ const CYCLE_HISTORY_COLUMNS = [
 
 import { formatMXN } from "@/design";
 
+const MONTH_NAMES_LONG = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+// Evita corrimientos de zona horaria al parsear "YYYY-MM-DD" como fecha local
+// (mismo patrón que CreatorList.jsx).
+function parseISODateLocal(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function formatDateLong(iso) {
+  const d = parseISODateLocal(iso);
+  return `${d.getDate()} de ${MONTH_NAMES_LONG[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+function nextDayISO(iso) {
+  const d = parseISODateLocal(iso);
+  d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 const SECTIONS = [
   { key: "creators", label: "Creadores" },
   { key: "brands", label: "Marcas" },
@@ -38,6 +61,9 @@ export default function AdminView({ creators, brands, onChange }) {
   /* Creator form modal (create when editingCreator === null, edit otherwise) */
   const [creatorFormOpen, setCreatorFormOpen] = useState(false);
   const [editingCreator, setEditingCreator] = useState(null);
+  // "Aplicar ahora" sobreescribe el ciclo YA vigente (no solo el próximo) —
+  // pide confirmación aparte por ser la excepción riesgosa a la regla normal.
+  const [confirmApplyNow, setConfirmApplyNow] = useState(false);
 
   /* Brand form modal */
   const [brandFormOpen, setBrandFormOpen] = useState(false);
@@ -97,6 +123,7 @@ export default function AdminView({ creators, brands, onChange }) {
     resetFeedback();
     setTempPassword(null);
     setCopied(false);
+    setConfirmApplyNow(false);
     setEditingCreator(creator);
     setFormName(creator ? creator.name : "");
     // Creador sin configuración de ciclo: ciclo materializado es $0; abrir el
@@ -112,6 +139,7 @@ export default function AdminView({ creators, brands, onChange }) {
     setCreatorFormOpen(false);
     setEditingCreator(null);
     setTempPassword(null);
+    setConfirmApplyNow(false);
     resetFeedback();
   };
 
@@ -177,7 +205,7 @@ export default function AdminView({ creators, brands, onChange }) {
 
   /* ── Submit handlers ─────────────────────────────────────────────────── */
 
-  const handleCreatorSubmit = async (e) => {
+  const handleCreatorSubmit = async (e, { aplicarAhora = false } = {}) => {
     e.preventDefault();
     resetFeedback();
 
@@ -206,8 +234,13 @@ export default function AdminView({ creators, brands, onChange }) {
           name,
           cycle_budget_amount: hasBudget ? Number(formBudget) : null,
           cycle_period: hasBudget ? formCyclePeriod : null,
+          aplicar_ahora: aplicarAhora,
         });
-        setSuccessMsg("Creador actualizado.");
+        setSuccessMsg(
+          aplicarAhora
+            ? "Creador actualizado. El ciclo vigente ya refleja el nuevo monto."
+            : "Creador actualizado."
+        );
         setTimeout(() => { closeCreatorForm(); onChange(); }, 800);
       } else {
         const result = await createCreator({
@@ -224,6 +257,7 @@ export default function AdminView({ creators, brands, onChange }) {
         onChange();
       }
     } catch (err) {
+      setConfirmApplyNow(false);
       setError(err.message);
     } finally {
       setSubmitting(false);
@@ -739,16 +773,46 @@ export default function AdminView({ creators, brands, onChange }) {
 
             {editingCreator && (
               <div
-                className="rounded-go border px-4 py-3 font-body text-sm"
+                className="rounded-go border px-4 py-3 font-body text-sm space-y-2"
                 style={{
                   background: "rgba(56,189,248,0.08)",
                   borderColor: "rgba(56,189,248,0.25)",
                   color: "#38bdf8",
                 }}
               >
-                Este cambio aplica al <strong>próximo ciclo</strong> — el ciclo vigente de{" "}
-                {editingCreator.name} no se modifica.
-                {budgetWarning && " El nuevo monto es menor a lo ya gastado en el ciclo actual."}
+                <p>
+                  {editingCreator.cycle_end_date ? (
+                    <>
+                      El cambio se aplicará a partir del{" "}
+                      <strong>{formatDateLong(nextDayISO(editingCreator.cycle_end_date))}</strong>{" "}
+                      (inicio del próximo ciclo). El ciclo vigente de {editingCreator.name}, que
+                      corre hasta el {formatDateLong(editingCreator.cycle_end_date)}, no se modifica.
+                    </>
+                  ) : (
+                    <>
+                      Este cambio aplica al <strong>próximo ciclo</strong> — el ciclo vigente de{" "}
+                      {editingCreator.name} no se modifica.
+                    </>
+                  )}
+                  {budgetWarning && " El nuevo monto es menor a lo ya gastado en el ciclo actual."}
+                </p>
+              </div>
+            )}
+
+            {/* ── Confirmación de "Aplicar ahora" ─────────────────────────
+                Excepción riesgosa a la regla normal (sobreescribe un ciclo
+                YA en curso, no solo el próximo) — exige un paso adicional,
+                mismo principio que el borrado físico en DeleteConfirmModal. */}
+            {confirmApplyNow && (
+              <div
+                className="rounded-go border px-4 py-3 font-body text-sm"
+                style={{ background: "rgba(229,62,62,0.1)", borderColor: "rgba(229,62,62,0.35)", color: "var(--go-error)" }}
+              >
+                <strong>¿Aplicar {formatMXN(Number(formBudget) || 0)} ahora mismo?</strong> Esto
+                sobreescribe de inmediato el ciclo vigente de {editingCreator?.name}
+                {editingCreator?.cycle_end_date ? ` (hasta el ${formatDateLong(editingCreator.cycle_end_date)})` : ""},
+                en vez de esperar al próximo ciclo.
+                {budgetWarning && " El monto ya gastado no se ajusta: el ciclo puede quedar en negativo."}
               </div>
             )}
 
@@ -756,26 +820,66 @@ export default function AdminView({ creators, brands, onChange }) {
             {successBanner}
 
             <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={closeCreatorForm}
-                disabled={submitting}
-                className="btn-go-ghost"
-              >
-                {tempPassword ? "Cerrar" : "Cancelar"}
-              </button>
-              <button type="submit" disabled={submitting} className="btn-go">
-                {submitting ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Guardando...
-                  </>
-                ) : editingCreator ? (
-                  "Guardar"
-                ) : (
-                  "Crear"
-                )}
-              </button>
+              {confirmApplyNow ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmApplyNow(false)}
+                    disabled={submitting}
+                    className="btn-go-ghost"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleCreatorSubmit(e, { aplicarAhora: true })}
+                    disabled={submitting}
+                    className="rounded-go px-4 py-2 font-display text-sm font-semibold text-white transition-colors"
+                    style={{ background: "var(--go-error)" }}
+                  >
+                    {submitting ? "Aplicando..." : "Sí, aplicar ahora"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={closeCreatorForm}
+                    disabled={submitting}
+                    className="btn-go-ghost"
+                  >
+                    {tempPassword ? "Cerrar" : "Cancelar"}
+                  </button>
+                  {editingCreator && hasBudget && (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmApplyNow(true)}
+                      disabled={submitting}
+                      className="rounded-go px-4 py-2 font-display text-sm font-semibold transition-colors"
+                      style={{
+                        background: "rgba(229,62,62,0.1)",
+                        border: "1px solid rgba(229,62,62,0.4)",
+                        color: "var(--go-error)",
+                      }}
+                      title="Sobreescribe de inmediato el ciclo vigente, en vez de esperar al próximo."
+                    >
+                      Aplicar ahora
+                    </button>
+                  )}
+                  <button type="submit" disabled={submitting} className="btn-go">
+                    {submitting ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        Guardando...
+                      </>
+                    ) : editingCreator ? (
+                      "Guardar"
+                    ) : (
+                      "Crear"
+                    )}
+                  </button>
+                </>
+              )}
             </div>
           </form>
         </Modal>
