@@ -54,6 +54,7 @@ class Config:
     starttls: bool
     habilitado: bool
     url_publica: str
+    bcc: str
 
     @property
     def completa(self) -> bool:
@@ -73,6 +74,11 @@ def config() -> Config:
         # area por el solo hecho de arrancar.
         habilitado=_bool_env("NOTIF_ENABLED", False),
         url_publica=os.getenv("APP_PUBLIC_URL", "http://127.0.0.1:5173").rstrip("/"),
+        # Copia oculta de TODO lo que se manda, a quien administra el correo del
+        # buzon (14/09/2026). Vacio = sin BCC. Nunca hardcodeado en el codigo —
+        # mismo motivo que §10.20 prohibe un destinatario fijo: si la cuenta
+        # cambia, es una variable de entorno la que se actualiza, no un deploy.
+        bcc=os.getenv("SMTP_BCC", "").strip(),
     )
 
 
@@ -94,6 +100,13 @@ def _armar(cfg: Config, destinatario: str, asunto: str, cuerpo: str, adjuntos) -
     mensaje = EmailMessage()
     mensaje["From"] = formataddr((NOMBRE_REMITENTE, cfg.remitente))
     mensaje["To"] = destinatario
+    # `send_message()` (llamado sin `to_addrs` explicito, ver `enviar()` abajo)
+    # resuelve los destinatarios reales del sobre SMTP a partir de los headers
+    # y AL MISMO TIEMPO quita el header `Bcc` del mensaje transmitido — el
+    # destinatario nunca ve esta direccion, es el propio stdlib el que hace
+    # la copia oculta bien hecha, no hay que armar un segundo envio.
+    if cfg.bcc and cfg.bcc.lower() != destinatario.lower():
+        mensaje["Bcc"] = cfg.bcc
     mensaje["Subject"] = asunto
     # Texto plano: sin CSP que pelear, sin imagenes remotas que se bloqueen, y
     # legible en cualquier cliente. Si marketing quiere HTML es decision de

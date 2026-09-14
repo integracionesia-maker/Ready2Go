@@ -61,6 +61,7 @@ def smtp_falso(monkeypatch, smtp_configurado):
             enviados.append(
                 {
                     "to": mensaje["To"],
+                    "bcc": mensaje["Bcc"],
                     "from": mensaje["From"],
                     "subject": mensaje["Subject"],
                     "body": mensaje.get_body(("plain",)).get_content(),
@@ -372,6 +373,28 @@ def test_el_remitente_lleva_nombre_visible(inventario, ana, melisa, smtp_falso):
     logueado("ana.ruiz")
     _confirmado(logueado("ana.ruiz"))
     assert smtp_falso[0]["from"].startswith("GOCreate")
+
+
+def test_bcc_se_agrega_cuando_esta_configurado(inventario, ana, melisa, smtp_falso, monkeypatch):
+    monkeypatch.setenv("SMTP_BCC", "integraciones.ia@grupo-ortiz.com")
+    _confirmado(logueado("ana.ruiz"))
+    assert smtp_falso
+    assert all(c["bcc"] == "integraciones.ia@grupo-ortiz.com" for c in smtp_falso)
+
+
+def test_sin_bcc_configurado_no_se_agrega(inventario, ana, melisa, smtp_falso):
+    _confirmado(logueado("ana.ruiz"))
+    assert smtp_falso
+    assert all(c["bcc"] is None for c in smtp_falso)
+
+
+def test_bcc_no_se_duplica_si_coincide_con_el_destinatario(inventario, ana, melisa, smtp_falso, monkeypatch):
+    """Si BCC es la misma cuenta que ya recibe el correo como destinatario
+    principal, no se agrega un segundo envio a la misma direccion."""
+    monkeypatch.setenv("SMTP_BCC", melisa.email)
+    _confirmado(logueado("ana.ruiz"))
+    aprobador = next(c for c in smtp_falso if c["to"] == melisa.email)
+    assert aprobador["bcc"] is None
 
 
 # ── Reintentos ──────────────────────────────────────────────────────────────
