@@ -89,6 +89,13 @@ export function returnLoan(loanId, { decisionesPorItem }) {
   });
 }
 
+export function updateFechaRegresoEsperada(loanId, fechaRegresoEsperada) {
+  return request(`/loans/${loanId}/fecha-regreso-esperada`, {
+    method: "PATCH",
+    body: JSON.stringify({ fecha_regreso_esperada: fechaRegresoEsperada }),
+  });
+}
+
 export function authorizeDelivery(loanId) {
   return request(`/loans/${loanId}/autorizar-entrega`, { method: "POST" });
 }

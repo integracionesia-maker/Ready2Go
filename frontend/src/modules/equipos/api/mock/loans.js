@@ -178,6 +178,24 @@ export async function confirmLoan(loanId) {
   return clone(loan);
 }
 
+export async function updateFechaRegresoEsperada(loanId, fechaRegresoEsperada) {
+  checkGlobalInjection();
+  const loan = findLoan(loanId);
+  if (["completado", "cancelado"].includes(loan.estado) || loan.fecha_regreso_real) {
+    throwFixtureError("TRANSICION_INVALIDA");
+  }
+  const anterior = loan.fecha_regreso_esperada;
+  loan.fecha_regreso_esperada = fechaRegresoEsperada;
+  loan.eventos.push({
+    id: Date.now(),
+    tipo: "fecha_regreso_modificada",
+    actor: loan.responsable?.nombre || "—",
+    detalle: `Fecha de regreso esperada: ${anterior || "—"} -> ${fechaRegresoEsperada}.`,
+    created_at: ahora(),
+  });
+  return clone(loan);
+}
+
 export async function cancelLoan(loanId) {
   checkGlobalInjection();
   const loan = findLoan(loanId);
