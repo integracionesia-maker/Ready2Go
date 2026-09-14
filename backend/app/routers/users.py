@@ -52,6 +52,7 @@ def list_users(
     ),
     search: Optional[str] = Query(None, description="Buscar en username, email o nombre"),
     is_active: Optional[bool] = Query(None),
+    locked_only: bool = Query(False, description="Solo cuentas bloqueadas ahora mismo"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     sort_by: str = Query("username"),
@@ -65,6 +66,7 @@ def list_users(
         exclude_role=exclude_role,
         search=search,
         is_active=is_active,
+        locked_only=locked_only,
         page=page,
         page_size=page_size,
         sort_by=sort_by,
@@ -252,6 +254,29 @@ def reset_password_superadmin(
         target_id=target.id,
     )
     return schemas.ResetPasswordResponse(temporary_password=temp_password)
+
+
+@router.post("/{user_id}/unlock", response_model=schemas.UserResponse)
+def desbloquear_usuario(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
+):
+    """Un clic: limpia intentos fallidos y `locked_until`, sin tocar contraseña
+    ni sesiones. Para la cuenta superadmin sigue existiendo el camino dedicado
+    (`reset-password-superadmin`, que ya desbloquea de paso)."""
+    target = _get_target_or_404(db, user_id)
+    _ensure_not_superadmin_target(target)
+
+    crud.unlock_user(db, target)
+    crud.log_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="account.unlock_by_admin",
+        target_type="user",
+        target_id=target.id,
+    )
+    return target
 
 
 @router.patch("/{user_id}/estado", response_model=schemas.UserResponse)

@@ -27,10 +27,32 @@ def _clean_state():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     security._login_attempts_by_ip.clear()
+    # Mismo motivo: estado en memoria a nivel modulo. Sin limpiarlo, un
+    # `user_id` reciclado (autoincrement reinicia con cada drop_all/create_all)
+    # podria heredar el cupo de auto-desbloqueo de un usuario de otra prueba.
+    security._unlock_challenges.clear()
+    security._self_unlock_count_by_user.clear()
     # La cola de auditoria es estado a nivel modulo — descartar eventos
     # de tests anteriores cuyos usuarios ya no existen en la DB nueva.
     audit_queue.limpiar_cola()
     yield
+
+
+@pytest.fixture(autouse=True)
+def _correo_apagado_por_defecto(monkeypatch):
+    """Ninguna prueba manda correo real, pase lo que diga el `.env` del
+    servidor (incidente real del 14/09/2026: un `.env` local con
+    NOTIF_ENABLED=true y credenciales reales de Gmail hizo que pruebas de
+    Equipos sin mockear SMTP intentaran enviar correo real a direcciones de
+    prueba). `load_dotenv()` en `app/main.py` carga ese archivo al importar la
+    app, y de ahi lo hereda todo el proceso de pytest salvo que algo lo pise.
+
+    Va DESPUES de `_clean_state` en la lista de autouse (mismo orden de
+    aparicion en el archivo), pero lo que importa es que corre ANTES que
+    cualquier fixture que un test pida explicitamente — `smtp_configurado`
+    en `tests/equipos/test_notificaciones.py` sigue pudiendo reactivarlo con
+    su propio `monkeypatch.setenv`, que se aplica despues y gana."""
+    monkeypatch.setenv("NOTIF_ENABLED", "false")
 
 
 @pytest.fixture

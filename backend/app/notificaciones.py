@@ -11,13 +11,10 @@ Tres reglas que vienen de §7 del plan y de §10.15/§10.16/§10.20:
 3. **Un SMTP caido no tumba el registro del prestamo.** El envio va en
    `BackgroundTasks`, con su propia sesion, y `mailer.enviar` nunca levanta.
 
-El recordatorio de vencimiento merece parrafo aparte: el plan lo quiere
-**diario**, pero con un `tipo` constante el UNIQUE lo mandaria **una sola vez en
-la vida del prestamo** y todos los dias siguientes chocarian en silencio,
-interpretados como idempotencia correcta. Por eso el tipo lleva sufijo de dia
-civil de CDMX (`vencimiento:2026-07-30`): el UNIQUE pasa a significar "un aviso
-por prestamo, por destinatario, por dia", que es exactamente lo que pide §7, y
-sigue bloqueando la doble corrida del mismo dia.
+Unico disparador en todo el modulo: la creacion del prestamo (`confirmar` en
+`routers/loans.py`). No hay recordatorio de vencimiento, ni aviso de firma, ni
+aviso de devolucion — se retiraron a proposito (decision posterior al plan
+original, que si los pedia en su §7).
 """
 
 from __future__ import annotations
@@ -45,7 +42,6 @@ log = logging.getLogger("gocreate.notificaciones")
 
 __all__ = [
     "MAX_INTENTOS",
-    "tipo_vencimiento",
     "aprobadores",
     "datos_de_prestamo",
     "encolar",
@@ -54,15 +50,6 @@ __all__ = [
 ]
 
 MAX_INTENTOS = 3
-
-
-def tipo_vencimiento(fecha=None) -> str:
-    """`vencimiento:YYYY-MM-DD` con el dia civil de CDMX.
-
-    El dia sale de `tz.hoy()`, jamas de UTC: despues de las 18:00 CDMX el UTC ya
-    es el dia siguiente y produciria dos filas y dos correos para el mismo dia.
-    """
-    return f"{pl.TIPO_VENCIMIENTO}:{(fecha or tz.hoy()).isoformat()}"
 
 
 # ── Destinatarios ───────────────────────────────────────────────────────────
@@ -347,16 +334,10 @@ def reintentar_fallidos(db: Session, limite: int = 50) -> int:
         if prestamo is None:
             continue
         _, cuerpo = pl.construir(fila.tipo, datos_de_prestamo(db, prestamo))
-        # Comparar contra el tipo BASE, no la fila entera: `firma_completada`
-        # ahora viaja con sufijo `:{kind}` (una fila por cada firma, ver
-        # `plantillas_correo.TIPO_FIRMA_COMPLETADA`) — sin el split, un
-        # reintento perderia el adjunto de la responsiva.
-        tipo_base = fila.tipo.split(":", 1)[0]
-        adjuntos = (
-            _adjunto_responsiva(db, prestamo)
-            if tipo_base in (pl.TIPO_CONFIRMADO_APROBADOR, pl.TIPO_CONFIRMADO_RESPONSABLE, pl.TIPO_FIRMA_COMPLETADA)
-            else []
-        )
+        # Unico disparador que queda es la creacion del prestamo, y sus tres
+        # tipos siempre llevan la responsiva adjunta (ver `confirmar_prestamo`
+        # en routers/loans.py).
+        adjuntos = _adjunto_responsiva(db, prestamo)
         if procesar_pendiente(fila.id, cuerpo, adjuntos):
             enviados += 1
     return enviados

@@ -3,8 +3,9 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import BrandLogo from "../components/BrandLogo";
 import { rutaInicioDe } from "@/shell/navItems";
+import { ApiError, unlockChallenge, unlockVerify } from "@/api";
 
-import { usePageTitle } from "@/design";
+import { usePageTitle, PuzzleSlider } from "@/design";
 
 /**
  * A dónde mandar tras iniciar sesión: si hay un destino previo real (deep link
@@ -28,6 +29,15 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  // Cuenta bloqueada (CUENTA_BLOQUEADA): panel aparte, no un error mas en la
+  // caja roja generica — necesita explicar la opcion del rompecabezas.
+  const [locked, setLocked] = useState(null); // { mensaje } | null
+  const [challenge, setChallenge] = useState(null); // { challenge_id, target_percent } | null
+  const [puzzleError, setPuzzleError] = useState(null);
+  const [puzzleOk, setPuzzleOk] = useState(null);
+  const [solvingPuzzle, setSolvingPuzzle] = useState(false);
+  const [askingChallenge, setAskingChallenge] = useState(false);
+
   if (!loading && user) {
     return <Navigate to={destinoLogin(location.state?.from?.pathname, user.permisos)} replace />;
   }
@@ -35,14 +45,51 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setLocked(null);
+    setChallenge(null);
+    setPuzzleOk(null);
     setSubmitting(true);
     try {
       const me = await login(identificador, password);
       navigate(destinoLogin(location.state?.from?.pathname, me.permisos), { replace: true });
     } catch (err) {
-      setError(err.message);
+      if (err instanceof ApiError && err.codigo === "CUENTA_BLOQUEADA") {
+        setLocked({ mensaje: err.message });
+      } else {
+        setError(err.message);
+      }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const pedirRompecabezas = async () => {
+    setAskingChallenge(true);
+    setPuzzleError(null);
+    try {
+      const reto = await unlockChallenge(identificador);
+      setChallenge(reto);
+    } catch (err) {
+      setPuzzleError(err.message);
+    } finally {
+      setAskingChallenge(false);
+    }
+  };
+
+  const resolverRompecabezas = async (posicionPercent, trail) => {
+    if (!challenge) return;
+    setSolvingPuzzle(true);
+    setPuzzleError(null);
+    try {
+      const resp = await unlockVerify(identificador, challenge.challenge_id, posicionPercent, trail);
+      setPuzzleOk(resp.mensaje);
+      setChallenge(null);
+      setLocked(null);
+    } catch (err) {
+      setPuzzleError(err.message);
+      setChallenge(null); // el intento (o el reto) ya no sirve: hay que pedir uno nuevo
+    } finally {
+      setSolvingPuzzle(false);
     }
   };
 
@@ -124,6 +171,60 @@ export default function LoginPage() {
               }}
             >
               {error}
+            </div>
+          )}
+
+          {puzzleOk && (
+            <div
+              className="rounded-go border px-4 py-3 font-body text-sm"
+              style={{ background: "rgba(34,197,94,0.08)", borderColor: "rgba(34,197,94,0.3)", color: "#22c55e" }}
+            >
+              {puzzleOk}
+            </div>
+          )}
+
+          {locked && !puzzleOk && (
+            <div
+              className="space-y-3 rounded-go border px-4 py-3 font-body text-sm"
+              style={{
+                background: "rgba(229,62,62,0.08)",
+                borderColor: "rgba(229,62,62,0.25)",
+                color: "var(--go-error)",
+              }}
+            >
+              <p>{locked.mensaje}</p>
+
+              {!challenge && (
+                <button
+                  type="button"
+                  onClick={pedirRompecabezas}
+                  disabled={askingChallenge}
+                  className="btn-go-ghost w-full justify-center"
+                >
+                  {askingChallenge ? "Generando…" : "Verificar que soy yo"}
+                </button>
+              )}
+
+              {challenge && (
+                <div className="space-y-2">
+                  <PuzzleSlider
+                    targetPercent={challenge.target_percent}
+                    onComplete={resolverRompecabezas}
+                    disabled={solvingPuzzle}
+                  />
+                  {solvingPuzzle && (
+                    <p className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                      Verificando…
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {puzzleError && (
+                <p className="font-body text-xs" style={{ color: "var(--go-error)" }}>
+                  {puzzleError} {!challenge && "Puedes intentarlo de nuevo."}
+                </p>
+              )}
             </div>
           )}
 

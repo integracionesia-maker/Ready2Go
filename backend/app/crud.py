@@ -1,7 +1,8 @@
 """CRUD helper functions used by API routers."""
 
+import calendar
 from datetime import datetime, date, timedelta, timezone
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract, case, and_
@@ -415,6 +416,42 @@ def get_brand_spend_breakdown(
     ]
 
 
+def get_general_expenses_by_brand(
+    db: Session,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+) -> List[schemas.BrandSpendItem]:
+    """Calco de get_brand_spend_breakdown pero sobre GeneralExpense en vez de
+    Ticket (sin filtro de status: general_expenses no tiene validación) — el
+    desglose por marca que le faltaba a "Gastos Generales" (antes solo se
+    veía agregado por mes). Reutiliza el mismo schema BrandSpendItem, por eso
+    el frontend reutiliza BrandSpendApexChart tal cual para esto."""
+    join_conditions = [
+        models.Brand.id == models.GeneralExpense.brand_id,
+        models.GeneralExpense.is_deleted == False,
+    ]
+    if start_date:
+        join_conditions.append(models.GeneralExpense.upload_date >= start_date)
+    if end_date:
+        join_conditions.append(models.GeneralExpense.upload_date < end_date + timedelta(days=1))
+
+    q = db.query(
+        models.Brand.name.label("brand_name"),
+        models.Brand.priority.label("priority"),
+        func.coalesce(func.sum(models.GeneralExpense.amount), 0.0).label("total_spent"),
+    ).outerjoin(models.GeneralExpense, and_(*join_conditions))
+
+    rows = (
+        q.group_by(models.Brand.id, models.Brand.name, models.Brand.priority)
+        .order_by(func.sum(models.GeneralExpense.amount).desc())
+        .all()
+    )
+    return [
+        schemas.BrandSpendItem(brand_name=r.brand_name, total_spent=float(r.total_spent), priority=r.priority)
+        for r in rows
+    ]
+
+
 # ── Dashboard ──────────────────────────────────────────────────────────────────
 
 
@@ -700,6 +737,274 @@ def get_top_expenses(
     return items[:3]
 
 
+def _calendar_month_bounds(year: int, month: int):
+    """(inicio, inicio_del_siguiente_mes) del mes dado — mismo patrón `< fin`
+    (exclusivo) que usa el resto del dashboard para no arrastrar el último día.
+    Distinto de `_month_bounds(d)` de arriba (esa es para ciclos de presupuesto,
+    toma una fecha y regresa fin inclusivo): mismo nombre habría chocado."""
+    start = date(year, month, 1)
+    end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    return start, end
+
+
+CATEGORIAS_ESTIMATE = ("caja_grande", "caja_chica")
+
+
+def _spent_caja_grande(db: Session, year: int, month: int) -> float:
+    """"Caja grande": gastos generales (por upload_date) + gastos por rubro
+    (por fecha_gasto). Mismo criterio de fecha por tabla que el resto del
+    dashboard (ver get_monthly_spend/get_top_expenses) — no se inventa un
+    bucketing nuevo."""
+    start, end = _calendar_month_bounds(year, month)
+    generales_total = (
+        db.query(func.coalesce(func.sum(models.GeneralExpense.amount), 0.0))
+        .filter(
+            models.GeneralExpense.is_deleted == False,
+            models.GeneralExpense.upload_date >= start,
+            models.GeneralExpense.upload_date < end,
+        )
+        .scalar()
+    )
+    operativos_total = (
+        db.query(func.coalesce(func.sum(models.OperationalExpense.amount), 0.0))
+        .filter(
+            models.OperationalExpense.is_deleted == False,
+            models.OperationalExpense.fecha_gasto >= start,
+            models.OperationalExpense.fecha_gasto < end,
+        )
+        .scalar()
+    )
+    return float(generales_total) + float(operativos_total)
+
+
+def _spent_caja_chica(db: Session, year: int, month: int) -> float:
+    """"Caja chica": gasto de creadores — tickets aprobados por upload_date."""
+    start, end = _calendar_month_bounds(year, month)
+    tickets_total = (
+        db.query(func.coalesce(func.sum(models.Ticket.amount), 0.0))
+        .filter(
+            models.Ticket.status == models.TicketStatus.APROBADO.value,
+            models.Ticket.is_deleted == False,
+            models.Ticket.upload_date >= start,
+            models.Ticket.upload_date < end,
+        )
+        .scalar()
+    )
+    return float(tickets_total)
+
+
+def _spent_for_categoria(db: Session, year: int, month: int, categoria: str) -> float:
+    if categoria == "caja_grande":
+        return _spent_caja_grande(db, year, month)
+    return _spent_caja_chica(db, year, month)
+
+
+def mes_es_editable(year: int, month: int) -> bool:
+    """Solo un mes que todavía no arranca acepta estimación — en cuanto empieza
+    (aunque sea el día 1) la meta queda congelada. Publica (sin `_`): el router
+    la usa para rechazar el PUT sobre un mes ya iniciado."""
+    return date(year, month, 1) > date.today()
+
+
+def _mes_anterior(year: int, month: int):
+    return (year - 1, 12) if month == 1 else (year, month - 1)
+
+
+def detectar_periodo_unico(
+    start_date: Optional[date], end_date: Optional[date]
+) -> Optional[Tuple[str, date, date]]:
+    """None si el rango no es exactamente un mes o un año de calendario
+    (multi-mes, "Últimos 3M", "Todo" con None/None, etc — comportamiento
+    actual del Dashboard, sin cambios). Si sí lo es, regresa
+    `(tipo, compare_start, compare_end)`: el periodo equivalente anterior
+    (mes/año pasado), con el MISMO recorte día-a-día si el periodo sigue "en
+    curso" (hasta hoy) — para comparar manzanas con manzanas, no un mes a
+    medias contra un mes completo — o el mes/año anterior COMPLETO si el
+    periodo pedido ya cerró.
+
+    Única fuente de verdad: la usan tanto los endpoints JSON como el PDF, así
+    que la pantalla y el reporte nunca pueden decidir cosas distintas."""
+    if start_date is None or end_date is None:
+        return None
+
+    primer_dia_mes = date(start_date.year, start_date.month, 1)
+    ultimo_dia_mes_num = calendar.monthrange(start_date.year, start_date.month)[1]
+    ultimo_dia_mes = date(start_date.year, start_date.month, ultimo_dia_mes_num)
+
+    # Se evalúa "mes" antes que "año": en enero, "Este mes" y "Este año a la
+    # fecha" producen el MISMO rango (1-ene a hoy) — indistinguibles sin
+    # rastrear qué botón se pulsó, cosa que a propósito no se hace (así un
+    # Desde/Hasta manual que caiga en un mes/año también entra en este modo).
+    # Se resuelve a favor de "mes" por simplicidad; solo afecta la etiqueta y
+    # el periodo de comparación, nunca qué gráficas se ocultan (ambos casos sí
+    # activan el modo periodo único).
+    if start_date == primer_dia_mes and end_date <= ultimo_dia_mes:
+        cmp_year, cmp_month = _mes_anterior(start_date.year, start_date.month)
+        cmp_ultimo_dia = calendar.monthrange(cmp_year, cmp_month)[1]
+        cmp_start = date(cmp_year, cmp_month, 1)
+        if end_date == ultimo_dia_mes:
+            cmp_end = date(cmp_year, cmp_month, cmp_ultimo_dia)
+        else:
+            cmp_end = date(cmp_year, cmp_month, min(end_date.day, cmp_ultimo_dia))
+        return ("mes", cmp_start, cmp_end)
+
+    primer_dia_anio = date(start_date.year, 1, 1)
+    ultimo_dia_anio = date(start_date.year, 12, 31)
+    if start_date == primer_dia_anio and end_date <= ultimo_dia_anio:
+        cmp_year = start_date.year - 1
+        cmp_start = date(cmp_year, 1, 1)
+        if end_date == ultimo_dia_anio:
+            cmp_end = date(cmp_year, 12, 31)
+        else:
+            try:
+                cmp_end = date(cmp_year, end_date.month, end_date.day)
+            except ValueError:
+                # 29 de febrero en un año no bisiesto.
+                cmp_end = date(cmp_year, end_date.month, calendar.monthrange(cmp_year, end_date.month)[1])
+        return ("anio", cmp_start, cmp_end)
+
+    return None
+
+
+def _actual_for_month(db: Session, year: int, month: int, categoria: str) -> float:
+    """Gasto real de un mes para una categoría: si tiene `actual_override`
+    (reconciliación histórica manual, ver `set_historical_actual`) ese valor
+    manda por completo; si no, el cálculo en vivo de siempre
+    (`_spent_for_categoria`)."""
+    fila = (
+        db.query(models.MonthlySpendEstimate)
+        .filter(
+            models.MonthlySpendEstimate.year == year,
+            models.MonthlySpendEstimate.month == month,
+            models.MonthlySpendEstimate.categoria == categoria,
+        )
+        .first()
+    )
+    if fila is not None and fila.actual_override is not None:
+        return float(fila.actual_override)
+    return _spent_for_categoria(db, year, month, categoria)
+
+
+def _estimacion_sugerida(db: Session, year: int, month: int, categoria: str) -> Optional[float]:
+    """Propuesta automática para un mes futuro SIN meta guardada todavía (por
+    categoría): promedio del gasto real (`_actual_for_month`) de los 3 meses de
+    calendario anteriores DE ESA categoría — caja_grande y caja_chica nunca se
+    mezclan. Es una estimación real y funcional (impulsa la barra/color como
+    cualquier meta guardada) — solo se guarda sola en la tabla cuando el admin
+    la confirma o cambia con un PUT (`upsert_monthly_estimate`); hasta entonces
+    el GET la recalcula cada vez. Sin ningún gasto real en esos 3 meses
+    (proyecto recién arrancando) regresa None — mejor "sin definir" que
+    sugerir $0."""
+    y, m = year, month
+    valores = []
+    for _ in range(3):
+        y, m = _mes_anterior(y, m)
+        valores.append(_actual_for_month(db, y, m, categoria))
+    if not any(v > 0 for v in valores):
+        return None
+    return round(sum(valores) / len(valores), 2)
+
+
+def get_monthly_estimates(db: Session, year: int) -> List[schemas.MonthlyEstimateItem]:
+    filas = {
+        (e.month, e.categoria): e
+        for e in db.query(models.MonthlySpendEstimate)
+        .filter(models.MonthlySpendEstimate.year == year)
+        .all()
+    }
+    resultado = []
+    for month in range(1, 13):
+        editable = mes_es_editable(year, month)
+        for categoria in CATEGORIAS_ESTIMATE:
+            fila = filas.get((month, categoria))
+            if fila is not None:
+                amount = fila.amount
+                is_suggested = False
+                spent = (
+                    float(fila.actual_override)
+                    if fila.actual_override is not None
+                    else _spent_for_categoria(db, year, month, categoria)
+                )
+            else:
+                spent = _spent_for_categoria(db, year, month, categoria)
+                amount = _estimacion_sugerida(db, year, month, categoria) if editable else None
+                is_suggested = editable and amount is not None
+            resultado.append(
+                schemas.MonthlyEstimateItem(
+                    year=year,
+                    month=month,
+                    categoria=categoria,
+                    amount=amount,
+                    spent=spent,
+                    is_editable=editable,
+                    is_suggested=is_suggested,
+                )
+            )
+    return resultado
+
+
+def upsert_monthly_estimate(
+    db: Session, *, year: int, month: int, categoria: str, amount: float, actor_user_id: int
+) -> models.MonthlySpendEstimate:
+    """Crea o actualiza la meta de un mes para una categoría. El router ya
+    validó con `mes_es_editable` que el mes sigue siendo futuro antes de
+    llamar esto — al guardarla, deja de ser una sugerencia y pasa a ser LA
+    meta real de ese mes/categoría hasta que alguien la vuelva a cambiar."""
+    fila = (
+        db.query(models.MonthlySpendEstimate)
+        .filter(
+            models.MonthlySpendEstimate.year == year,
+            models.MonthlySpendEstimate.month == month,
+            models.MonthlySpendEstimate.categoria == categoria,
+        )
+        .first()
+    )
+    if fila is None:
+        fila = models.MonthlySpendEstimate(
+            year=year, month=month, categoria=categoria, amount=amount, updated_by_user_id=actor_user_id
+        )
+        db.add(fila)
+    else:
+        fila.amount = amount
+        fila.updated_by_user_id = actor_user_id
+    db.commit()
+    db.refresh(fila)
+    return fila
+
+
+def set_historical_actual(
+    db: Session, *, year: int, month: int, categoria: str, amount: float
+) -> models.MonthlySpendEstimate:
+    """SOLO para scripts de migración (ej.
+    `migrate_estimaciones_historicas_2026_06_07.py`) — reconciliación de un mes
+    que ya pasó ANTES de que existiera esta tabla, sin tickets/gastos
+    individuales que lo respalden. Fija `amount` (meta) y `actual_override`
+    (gasto real) de ESA categoría al MISMO valor: queda en 100% de
+    cumplimiento porque no hay una meta previa distinta con la que comparar.
+    A propósito NO pasa por `mes_es_editable` — un mes ya cerrado sí se puede
+    reconciliar por este camino; esa regla solo aplica al PUT del router."""
+    fila = (
+        db.query(models.MonthlySpendEstimate)
+        .filter(
+            models.MonthlySpendEstimate.year == year,
+            models.MonthlySpendEstimate.month == month,
+            models.MonthlySpendEstimate.categoria == categoria,
+        )
+        .first()
+    )
+    if fila is None:
+        fila = models.MonthlySpendEstimate(
+            year=year, month=month, categoria=categoria, amount=amount, actual_override=amount
+        )
+        db.add(fila)
+    else:
+        fila.amount = amount
+        fila.actual_override = amount
+    db.commit()
+    db.refresh(fila)
+    return fila
+
+
 def get_general_expense(db: Session, expense_id: int) -> Optional[models.GeneralExpense]:
     return db.query(models.GeneralExpense).filter(models.GeneralExpense.id == expense_id).first()
 
@@ -783,6 +1088,7 @@ def list_users(
     exclude_role: Optional[str] = None,
     search: Optional[str] = None,
     is_active: Optional[bool] = None,
+    locked_only: bool = False,
     page: int = 1,
     page_size: int = 50,
     sort_by: str = "username",
@@ -797,6 +1103,10 @@ def list_users(
         q = q.filter(models.User.role != exclude_role)
     if is_active is not None:
         q = q.filter(models.User.is_active == is_active)
+    if locked_only:
+        # Mismo criterio que `is_locked()`: naive UTC, ambos lados sin tzinfo.
+        ahora = datetime.now(timezone.utc).replace(tzinfo=None)
+        q = q.filter(models.User.locked_until.isnot(None), models.User.locked_until > ahora)
     if search:
         patron = f"%{search}%"
         q = q.filter(
@@ -899,6 +1209,15 @@ def register_successful_login(db: Session, user: models.User) -> None:
     user.failed_login_attempts = 0
     user.locked_until = None
     user.last_login = datetime.now(timezone.utc)
+    db.commit()
+
+
+def unlock_user(db: Session, user: models.User) -> None:
+    """Limpia el bloqueo sin tocar nada mas (ni contraseña, ni sesiones) — lo
+    usan tanto el auto-desbloqueo por rompecabezas como el botón del
+    superadmin. `login()` sigue pidiendo la contraseña correcta despues."""
+    user.failed_login_attempts = 0
+    user.locked_until = None
     db.commit()
 
 

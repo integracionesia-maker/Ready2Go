@@ -190,6 +190,54 @@ class GeneralExpense(Base):
     deleted_by = relationship("User", foreign_keys=[deleted_by_user_id], lazy="selectin")
 
 
+class MonthlySpendEstimate(Base):
+    """Meta fija de gasto para un mes, por categoria (`categoria`) — dos metas
+    INDEPENDIENTES por mes, cada una con su propia barra/color en el Dashboard,
+    nunca combinadas en un solo total (I10, 10/09/2026):
+
+    - "caja_grande": gastos generales (`general_expenses`) + gastos por rubro
+      (`operational_expenses`).
+    - "caja_chica": gasto de creadores (tickets aprobados).
+
+    Solo se puede fijar/editar para un mes que todavia no inicia — en cuanto el
+    mes arranca la meta queda congelada (rechazado en crud.upsert_monthly_estimate,
+    no aqui: esta tabla no impone esa regla por si sola).
+
+    `actual_override`: reconciliacion historica de un mes que ya paso ANTES de
+    que existiera esta tabla (ej. junio/julio 2026, ver
+    doc/presupuestos/meta-gasto-mensual.md) — un total real reportado por
+    marketing sin ticket/gasto individual que lo respalde. Cuando esta
+    presente, sustituye por completo el calculo en vivo de `spent` de ESA
+    categoria (nunca se suma a el). Solo lo escribe crud.set_historical_actual
+    (usado por scripts de migracion), JAMAS el router/API normal."""
+
+    __tablename__ = "monthly_spend_estimates"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)  # 1-12
+    categoria = Column(String(20), nullable=False)  # "caja_grande" | "caja_chica"
+    amount = Column(Float, nullable=False)
+    actual_override = Column(Float, nullable=True)
+    updated_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    updated_by = relationship("User", foreign_keys=[updated_by_user_id], lazy="selectin")
+
+    __table_args__ = (
+        Index(
+            "ix_monthly_spend_estimates_year_month_categoria",
+            "year", "month", "categoria",
+            unique=True,
+        ),
+    )
+
+
 class User(Base):
     __tablename__ = "users"
 
