@@ -66,4 +66,8 @@ App usable desde 320px de ancho (ver auditoría original en `docs/historico/audi
 
 ## Deploy
 
-No desplegado — corre local en `127.0.0.1:8000` (backend) y `127.0.0.1:5173` (frontend). Sin entorno de produccion todavia. Antes de exponer fuera de `127.0.0.1`: agregar HTTPS (obligatorio para `Secure` en cookies), CSP/HSTS, y revisar `CORS_ORIGINS` (ver RISKS.md #2 residual y `docs/deploy/runbook.md`).
+**Sí está desplegado** (14/09/2026 en adelante — este archivo decía "no desplegado" hasta esa fecha, desactualizado, confiar en esto y no en versiones viejas de este párrafo): produccion real en `https://gocreate.mx`, corriendo en la Mac mini de marketing (mkt) — **no** un droplet (el droplet viejo se decomisionó tras la migración de finales de agosto). Pipeline de deploy continuo por releases (`sudo /opt/go/bin/deploy-app.sh gocreate`, con backup automático y rollback si el health check falla), jala siempre de `master`. Acceso SSH y sudo sin contraseña ya configurados para automatizar el deploy — **antes de rehacer nada de esto, leer `docs/deploy/acceso-deploy-gocreate.md`**, tiene el flujo completo (alinear ramas → deploy → verificar) y qué credenciales/reglas ya existen. Diseño del pipeline en sí: `docs/deploy/despliegue-continuo-multi-app.md`.
+
+Localmente sigue corriendo igual, para desarrollo: `127.0.0.1:8000` (backend) y `127.0.0.1:5173` (frontend, puerto variable si ya está ocupado). El deploy en producción no cambia nada de eso.
+
+Nota heredada, sigue aplicando en general para exponer *cualquier cosa* fuera de `127.0.0.1` sin verificar primero: HTTPS, CSP/HSTS y `CORS_ORIGINS` (ver RISKS.md #2 residual y `docs/deploy/runbook.md`) — producción ya tiene HTTPS vía el dominio real, pero no se ha reauditado CSP/HSTS específicamente desde la migración.
