@@ -1,5 +1,12 @@
 # Recordatorios de vencimiento — LaunchAgent del Mac mini
 
+> **RETIRADO (14/09/2026):** `backend/scripts/recordatorios_vencimiento.py` fue
+> eliminado — decision posterior al plan original (§7), que si pedia este
+> recordatorio. Hoy el unico correo que manda Control de Equipos es al crear
+> el prestamo (`confirmar`); no hay aviso de vencimiento, firma ni devolucion.
+> Este documento queda solo como referencia historica de como funcionaba antes
+> de retirarse — no hay LaunchAgent que configurar.
+
 > Carril servidor y datos, tarea S6 (WP6). Patron: el mismo que ya usa
 > `doc/deploy-runbook.md` para las tareas programadas del Mac mini.
 > Diseño de las notificaciones: §7 de `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md`.

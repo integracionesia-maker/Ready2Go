@@ -75,9 +75,10 @@ def login(
             db, actor_user_id=user.id, action="login.failed", ip_address=client_ip,
             details="cuenta bloqueada temporalmente",
         )
-        raise HTTPException(
-            status_code=401,
-            detail="Cuenta bloqueada temporalmente por intentos fallidos. Intenta más tarde.",
+        raise security.CuentaBloqueadaError(
+            detail="Cuenta bloqueada temporalmente por intentos fallidos. "
+            "Contacta a un administrador o verifica tu identidad resolviendo el rompecabezas.",
+            locked_until=user.locked_until,
         )
 
     if not user.is_active:
@@ -97,6 +98,61 @@ def login(
 
     _issue_session(db, response, user)
     return schemas.LoginResponse(user=schemas.UserResponse.model_validate(user))
+
+
+# ── Auto-desbloqueo con rompecabezas ────────────────────────────────────────
+# Publico (sin sesion) a proposito: quien esta bloqueado no puede loguearse
+# todavia, asi que no hay cookie de sesion que exigir. Resolver el
+# rompecabezas SOLO limpia el bloqueo — nunca inicia sesion; la contraseña
+# sigue haciendo falta despues, tal cual con el desbloqueo del superadmin.
+
+
+@router.post("/unlock/challenge", response_model=schemas.UnlockChallengeResponse)
+def solicitar_challenge_desbloqueo(
+    payload: schemas.UnlockChallengeRequest,
+    db: Session = Depends(get_db),
+):
+    user = crud.get_user_by_identifier(db, payload.identificador)
+    if not user or not crud.is_locked(user):
+        raise HTTPException(
+            status_code=404, detail="No hay una cuenta bloqueada con ese usuario o correo."
+        )
+    if not security.self_unlock_disponible(user.id):
+        raise HTTPException(
+            status_code=429,
+            detail="Ya usaste el auto-desbloqueo varias veces hoy. Contacta a un administrador.",
+        )
+    return schemas.UnlockChallengeResponse(**security.crear_challenge_desbloqueo(user.id))
+
+
+@router.post("/unlock/verify", response_model=schemas.UnlockVerifyResponse)
+def verificar_challenge_desbloqueo(
+    payload: schemas.UnlockVerifyRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user = crud.get_user_by_identifier(db, payload.identificador)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
+    exito, motivo = security.verificar_challenge_desbloqueo(
+        payload.challenge_id,
+        user.id,
+        payload.posicion_percent,
+        [p.model_dump() for p in payload.trail],
+    )
+    if not exito:
+        raise HTTPException(status_code=400, detail=motivo)
+
+    crud.unlock_user(db, user)
+    security.registrar_self_unlock(user.id)
+    client_ip = request.client.host if request.client else "unknown"
+    crud.log_audit(
+        db, actor_user_id=user.id, action="account.self_unlock", ip_address=client_ip,
+    )
+    return schemas.UnlockVerifyResponse(
+        ok=True, mensaje="Cuenta desbloqueada. Ya puedes intentar iniciar sesión de nuevo."
+    )
 
 
 @router.post("/refresh", response_model=schemas.LoginResponse)

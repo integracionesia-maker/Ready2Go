@@ -33,6 +33,7 @@ def test_admin_forbidden_from_user_detail_endpoints(logged_in_admin, db, creador
     assert logged_in_admin.put(f"/api/users/{creador_user.id}", json={"full_name": "Hackeado"}).status_code == 403
     assert logged_in_admin.post(f"/api/users/{creador_user.id}/reset-password").status_code == 403
     assert logged_in_admin.post(f"/api/users/{creador_user.id}/reset-password-superadmin").status_code == 403
+    assert logged_in_admin.post(f"/api/users/{creador_user.id}/unlock").status_code == 403
     assert logged_in_admin.patch(f"/api/users/{creador_user.id}/estado", json={"is_active": False}).status_code == 403
     assert logged_in_admin.get(f"/api/users/{other_admin.id}").status_code == 403
 
@@ -127,6 +128,42 @@ def test_reset_password_returns_temporary_password_once(logged_in_superadmin, cr
     resp = logged_in_superadmin.post(f"/api/users/{creador_user.id}/reset-password")
     assert resp.status_code == 200
     assert len(resp.json()["temporary_password"]) > 0
+
+
+# ── Cuentas bloqueadas ───────────────────────────────────────────────────────
+
+
+def _bloquear(client, username):
+    for _ in range(5):
+        client.post("/api/auth/login", json={"identificador": username, "password": "clave-mala"})
+
+
+def test_locked_only_filtra_solo_las_bloqueadas(logged_in_superadmin, client, creador_user, admin_user):
+    _bloquear(client, creador_user.username)
+
+    resp = logged_in_superadmin.get("/api/users/", params={"locked_only": True})
+    assert resp.status_code == 200
+    usernames = [u["username"] for u in resp.json()["items"]]
+    assert usernames == [creador_user.username]
+
+
+def test_superadmin_desbloquea_con_un_clic(logged_in_superadmin, client, creador_user):
+    from .conftest import PASSWORD_CREADOR
+
+    _bloquear(client, creador_user.username)
+    assert login(client, creador_user.username, PASSWORD_CREADOR).status_code == 401
+
+    resp = logged_in_superadmin.post(f"/api/users/{creador_user.id}/unlock")
+    assert resp.status_code == 200
+    assert resp.json()["locked_until"] is None
+    assert resp.json()["failed_login_attempts"] == 0
+
+    assert login(client, creador_user.username, PASSWORD_CREADOR).status_code == 200
+
+
+def test_unlock_no_aplica_a_la_cuenta_superadmin(logged_in_superadmin, superadmin_user_b):
+    resp = logged_in_superadmin.post(f"/api/users/{superadmin_user_b.id}/unlock")
+    assert resp.status_code == 403
 
 
 def test_weak_password_rejected_on_create(logged_in_superadmin):

@@ -81,6 +81,32 @@ export function setUserActive(id, isActive) {
   });
 }
 
+// Un clic: limpia intentos fallidos y bloqueo, sin tocar contraseña ni sesiones.
+export function unlockUser(id) {
+  return request(`/users/${id}/unlock`, { method: "POST" });
+}
+
+/* ── Auto-desbloqueo con rompecabezas (público, sin sesión) ────────────── */
+
+export function unlockChallenge(identificador) {
+  return request("/auth/unlock/challenge", {
+    method: "POST",
+    body: JSON.stringify({ identificador }),
+  });
+}
+
+export function unlockVerify(identificador, challengeId, posicionPercent, trail) {
+  return request("/auth/unlock/verify", {
+    method: "POST",
+    body: JSON.stringify({
+      identificador,
+      challenge_id: challengeId,
+      posicion_percent: posicionPercent,
+      trail,
+    }),
+  });
+}
+
 /* ── Roles y permisos (RBAC aditivo, solo superadmin) ───────────────────── */
 
 export function fetchRoles() {
@@ -391,6 +417,33 @@ export function fetchTopExpenses(startDate, endDate, { signal } = {}) {
   if (endDate) params.set("end_date", endDate);
   const qs = params.toString();
   return request(`/dashboard/top-expenses${qs ? `?${qs}` : ""}`, { signal });
+}
+
+export function fetchPeriodComparison(startDate, endDate, { signal } = {}) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  const qs = params.toString();
+  return request(`/dashboard/period-comparison${qs ? `?${qs}` : ""}`, { signal });
+}
+
+export function fetchGeneralExpensesByBrand(startDate, endDate, { signal } = {}) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  const qs = params.toString();
+  return request(`/dashboard/general-expenses-by-brand${qs ? `?${qs}` : ""}`, { signal });
+}
+
+export function fetchMonthlyEstimates(year, { signal } = {}) {
+  return request(`/dashboard/monthly-estimates?year=${year}`, { signal });
+}
+
+export function updateMonthlyEstimate(year, month, categoria, amount) {
+  return request(`/dashboard/monthly-estimates/${year}/${month}/${categoria}`, {
+    method: "PUT",
+    body: JSON.stringify({ amount }),
+  });
 }
 
 /** Reporte del dashboard generado en backend (reportlab, vectores nativos —

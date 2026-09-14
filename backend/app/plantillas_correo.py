@@ -1,12 +1,18 @@
-"""Las cinco plantillas de correo de §7 del plan.
+"""Las plantillas de correo de Control de Equipos.
 
 Texto plano, en español, tono sobrio, **cero emojis**. Funciones puras: reciben
 un diccionario y devuelven `(asunto, cuerpo)`. No tocan la base ni el mailer, asi
 que se prueban sin sesion y sin servidor de correo.
 
-Los textos son propuesta del servidor: el plan define disparador, destinatarios y
-que datos lleva cada correo, no la redaccion. Son mensajes de cara a personas de
-Grupo Ortiz, asi que conviene que marketing los apruebe antes del piloto.
+Unico disparador en todo el modulo: la creacion del prestamo (`confirmar` en
+`routers/loans.py`, el momento en que se asigna folio y se genera la
+responsiva). El plan original (§7) pedia tambien avisos de firma, devolucion y
+vencimiento; se retiraron a proposito (decision posterior al plan) — no
+avisar en esos otros eventos.
+
+Los textos son propuesta del servidor: no la redaccion final. Son mensajes de
+cara a personas de Grupo Ortiz, asi que conviene que marketing los apruebe
+antes del piloto.
 """
 
 from __future__ import annotations
@@ -14,10 +20,7 @@ from __future__ import annotations
 __all__ = [
     "TIPO_CONFIRMADO_APROBADOR",
     "TIPO_CONFIRMADO_RESPONSABLE",
-    "TIPO_DEVOLUCION_APROBADOR",
-    "TIPO_DEVOLUCION_CONFIRMADA",
-    "TIPO_VENCIMIENTO",
-    "TIPO_FIRMA_COMPLETADA",
+    "TIPO_CONFIRMADO_TITULAR_FIRMA",
     "PIE",
     "RUTA_APROBACIONES",
     "RUTA_PRESTAMO",
@@ -29,21 +32,17 @@ __all__ = [
 # UNIQUE(loan_id, tipo, destinatario): cambiarlos reenvia todo.
 TIPO_CONFIRMADO_APROBADOR = "confirmado_aprobador"
 TIPO_CONFIRMADO_RESPONSABLE = "confirmado_responsable"
-TIPO_DEVOLUCION_APROBADOR = "devolucion_aprobador"
-TIPO_DEVOLUCION_CONFIRMADA = "devolucion_confirmada"
-# El de vencimiento lleva sufijo de dia (`vencimiento:2026-07-30`) porque el
-# recordatorio es DIARIO y el UNIQUE lo bloquearia para siempre despues del
-# primer envio. Ver `notificaciones.tipo_vencimiento()`.
-TIPO_VENCIMIENTO = "vencimiento"
-# Se dispara con CADA firma que se sube post-confirmacion (prestamo ya en
-# `prestado`/`pendiente_confirmacion`/`incompleto`, ver
-# `crud_loans.completar_firma_faltante`). A diferencia de confirmado_*, esto
-# SI puede pasar dos veces en la vida del prestamo (una por firma) — se manda
-# siempre con sufijo `:{kind}` (`firma_completada:firma_entrega` /
-# `:firma_responsable`) para que la idempotencia de `notification_log`
-# (UNIQUE loan_id+tipo+destinatario) no bloquee la segunda. Mismo patron que
-# el sufijo de dia de TIPO_VENCIMIENTO.
-TIPO_FIRMA_COMPLETADA = "firma_completada"
+# Distinto de TIPO_CONFIRMADO_APROBADOR: ese va a quien tiene
+# `equipos_aprobacion:autorizar_entrega` (APROBADOR_EQUIPO); este va a quien
+# tiene HOY el paquete singleton TITULAR_FIRMA_EQUIPO — hoy la misma persona
+# (Melisa), pero son paquetes desacoplados a proposito (ver
+# `docs/equipos/firma-pendiente-al-confirmar.md` §Titular), asi que el titular
+# puede cambiar sin que cambie quien aprueba, y viceversa. Se manda una sola
+# vez en la vida del prestamo: se dispara en el mismo punto que
+# TIPO_CONFIRMADO_APROBADOR (`confirmar`, el unico momento en que se asigna
+# folio y se genera la responsiva) y la idempotencia de `notification_log`
+# (UNIQUE loan_id+tipo+destinatario) hace el resto.
+TIPO_CONFIRMADO_TITULAR_FIRMA = "confirmado_titular_firma"
 
 PIE = (
     "\n\n--\n"
@@ -116,75 +115,21 @@ def confirmado_responsable(d: dict) -> tuple[str, str]:
     return asunto, cuerpo
 
 
-def firma_completada(d: dict) -> tuple[str, str]:
-    """Se dispara con CADA firma que se sube (revision 3, 07/09/2026), no
-    solo con la última — `firma_pendiente` ya viene calculado DESPUES de
-    guardar esta firma, así que `_aviso_firma_pendiente` dice honestamente
-    si todavía falta la otra (mismo helper que usa el aviso de confirmación,
-    ya resuelve el "de el" con guion en vez de preposición)."""
-    asunto = f"[GOCreate] Firma completada — carta responsiva {d['folio']} actualizada"
+def confirmado_titular_firma(d: dict) -> tuple[str, str]:
+    asunto = f"[GOCreate] Prestamo {d['folio']} espera tu firma"
     cuerpo = (
-        f"Se registro una firma del prestamo {d['folio']}.\n\n"
-        f"Responsable: {d['responsable']}\n"
-        f"Equipos:\n{_lista(d.get('equipos') or [])}\n\n"
-        f"La carta responsiva actualizada va adjunta.\n"
-        f"{_aviso_firma_pendiente(d)}"
-        f"Consulta el prestamo en: "
-        f"{_enlace(d['url_publica'], RUTA_PRESTAMO.format(folio=d['folio']))}"
-        f"{PIE}"
-    )
-    return asunto, cuerpo
-
-
-def devolucion_aprobador(d: dict) -> tuple[str, str]:
-    asunto = f"[GOCreate] Devolucion registrada del prestamo {d['folio']}"
-    cuerpo = (
-        f"Se registro la devolucion de un prestamo y falta confirmarla.\n\n"
+        f"Se registro un prestamo de equipo que necesita tu firma como titular.\n\n"
         f"Folio: {d['folio']}\n"
         f"Responsable: {d['responsable']}\n"
-        f"Fecha de regreso: {d.get('fecha_regreso_real') or '—'}\n\n"
-        f"Equipos devueltos:\n{_lista(d.get('equipos') or [])}\n\n"
-        f"Revisa las fotos de devolucion y confirma el estado en: "
-        f"{_enlace(d['url_publica'], RUTA_APROBACIONES)}"
-        f"{PIE}"
-    )
-    return asunto, cuerpo
-
-
-def devolucion_confirmada(d: dict) -> tuple[str, str]:
-    hay_incidencias = bool(d.get("incidencias"))
-    estado = "con incidencias" if hay_incidencias else "en buen estado"
-    asunto = f"[GOCreate] Devolucion confirmada — {d['folio']} ({estado})"
-
-    detalle = ""
-    if hay_incidencias:
-        detalle = "\nIncidencias reportadas:\n" + "\n".join(
-            f"  - {linea}" for linea in d["incidencias"]
-        ) + "\n"
-
-    cuerpo = (
-        f"Hola {d['responsable']}:\n\n"
-        f"Se confirmo la devolucion del prestamo {d['folio']}.\n"
-        f"Resultado: {'se reportaron incidencias' if hay_incidencias else 'todo en buen estado'}.\n"
-        f"{detalle}\n"
-        f"Consulta el detalle en: "
-        f"{_enlace(d['url_publica'], RUTA_PRESTAMO.format(folio=d['folio']))}"
-        f"{PIE}"
-    )
-    return asunto, cuerpo
-
-
-def vencimiento(d: dict) -> tuple[str, str]:
-    dias = d.get("dias_atraso", 0)
-    plural = "s" if dias != 1 else ""
-    asunto = f"[GOCreate] Equipo con {dias} dia{plural} de atraso — {d['folio']}"
-    cuerpo = (
-        f"El prestamo {d['folio']} paso su fecha de regreso.\n\n"
-        f"Responsable: {d['responsable']}\n"
-        f"Fecha de regreso esperada: {d.get('fecha_regreso_esperada') or '—'}\n"
-        f"Dias de atraso: {dias}\n\n"
-        f"Equipos pendientes de devolver:\n{_lista(d.get('equipos') or [])}\n\n"
-        f"Registra la devolucion en: "
+        f"Area: {d.get('area') or '—'}\n"
+        f"Empresa: {d.get('empresa') or '—'}\n"
+        f"Motivo: {d.get('motivo') or '—'}\n"
+        f"Fecha de entrega: {d.get('fecha_entrega') or '—'}\n"
+        f"Fecha de regreso esperada: {d.get('fecha_regreso_esperada') or '—'}\n\n"
+        f"Equipos:\n{_lista(d.get('equipos') or [])}\n\n"
+        f"La carta responsiva va adjunta.\n"
+        f"{_aviso_firma_pendiente(d)}"
+        f"Para firmar: "
         f"{_enlace(d['url_publica'], RUTA_PRESTAMO.format(folio=d['folio']))}"
         f"{PIE}"
     )
@@ -194,18 +139,13 @@ def vencimiento(d: dict) -> tuple[str, str]:
 PLANTILLAS = {
     TIPO_CONFIRMADO_APROBADOR: confirmado_aprobador,
     TIPO_CONFIRMADO_RESPONSABLE: confirmado_responsable,
-    TIPO_DEVOLUCION_APROBADOR: devolucion_aprobador,
-    TIPO_DEVOLUCION_CONFIRMADA: devolucion_confirmada,
-    TIPO_VENCIMIENTO: vencimiento,
-    TIPO_FIRMA_COMPLETADA: firma_completada,
+    TIPO_CONFIRMADO_TITULAR_FIRMA: confirmado_titular_firma,
 }
 
 
 def construir(tipo: str, datos: dict) -> tuple[str, str]:
-    """`(asunto, cuerpo)` de una plantilla. El tipo de vencimiento puede venir
-    con su sufijo de dia (`vencimiento:2026-07-30`)."""
-    base = tipo.split(":", 1)[0]
-    plantilla = PLANTILLAS.get(base)
+    """`(asunto, cuerpo)` de una plantilla."""
+    plantilla = PLANTILLAS.get(tipo)
     if plantilla is None:
         raise KeyError(f"No hay plantilla de correo para el tipo '{tipo}'.")
     return plantilla(datos)

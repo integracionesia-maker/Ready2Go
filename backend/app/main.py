@@ -15,6 +15,7 @@ from . import audit_queue
 from .database import engine, Base
 from .errores import registrar_manejadores
 from .middleware_audit import AuditMiddleware
+from .security import registrar_manejador_cuenta_bloqueada
 from .routers import auth, creators, brands, tickets, dashboard, users, general_expenses
 from .routers import roles, user_roles, empresas, equipos_dashboard, equipment
 from .routers import loans, approvals, media, responsivas, notifications
@@ -66,6 +67,7 @@ app.add_middleware(AuditMiddleware)
 # por defecto de FastAPI envuelve el detalle y deja `codigo` anidado, asi que el
 # cliente no lo encontraria en la raiz. Ver app/errores.py.
 registrar_manejadores(app)
+registrar_manejador_cuenta_bloqueada(app)
 
 app.include_router(auth.router)
 app.include_router(users.router)

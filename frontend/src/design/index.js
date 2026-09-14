@@ -29,3 +29,4 @@ export { createApexOptions, formatChartCurrency, GO_CHART_COLORS } from "./apexT
 export * as motionTokens from "./motion";
 export { useSortable } from "./useSortable";
 export { SortIcon, SortableHeaderCell } from "./SortableHeader";
+export { default as PuzzleSlider } from "./PuzzleSlider";

@@ -7,6 +7,7 @@ import {
   resetSuperadminPassword,
   resetUserPassword,
   setUserActive,
+  unlockUser,
   updateUser,
 } from "@/api";
 import { useAuth } from "@/context/AuthContext";
@@ -60,6 +61,11 @@ const SUPERADMIN_COLUMNS = [
 function formatLastLogin(iso) {
   if (!iso) return "Nunca";
   return new Date(iso).toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function formatLockedUntil(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 function emptyForm() {
@@ -156,6 +162,11 @@ export default function UserManagement({ creators, onCreatorsChange }) {
   const [saConfirmInput, setSaConfirmInput] = useState("");
   const [saReset, setSaReset] = useState({ fase: "confirmando", password: null, error: null });
 
+  // ── Cuentas bloqueadas: desbloqueo de un clic ───────────────────────────
+  const [lockedUsers, setLockedUsers] = useState([]);
+  const [lockedLoading, setLockedLoading] = useState(true);
+  const [unlockingId, setUnlockingId] = useState(null);
+
   const { sortedItems: sortedUsers, sortKey, sortDir, cycleSort } = useSortable(users, USER_COLUMNS);
   const {
     sortedItems: sortedSuperAdmins,
@@ -241,9 +252,39 @@ export default function UserManagement({ creators, onCreatorsChange }) {
     setRolesPorUsuario(Object.fromEntries(entries));
   };
 
+  const loadLockedUsers = async () => {
+    setLockedLoading(true);
+    try {
+      const data = await fetchUsers({ locked_only: true, page_size: 200 });
+      setLockedUsers(data.items);
+    } catch {
+      setLockedUsers([]);
+    } finally {
+      setLockedLoading(false);
+    }
+  };
+
+  const handleUnlock = async (u) => {
+    setUnlockingId(u.id);
+    try {
+      await unlockUser(u.id);
+      toast.push({ tone: "success", title: `${u.username} desbloqueado` });
+      setLockedUsers((prev) => prev.filter((x) => x.id !== u.id));
+      // Si la cuenta tambien esta en la tabla principal (fuera de vista por el
+      // filtro), su badge de bloqueo se refresca en el proximo `load()`.
+      load();
+    } catch (err) {
+      toast.push({ tone: "error", title: err.message });
+    } finally {
+      setUnlockingId(null);
+    }
+  };
+
   useEffect(() => { load(); }, [page, pageSize, filters]);
 
   useEffect(() => { loadSuperAdmins(); }, []);
+
+  useEffect(() => { loadLockedUsers(); }, []);
 
   const openCreateForm = () => {
     setEditingUser(null);
@@ -606,6 +647,76 @@ export default function UserManagement({ creators, onCreatorsChange }) {
           </div>
         )}
         </>
+      )}
+
+      {/* ── Cuentas bloqueadas: desbloqueo de un clic. Solo aparece si hay
+          alguna — sin sección vacía compitiendo por espacio. */}
+      {(lockedLoading || lockedUsers.length > 0) && (
+        <div className="rounded-go-lg border p-4" style={{ borderColor: "rgba(229,62,62,0.3)" }}>
+          <div className="flex items-center justify-between">
+            <span className="go-eyebrow" style={{ color: "var(--go-error)" }}>
+              Cuentas bloqueadas
+            </span>
+            {!lockedLoading && (
+              <span className="font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                {lockedUsers.length} cuenta{lockedUsers.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+
+          {lockedLoading ? (
+            <p className="py-3 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
+              Cargando...
+            </p>
+          ) : (
+            <div className="go-table-scroll-wrapper mt-2">
+              <div className="go-table-scroll overflow-x-auto">
+                <table className="go-table w-full table-fixed">
+                  <colgroup>
+                    <col className="w-[120px]" />
+                    <col className="w-[160px]" />
+                    <col className="w-[90px]" />
+                    <col className="w-[150px]" />
+                    <col className="w-[110px]" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Nombre</th>
+                      <th className="text-center">Intentos</th>
+                      <th>Bloqueada hasta</th>
+                      <th className="text-right" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lockedUsers.map((u) => (
+                      <tr key={u.id}>
+                        <td className="truncate font-mono text-xs" title={u.username}>{u.username}</td>
+                        <td className="truncate font-body text-sm" style={{ color: "var(--go-text-primary)" }} title={u.full_name}>
+                          {u.full_name}
+                        </td>
+                        <td className="text-center font-mono text-xs tabular-nums">{u.failed_login_attempts}</td>
+                        <td className="whitespace-nowrap font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
+                          {formatLockedUntil(u.locked_until)}
+                        </td>
+                        <td className="text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleUnlock(u)}
+                            disabled={unlockingId === u.id}
+                            className="btn-go-ghost text-xs px-3 py-1.5"
+                          >
+                            {unlockingId === u.id ? "Desbloqueando..." : "Desbloquear"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── Superadministradores: tabla separada (2026-08-19), al FONDO de la

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState, GlassPanel, SkeletonShimmer, Timeline, MediaViewer, usePageTitle } from "@/design";
 import { esCodigo } from "@/api";
-import { fetchLoanByFolio, fetchTitularFirmaEquipo, mediaUrl, loanResponsivaUrl } from "../api";
+import { fetchLoanByFolio, fetchTitularFirmaEquipo, mediaUrl, loanResponsivaUrl, updateFechaRegresoEsperada } from "../api";
 import CompletarFirmaModal from "../components/CompletarFirmaModal";
 import RegistrarDevolucionModal from "../components/RegistrarDevolucionModal";
 import { usePermisos } from "../permisos/usePermisos";
@@ -100,6 +100,10 @@ export default function FichaPrestamoPage() {
   const [completarFirma, setCompletarFirma] = useState(null); // "firma_entrega" | "firma_responsable" | null
   const [titular, setTitular] = useState(null); // { user_id, nombre, soy_titular } | null
   const [mostrarDevolucion, setMostrarDevolucion] = useState(false);
+  const [editandoFecha, setEditandoFecha] = useState(false);
+  const [nuevaFecha, setNuevaFecha] = useState("");
+  const [guardandoFecha, setGuardandoFecha] = useState(false);
+  const [errorFecha, setErrorFecha] = useState(null);
 
   useEffect(() => {
     fetchTitularFirmaEquipo()
@@ -130,6 +134,20 @@ export default function FichaPrestamoPage() {
   async function verResponsiva() {
     const url = await loanResponsivaUrl(loan.id);
     window.open(url, "_blank", "noopener");
+  }
+
+  async function guardarFecha() {
+    setGuardandoFecha(true);
+    setErrorFecha(null);
+    try {
+      await updateFechaRegresoEsperada(loan.id, nuevaFecha);
+      setEditandoFecha(false);
+      cargar();
+    } catch (e) {
+      setErrorFecha(e.message);
+    } finally {
+      setGuardandoFecha(false);
+    }
   }
 
   if (loading) {
@@ -183,6 +201,11 @@ export default function FichaPrestamoPage() {
   // tiene la pestaña "Activos" (I9, 07/09/2026), así que la acción vive
   // aquí, en la ficha, para quien sí tenga el permiso.
   const puedeRegistrarDevolucion = loan.estado === "prestado" && puede("equipos_prestamos", "registrar_devolucion");
+  // Mismo criterio que el servidor (routers/loans.py::actualizar_fecha_regreso_esperada):
+  // no aplica en un préstamo cerrado ni una vez que el equipo ya volvió. Sin
+  // permiso extra a propósito — "cualquiera con acceso a la vista" (CLAUDE.md
+  // raíz): quien puede ver esta ficha, puede modificar la fecha.
+  const puedeEditarFecha = !["completado", "cancelado"].includes(loan.estado) && !loan.fecha_regreso_real;
 
   return (
     <div className="space-y-6">
@@ -239,7 +262,59 @@ export default function FichaPrestamoPage() {
             <span className="font-mono">{loan.fecha_entrega || "—"}</span>
           </Dato>
           <Dato label="Regreso esperado">
-            <span className="font-mono">{loan.fecha_regreso_esperada || "—"}</span>
+            {editandoFecha ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="date"
+                  value={nuevaFecha}
+                  onChange={(e) => setNuevaFecha(e.target.value)}
+                  className="go-input w-auto font-mono text-xs"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={guardarFecha}
+                  disabled={guardandoFecha || !nuevaFecha}
+                  className="btn-go-ghost px-2 py-1 text-xs"
+                >
+                  {guardandoFecha ? "Guardando…" : "Guardar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditandoFecha(false);
+                    setErrorFecha(null);
+                  }}
+                  disabled={guardandoFecha}
+                  className="btn-go-ghost px-2 py-1 text-xs"
+                >
+                  Cancelar
+                </button>
+                {errorFecha && (
+                  <p className="w-full font-body text-xs" style={{ color: "var(--go-error)" }}>
+                    {errorFecha}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="font-mono">{loan.fecha_regreso_esperada || "—"}</span>
+                {puedeEditarFecha && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNuevaFecha(loan.fecha_regreso_esperada || "");
+                      setErrorFecha(null);
+                      setEditandoFecha(true);
+                    }}
+                    className="font-body text-xs underline"
+                    style={{ color: "var(--go-orange)" }}
+                  >
+                    Modificar
+                  </button>
+                )}
+              </span>
+            )}
           </Dato>
           <Dato label="Regreso real">
             <span className="font-mono">{loan.fecha_regreso_real || "—"}</span>

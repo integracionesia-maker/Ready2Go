@@ -13,7 +13,7 @@ la maqueta cualquiera elegia "Melisa" en un `<select>` y aprobaba en su nombre
 (§10.4, CRITICO).
 """
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from .. import (
@@ -21,8 +21,6 @@ from .. import (
     crud_loans,
     loan_state,
     models,
-    notificaciones,
-    plantillas_correo,
     schemas_loans,
 )
 from ..database import get_db
@@ -108,7 +106,6 @@ def confirmar_devolucion(
     loan_id: int,
     data: schemas_loans.ConfirmarDevolucionRequest,
     request: Request,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_perm("equipos_aprobacion", "confirmar_devolucion")),
 ):
@@ -164,14 +161,8 @@ def confirmar_devolucion(
         target_id=prestamo.id,
         details=destino,
     )
-    if prestamo.responsable_email:
-        notificaciones.encolar(
-            db,
-            plantillas_correo.TIPO_DEVOLUCION_CONFIRMADA,
-            prestamo,
-            background_tasks,
-            destinatarios=[prestamo.responsable_email],
-        )
+    # Sin correo aqui a proposito: el unico disparador de correo en todo el
+    # modulo es la creacion del prestamo (`confirmar_prestamo`, en loans.py).
     return crud_loans.serializar_detalle(db, prestamo)
 
 

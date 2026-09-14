@@ -30,6 +30,9 @@ export async function cancelLoan(loanId) {
 export async function returnLoan(loanId, data) {
   return (await backend).returnLoan(loanId, data);
 }
+export async function updateFechaRegresoEsperada(loanId, fechaRegresoEsperada) {
+  return (await backend).updateFechaRegresoEsperada(loanId, fechaRegresoEsperada);
+}
 export async function authorizeDelivery(loanId) {
   return (await backend).authorizeDelivery(loanId);
 }

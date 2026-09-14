@@ -52,6 +52,7 @@ __all__ = [
     "agregar_item",
     "quitar_item",
     "confirmar",
+    "actualizar_fecha_regreso_esperada",
     "cancelar",
     "registrar_devolucion",
     "autorizar_entrega",
@@ -673,6 +674,34 @@ def confirmar(db: Session, prestamo: Loan, actor: User) -> Loan:
     )
     generar_responsiva(db, prestamo, actor)
 
+    db.commit()
+    db.refresh(prestamo)
+    return prestamo
+
+
+def actualizar_fecha_regreso_esperada(db: Session, prestamo: Loan, nueva_fecha: date, actor: User) -> Loan:
+    """Cambia cuando se espera el regreso del equipo. En el dia a dia el plazo
+    original casi nunca se cumple tal cual — esto no es una excepcion, es lo
+    normal, asi que cualquiera con acceso a la ficha (el beneficiario, un
+    aprobador, o quien tenga `ver_global`) puede correrla, no solo quien creo
+    el prestamo. La validacion de permiso vive en el router (misma regla que
+    ya existe para VER la ficha); aqui solo se valida el dato.
+
+    No aplica una vez que el equipo ya volvio (`fecha_regreso_real` puesto) ni
+    en un prestamo cerrado: ahi la fecha esperada ya es historia, no un plan.
+    El router valida eso antes de llamar aqui (mismo orden permiso->estado que
+    el resto de las transiciones); esta funcion asume que ya se valido.
+    """
+    anterior = prestamo.fecha_regreso_esperada
+    prestamo.fecha_regreso_esperada = nueva_fecha
+
+    registrar_evento(
+        db,
+        prestamo,
+        TipoEvento.FECHA_REGRESO_MODIFICADA.value,
+        f"Fecha de regreso esperada: {anterior.isoformat() if anterior else '—'} -> {nueva_fecha.isoformat()}.",
+        actor,
+    )
     db.commit()
     db.refresh(prestamo)
     return prestamo

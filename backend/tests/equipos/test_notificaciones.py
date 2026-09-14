@@ -1,18 +1,18 @@
-"""Correo y recordatorios (S6 / WP6).
+"""Correo de Control de Equipos (S6 / WP6).
 
-Criterios de cierre del reparto: idempotencia (reintentar no duplica correos) y
-que un SMTP caido **no** tumbe el registro del prestamo.
+Unico disparador: la creacion del prestamo. Criterios de cierre del reparto:
+idempotencia (reintentar no duplica correos) y que un SMTP caido **no** tumbe
+el registro del prestamo.
 """
 
 import smtplib
-from datetime import date
 
 import pytest
 
 import seed_equipos
 from app import mailer, notificaciones
 from app import plantillas_correo as pl
-from app.models_equipos import EstadoNotificacion, EstadoPrestamo, Loan, NotificationLog
+from app.models_equipos import EstadoNotificacion, EstadoPrestamo, NotificationLog
 
 from .conftest import crear_prestamo, logueado, subir, usuario_con
 from ..conftest import PASSWORD_SUPERADMIN
@@ -284,8 +284,8 @@ def test_en_modo_legacy_no_hay_aprobadores(inventario, db, monkeypatch, caplog):
 # ── Contenido de los correos ────────────────────────────────────────────────
 
 
-def test_hay_seis_plantillas():
-    assert len(pl.PLANTILLAS) == 6
+def test_hay_tres_plantillas():
+    assert len(pl.PLANTILLAS) == 3
 
 
 def test_ninguna_plantilla_lleva_emojis(inventario, ana, db):
@@ -320,6 +320,43 @@ def test_el_responsable_recibe_su_copia_del_pdf(inventario, ana, melisa, smtp_fa
     assert copia["adjuntos"] == ["CE-0001_v1.pdf"]
 
 
+def test_confirmar_avisa_al_titular_de_la_firma(inventario, ana, db, smtp_falso):
+    """TITULAR_FIRMA_EQUIPO es un paquete desacoplado de APROBADOR_EQUIPO: se
+    usa un titular sin el aditivo de aprobador para probar que el aviso le
+    llega a el aunque no sea quien autoriza la entrega."""
+    titular = usuario_con(db, username="firmante", aditivos=("TITULAR_FIRMA_EQUIPO",))
+    cliente = logueado("ana.ruiz")
+    _confirmado(cliente)
+
+    aviso = next(c for c in smtp_falso if c["to"] == titular.email)
+    assert "CE-0001" in aviso["subject"]
+    assert aviso["adjuntos"] == ["CE-0001_v1.pdf"]
+
+
+def test_sin_titular_asignado_no_hay_aviso_de_firma(inventario, ana, db, smtp_falso):
+    """Solo aprobador, sin TITULAR_FIRMA_EQUIPO: no debe haber un tercer
+    correo ni un intento a un destinatario vacio."""
+    usuario_con(db, username="melisa", aditivos=("APROBADOR_EQUIPO",))
+    cliente = logueado("ana.ruiz")
+    _confirmado(cliente)
+
+    # Solo el aviso al aprobador y la copia al responsable — nada de un
+    # tercer correo de firma sin destinatario.
+    assert len(smtp_falso) == 2
+    assert not any("espera tu firma" in c["subject"] for c in smtp_falso)
+
+
+def test_confirmar_dos_veces_no_duplica_el_aviso_al_titular(inventario, ana, db, smtp_falso):
+    titular = usuario_con(db, username="firmante", aditivos=("TITULAR_FIRMA_EQUIPO",))
+    cliente = logueado("ana.ruiz")
+    loan_id = _confirmado(cliente)
+    cuantos = sum(1 for c in smtp_falso if c["to"] == titular.email)
+    assert cuantos == 1
+
+    cliente.post(f"/api/loans/{loan_id}/confirmar")  # 409, no reenvía
+    assert sum(1 for c in smtp_falso if c["to"] == titular.email) == 1
+
+
 def test_el_aviso_de_confirmacion_avisa_de_las_firmas_pendientes(inventario, ana, melisa, smtp_falso):
     """`confirmar` ya no pide ninguna firma (revision 2): al momento de este
     correo lo normal es que falten LAS DOS."""
@@ -331,181 +368,19 @@ def test_el_aviso_de_confirmacion_avisa_de_las_firmas_pendientes(inventario, ana
     assert "el beneficiario" in aprobador["body"]
 
 
-def test_completar_las_dos_firmas_avisa_al_responsable_y_al_aprobador(inventario, ana, melisa, smtp_falso):
-    cliente = logueado("ana.ruiz")
-    loan_id = _confirmado(cliente)
-    smtp_falso.clear()
-
-    subir(logueado("melisa"), loan_id, "firma_entrega")
-    subir(cliente, loan_id, "firma_responsable")
-
-    aprobador = next(c for c in smtp_falso if c["to"] == melisa.email)
-    responsable = next(c for c in smtp_falso if c["to"] == ana.email)
-    assert "CE-0001" in aprobador["subject"]
-    assert aprobador["adjuntos"] == ["CE-0001_v2.pdf"]
-    assert responsable["adjuntos"] == ["CE-0001_v2.pdf"]
-
-
 def test_el_remitente_lleva_nombre_visible(inventario, ana, melisa, smtp_falso):
     logueado("ana.ruiz")
     _confirmado(logueado("ana.ruiz"))
     assert smtp_falso[0]["from"].startswith("GOCreate")
 
 
-def test_la_devolucion_avisa_a_los_aprobadores(inventario, ana, melisa, smtp_falso):
-    cliente = logueado("ana.ruiz")
-    loan_id = _confirmado(cliente)
-    item_id = cliente.get(f"/api/loans/{loan_id}").json()["items"][0]["id"]
-    subir(cliente, loan_id, "foto_dev_frente", item_id)
-    subir(cliente, loan_id, "foto_dev_atras", item_id)
-    smtp_falso.clear()
-
-    cliente.post(f"/api/loans/{loan_id}/devolucion", json={"items": [{"loan_item_id": item_id}]})
-
-    assert [c["to"] for c in smtp_falso] == [melisa.email]
-    assert "Devolucion registrada" in smtp_falso[0]["subject"]
-
-
-def test_la_confirmacion_avisa_al_responsable_con_el_resultado(
-    inventario, ana, melisa, smtp_falso
-):
-    cliente = logueado("ana.ruiz")
-    loan_id = _confirmado(cliente)
-    item_id = cliente.get(f"/api/loans/{loan_id}").json()["items"][0]["id"]
-    subir(cliente, loan_id, "foto_dev_frente", item_id)
-    subir(cliente, loan_id, "foto_dev_atras", item_id)
-    cliente.post(f"/api/loans/{loan_id}/devolucion", json={"items": [{"loan_item_id": item_id}]})
-    smtp_falso.clear()
-
-    cliente_mel = logueado("melisa")
-    cliente_mel.post(
-        f"/api/loans/{loan_id}/confirmar-devolucion",
-        json={"decisiones": [{"loan_item_id": item_id, "decision": "danado", "nota": "Lente rayado"}]},
-    )
-
-    aviso = next(c for c in smtp_falso if c["to"] == ana.email)
-    assert "incidencias" in aviso["subject"]
-    assert "Lente rayado" in aviso["body"]
-
-
-# ── Recordatorio de vencimiento ─────────────────────────────────────────────
-
-
-def test_el_tipo_de_vencimiento_lleva_el_dia(inventario):
-    assert notificaciones.tipo_vencimiento(date(2026, 7, 30)) == "vencimiento:2026-07-30"
-
-
-def test_el_dia_del_recordatorio_sale_de_cdmx(inventario):
-    """Con UTC, despues de las 18:00 CDMX el dia ya es el siguiente y saldrian
-    dos avisos para el mismo dia civil."""
-    from freezegun import freeze_time
-
-    with freeze_time("2026-07-31 03:00:00"):  # 2026-07-30 21:00 en CDMX
-        assert notificaciones.tipo_vencimiento() == "vencimiento:2026-07-30"
-
-
-def _prestamo_vencido(db, ana, folio="CE-0070"):
-    return crear_prestamo(
-        db,
-        responsable=ana,
-        folio=folio,
-        estado=EstadoPrestamo.PRESTADO.value,
-        fecha_regreso_esperada=date(2026, 7, 20),
-    )
-
-
-def test_el_recordatorio_encuentra_los_atrasados(inventario, ana, melisa, db):
-    from scripts import recordatorios_vencimiento as recordatorios
-
-    _prestamo_vencido(db, ana)
-    crear_prestamo(
-        db,
-        responsable=ana,
-        folio="CE-0071",
-        estado=EstadoPrestamo.PRESTADO.value,
-        fecha_regreso_esperada=date(2026, 12, 31),
-    )
-
-    atrasados = recordatorios.prestamos_atrasados(db, date(2026, 7, 28))
-    assert [p.folio for p in atrasados] == ["CE-0070"]
-
-
-def test_un_prestamo_ya_devuelto_no_recibe_recordatorio(inventario, ana, db):
-    """Ya volvio fisicamente; lo que falta es el visto bueno del aprobador.
-    Mandarle "devuelve el equipo" seria confundir a la persona."""
-    from scripts import recordatorios_vencimiento as recordatorios
-
-    crear_prestamo(
-        db,
-        responsable=ana,
-        folio="CE-0072",
-        estado=EstadoPrestamo.PENDIENTE_CONFIRMACION.value,
-        fecha_regreso_esperada=date(2026, 7, 20),
-    )
-    assert recordatorios.prestamos_atrasados(db, date(2026, 7, 28)) == []
-
-
-def test_dos_corridas_el_mismo_dia_no_duplican(inventario, ana, melisa, db):
-    from scripts import recordatorios_vencimiento as recordatorios
-
-    _prestamo_vencido(db, ana)
-    recordatorios.correr(db, simular=True, referencia=date(2026, 7, 28))
-    recordatorios.correr(db, simular=True, referencia=date(2026, 7, 28))
-
-    filas = db.query(NotificationLog).all()
-    assert len(filas) == 2  # responsable + aprobadora, una vez cada uno
-
-
-def test_al_dia_siguiente_si_manda_otro(inventario, ana, melisa, db):
-    """Es un recordatorio DIARIO. Con un tipo constante, el UNIQUE lo mandaria
-    una sola vez en la vida del prestamo y nadie se enteraria."""
-    from scripts import recordatorios_vencimiento as recordatorios
-
-    _prestamo_vencido(db, ana)
-    recordatorios.correr(db, simular=True, referencia=date(2026, 7, 28))
-    recordatorios.correr(db, simular=True, referencia=date(2026, 7, 29))
-
-    tipos = {f.tipo for f in db.query(NotificationLog).all()}
-    assert tipos == {"vencimiento:2026-07-28", "vencimiento:2026-07-29"}
-
-
-def test_el_recordatorio_va_al_responsable_y_a_los_aprobadores(inventario, ana, melisa, db):
-    from scripts import recordatorios_vencimiento as recordatorios
-
-    prestamo = _prestamo_vencido(db, ana)
-    correos = recordatorios.destinatarios_de(db, prestamo)
-    assert set(correos) == {ana.email, melisa.email}
-
-
-def test_el_recordatorio_dice_cuantos_dias(inventario, ana, melisa, db):
-    from freezegun import freeze_time
-
-    prestamo = _prestamo_vencido(db, ana)
-    with freeze_time("2026-07-28 18:00:00"):
-        datos = notificaciones.datos_de_prestamo(db, prestamo)
-        asunto, cuerpo = pl.construir(notificaciones.tipo_vencimiento(), datos)
-
-    assert "8 dias de atraso" in asunto
-    assert "CE-0070" in asunto
-
-
 # ── Reintentos ──────────────────────────────────────────────────────────────
 
 
-def test_reintentar_conserva_el_adjunto_con_el_sufijo_de_firma(
-    inventario, ana, melisa, db, monkeypatch, smtp_configurado
-):
-    """Regresion: `firma_completada` viaja con sufijo `:{kind}` (revision 3,
-    07/09/2026 — una fila distinta por cada firma, para no chocar con la
-    idempotencia UNIQUE(loan_id,tipo,destinatario)). Sin comparar contra el
-    tipo BASE en `reintentar_fallidos`, un reintento perdia el adjunto de la
-    responsiva."""
-    loan_id = _confirmado(logueado("ana.ruiz"))
-    prestamo = db.get(Loan, loan_id)
-    fila = notificaciones.encolar(
-        db, "firma_completada:firma_entrega", prestamo, None, destinatarios=[ana.email]
-    )[0]
-    assert fila.estado == EstadoNotificacion.PENDIENTE.value
+def test_reintentar_conserva_el_adjunto(inventario, ana, melisa, db, monkeypatch, smtp_configurado):
+    """Los tres tipos que quedan siempre llevan la responsiva adjunta — un
+    reintento no debe perderla."""
+    _confirmado(logueado("ana.ruiz"))
 
     capturados = []
 
@@ -516,12 +391,11 @@ def test_reintentar_conserva_el_adjunto_con_el_sufijo_de_firma(
     monkeypatch.setattr(mailer, "enviar", _capturar)
     notificaciones.reintentar_fallidos(db)
 
-    # `_confirmado()` ya deja sus propias filas fallidas (confirmado_aprobador/
-    # confirmado_responsable, sin servidor real que las reciba) — el punto no
-    # es contar cuantas se reintentan, sino que NINGUNA pierda su adjunto.
-    # Antes del fix, justo la de `firma_completada:firma_entrega` venia vacia.
+    # `_confirmado()` deja sus propias filas fallidas (confirmado_aprobador/
+    # confirmado_responsable/confirmado_titular_firma, sin servidor real que
+    # las reciba) — ninguna debe perder su adjunto al reintentarse.
     assert capturados, "deberia haber al menos un intento capturado"
-    assert all(capturados), "ninguna lista de adjuntos deberia venir vacia (incluida firma_completada:kind)"
+    assert all(capturados), "ninguna lista de adjuntos deberia venir vacia"
 
 
 def test_reintentar_reusa_la_misma_fila(inventario, ana, melisa, db, monkeypatch, smtp_configurado):

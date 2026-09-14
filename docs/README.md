@@ -115,7 +115,7 @@ Registros de lo que pasó durante el desarrollo. Organizados por carril (interfa
 |-----------|-----------|
 | [`deploy/migracion-macmini.md`](deploy/migracion-macmini.md) | **Migración del droplet Ubuntu a la Mac mini**, conservando la base y el dominio `gocreate.mx`. Inventario del servidor en vivo, cómo se mueve el túnel de Cloudflare, trampas del proyecto (WAL, cwd relativo), ventana paso a paso, verificación y rollback. **Preparado, no ejecutado.** |
 | [`deploy/runbook.md`](deploy/runbook.md) | Runbook de deploy en Mac Mini on-premise: LaunchDaemon, backups, hardening. ⚠️ Anterior al deploy actual con Cloudflare Tunnel — su §6 (Caddy) **ya no aplica**, ver §2 de `migracion-macmini.md`. |
-| [`deploy/recordatorios-launchagent.md`](deploy/recordatorios-launchagent.md) | LaunchAgent de macOS para el script de recordatorios de vencimiento. 8 variables SMTP requeridas. |
+| [`deploy/recordatorios-launchagent.md`](deploy/recordatorios-launchagent.md) | ⚠️ **Retirado (14/09/2026)** — el script de recordatorios de vencimiento se eliminó; queda solo como referencia histórica. |
 
 ---
 

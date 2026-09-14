@@ -51,7 +51,14 @@ from ..errores import (
     SinPermiso,
     TransicionInvalida,
 )
-from ..models_equipos import EstadoOperativo, Equipment, KindMedia, LoanItem, MediaAsset
+from ..models_equipos import (
+    ESTADOS_PRESTAMO_TERMINAL,
+    EstadoOperativo,
+    Equipment,
+    KindMedia,
+    LoanItem,
+    MediaAsset,
+)
 from ..rbac import permisos_del_request, require_cualquiera, require_perm
 
 router = APIRouter(prefix="/api/loans", tags=["loans"])
@@ -229,6 +236,36 @@ def ficha_de_prestamo(
     return _ficha(db, _prestamo_visible(request, db, current_user, loan_id))
 
 
+@router.patch("/{loan_id:int}/fecha-regreso-esperada", response_model=schemas_loans.LoanDetail)
+def actualizar_fecha_regreso_esperada(
+    loan_id: int,
+    data: schemas_loans.FechaRegresoEsperadaRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    # Misma puerta que la ficha (VER_PROPIOS/VER_GLOBAL): el beneficiario sobre
+    # su propio prestamo, o cualquiera con ver_global (aprobadores, custodios,
+    # admins) — "cualquiera con acceso a la vista" tal cual se pidio, no un
+    # permiso nuevo.
+    current_user: models.User = Depends(require_cualquiera(VER_PROPIOS, VER_GLOBAL)),
+):
+    prestamo = _prestamo_visible(request, db, current_user, loan_id)
+    if prestamo.estado in ESTADOS_PRESTAMO_TERMINAL or prestamo.fecha_regreso_real is not None:
+        raise TransicionInvalida(
+            "El prestamo ya se cerro; no aplica modificar la fecha de regreso esperada."
+        )
+
+    crud_loans.actualizar_fecha_regreso_esperada(db, prestamo, data.fecha_regreso_esperada, current_user)
+    crud.log_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="loan.update_fecha_regreso_esperada",
+        target_type="loan",
+        target_id=prestamo.id,
+        details=data.fecha_regreso_esperada.isoformat(),
+    )
+    return _ficha(db, prestamo)
+
+
 # ── Renglones ───────────────────────────────────────────────────────────────
 
 
@@ -329,7 +366,6 @@ def titular_de_la_firma_del_aprobador(
 async def subir_media(
     loan_id: int,
     request: Request,
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     kind: str = Form(...),
     loan_item_id: Optional[int] = Form(None),
@@ -442,28 +478,10 @@ async def subir_media(
             target_id=prestamo.id,
             details=f"{prestamo.folio}:{kind}",
         )
-        # Sufijo de `kind` en el tipo de aviso: la idempotencia de
-        # `notification_log` es UNIQUE(loan_id, tipo, destinatario), y ahora
-        # este evento puede pasar dos veces en la vida del prestamo (una por
-        # cada firma) — mismo patron que el sufijo de dia de
-        # TIPO_VENCIMIENTO, `construir()` ya soporta el prefijo antes de ":".
-        tipo_aviso = f"{plantillas_correo.TIPO_FIRMA_COMPLETADA}:{kind}"
-        notificaciones.encolar(
-            db,
-            tipo_aviso,
-            prestamo,
-            background_tasks,
-            con_responsiva=True,
-        )
-        if prestamo.responsable_email:
-            notificaciones.encolar(
-                db,
-                tipo_aviso,
-                prestamo,
-                background_tasks,
-                destinatarios=[prestamo.responsable_email],
-                con_responsiva=True,
-            )
+        # Sin correo aqui a proposito: el unico disparador de correo en todo
+        # el modulo es la creacion del prestamo (`confirmar_prestamo`). Firmar
+        # sigue regenerando la responsiva de inmediato (arriba), solo que ya
+        # no lo avisa por correo.
 
     return schemas_loans.MediaResponse(id=fila.id, kind=fila.kind, sha256=fila.sha256)
 
@@ -518,6 +536,19 @@ def confirmar_prestamo(
             destinatarios=[prestamo.responsable_email],
             con_responsiva=True,
         )
+    # Titular de TITULAR_FIRMA_EQUIPO: puede ser distinto de los aprobadores
+    # (paquetes desacoplados a proposito), asi que se avisa aparte. Si nadie
+    # tiene el paquete asignado, simplemente no hay a quien avisar todavia.
+    titular = crud_rbac.titular_firma_equipo(db)
+    if titular and titular.email:
+        notificaciones.encolar(
+            db,
+            plantillas_correo.TIPO_CONFIRMADO_TITULAR_FIRMA,
+            prestamo,
+            background_tasks,
+            destinatarios=[titular.email],
+            con_responsiva=True,
+        )
     return _ficha(db, prestamo)
 
 
@@ -559,7 +590,6 @@ def registrar_devolucion(
     loan_id: int,
     data: schemas_loans.DevolucionRequest,
     request: Request,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_perm("equipos_prestamos", "registrar_devolucion")),
 ):
@@ -588,9 +618,8 @@ def registrar_devolucion(
         target_type="loan",
         target_id=prestamo.id,
     )
-    notificaciones.encolar(
-        db, plantillas_correo.TIPO_DEVOLUCION_APROBADOR, prestamo, background_tasks
-    )
+    # Sin correo aqui a proposito: el unico disparador de correo en todo el
+    # modulo es la creacion del prestamo (`confirmar_prestamo`).
     return _ficha(db, prestamo)
 
 

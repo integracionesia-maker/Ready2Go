@@ -70,12 +70,16 @@ export async function fetchWithAuthRetry(path, options = {}, skipAuthRetry = fal
  * JAMÁS se interpreta como sesión inválida.
  */
 export class ApiError extends Error {
-  constructor(message, { status, codigo, detail } = {}) {
+  constructor(message, { status, codigo, detail, body } = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.codigo = codigo;
     this.detail = detail;
+    // Cuerpo crudo completo, para campos extra que no todo error trae (ej.
+    // `locked_until` de CUENTA_BLOQUEADA) sin tener que enumerarlos aqui uno
+    // por uno.
+    this.body = body;
   }
 }
 
@@ -91,7 +95,7 @@ export function esCodigo(e, codigo) {
 export async function throwApiError(res) {
   const body = await res.json().catch(() => ({}));
   const message = body.detail || `Error ${res.status}: ${res.statusText}`;
-  throw new ApiError(message, { status: res.status, codigo: body.codigo, detail: body.detail });
+  throw new ApiError(message, { status: res.status, codigo: body.codigo, detail: body.detail, body });
 }
 
 export async function request(path, options = {}) {

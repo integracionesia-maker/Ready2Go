@@ -194,6 +194,47 @@ class MonthlySpendItem(BaseModel):
     pending_count: int = 0
 
 
+class MonthlyEstimateItem(BaseModel):
+    year: int
+    month: int  # 1-12
+    # "caja_grande" (generales + por rubro) o "caja_chica" (tickets de
+    # creadores) — dos metas independientes por mes, nunca combinadas.
+    categoria: Literal["caja_grande", "caja_chica"]
+    # None = todavía no se ha definido una meta para ese mes/categoría.
+    amount: Optional[float] = None
+    spent: float
+    # False una vez que el mes arranca (o ya pasó) — la meta queda congelada.
+    is_editable: bool
+    # True si `amount` es una propuesta automática (promedio de los 3 meses
+    # anteriores) que nadie ha confirmado guardando un PUT todavía — ya es una
+    # meta real y funcional (impulsa % y color), solo indica que un admin aún
+    # no fijó un valor definitivo propio. Nunca True si ya existe una meta
+    # explícita en la tabla.
+    is_suggested: bool = False
+
+
+class PeriodComparisonItem(BaseModel):
+    total_spent: float  # tickets aprobados — misma fuente que DashboardSummary.total_spent
+    general_expenses_total: float
+    operational_expenses_total: float
+    ticket_count: int
+
+
+class PeriodComparisonResponse(BaseModel):
+    # True solo si el rango pedido es exactamente un mes o un año de
+    # calendario (ver crud.detectar_periodo_unico) — "Últimos 3M"/"Todo"/un
+    # rango arbitrario siempre dan False, sin `anterior`.
+    is_single_period: bool
+    tipo: Optional[Literal["mes", "anio"]] = None
+    label_comparacion: Optional[str] = None  # "el mes pasado" | "el año pasado"
+    actual: PeriodComparisonItem
+    anterior: Optional[PeriodComparisonItem] = None
+
+
+class MonthlyEstimateUpdate(BaseModel):
+    amount: float = Field(..., gt=0)
+
+
 class TicketsPerDayItem(BaseModel):
     day: str  # "2026-08-31"
     count: int
@@ -242,6 +283,33 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
 
+class UnlockChallengeRequest(BaseModel):
+    identificador: str = Field(..., min_length=1)
+
+
+class UnlockChallengeResponse(BaseModel):
+    challenge_id: str
+    target_percent: float
+    expira_en_segundos: float
+
+
+class TrailPoint(BaseModel):
+    x: float
+    t: float
+
+
+class UnlockVerifyRequest(BaseModel):
+    challenge_id: str = Field(..., min_length=1)
+    identificador: str = Field(..., min_length=1)
+    posicion_percent: float
+    trail: list[TrailPoint] = []
+
+
+class UnlockVerifyResponse(BaseModel):
+    ok: bool
+    mensaje: str
+
+
 class UserResponse(BaseModel):
     id: int
     username: str
@@ -253,6 +321,10 @@ class UserResponse(BaseModel):
     must_change_password: bool
     last_login: Optional[datetime] = None
     created_at: datetime
+    # Para el panel de "cuentas bloqueadas" (superadmin): 0/None en el caso
+    # normal, asi que no hace falta un schema aparte solo para exponerlos.
+    failed_login_attempts: int = 0
+    locked_until: Optional[datetime] = None
     # Permisos efectivos {modulo: [acciones]}. Solo GET /api/auth/me los llena;
     # el resto de endpoints que devuelven UserResponse (login, refresh, gestión
     # de usuarios) los dejan en {} a propósito, para no resolver RBAC en rutas

@@ -10,6 +10,8 @@
 
 Si escribes mal la contraseña varias veces, tu cuenta se bloquea temporalmente unos minutos (el bloqueo crece si sigues intentando). El mensaje de error es el mismo si el usuario no existe, la contraseña es incorrecta, o la cuenta está desactivada — por seguridad, no se distingue cuál fue el caso.
 
+**Si tu cuenta queda bloqueada** (mensaje "Cuenta bloqueada temporalmente..."), no tienes que esperar el tiempo completo ni pedirle a nadie que te desbloquee: aparece un botón **"Verificar que soy yo"** que te muestra un rompecabezas — arrastra la pieza hasta el hueco marcado y suéltala. Si quedó en su lugar, tu cuenta se desbloquea al instante (sigues necesitando tu contraseña correcta después; el rompecabezas no inicia sesión por sí solo). Puedes usar esto hasta 3 veces por día por cuenta — si lo agotas, toca esperar el bloqueo o pedirle a un administrador que te desbloquee.
+
 ## Cambiar tu contraseña
 
 Ve a **Mi Perfil** (ícono en la barra lateral) → sección "Cambiar contraseña". Necesitas tu contraseña actual, la nueva (mínimo 10 caracteres, con letras y números, no puede ser igual a tu usuario) y confirmarla. Tu sesión actual sigue activa después del cambio; las demás sesiones abiertas (si iniciaste sesión en otro dispositivo) se cierran.
@@ -39,6 +41,7 @@ El botón de sol/luna en el header cambia el tema al instante, sin parpadeo al r
 - **Crear usuario**: botón "Nuevo Usuario". Si el rol es "Creador", debes vincularlo a un Creador ya existente (créalo primero en Administración → Creadores si hace falta — eso sí lo puede hacer un administrador). Si no escribes una contraseña, el sistema genera una temporal — anótala, se muestra una sola vez.
 - **Resetear contraseña**: genera una nueva contraseña temporal para ese usuario (debe cambiarla en su próximo login). También se muestra una sola vez — compártela por un canal seguro (no por correo sin cifrar ni chat público).
 - **Activar/Desactivar**: una cuenta desactivada no puede iniciar sesión.
+- **Cuentas bloqueadas**: si hay alguna cuenta bloqueada por intentos fallidos ahora mismo, aparece una sección aparte, en rojo, con un botón **"Desbloquear"** por fila — un clic limpia el bloqueo sin tocar la contraseña ni cerrar sesiones activas. Si no hay ninguna bloqueada, la sección no aparece. No aplica sobre la cuenta superadmin (ver abajo).
 
 La cuenta superadmin no se puede desactivar ni degradar desde ningún lugar de la app (es intencional: es la única cuenta de ese tipo).
 
@@ -96,6 +99,7 @@ Un creador nunca ve estos botones (ni en su propia vista de Transacciones). Deta
 
 ## Si perdiste el acceso
 
+- **Tu cuenta está bloqueada por intentos fallidos**: prueba primero el botón "Verificar que soy yo" (rompecabezas) en la pantalla de login — ver arriba. Es más rápido que esperar o pedirle a alguien que te desbloquee.
 - **Olvidaste tu contraseña (rol Creador o Administrador)**: pide a un administrador o al superadmin que te haga un reset desde Administración → Usuarios.
 - **El superadmin perdió su contraseña y no hay otra cuenta con acceso**: esto requiere acceso al servidor (no se puede resolver desde la app, a propósito — la cuenta superadmin es inmutable por API). Desde `backend/`, ejecutar:
   ```

@@ -160,6 +160,10 @@ class CancelarRequest(BaseModel):
     motivo: Optional[str] = Field(None, max_length=500)
 
 
+class FechaRegresoEsperadaRequest(BaseModel):
+    fecha_regreso_esperada: date
+
+
 class DevolucionItem(BaseModel):
     loan_item_id: int
     no_devuelto: bool = False

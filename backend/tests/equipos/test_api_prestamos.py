@@ -442,6 +442,85 @@ def test_confirmar_no_toca_estado_operativo_del_equipo(inventario, ana, db):
     assert db.get(Equipment, 1).estado_operativo == EstadoOperativo.ACTIVO.value
 
 
+# ── Fecha de regreso esperada ───────────────────────────────────────────────
+
+
+def test_el_beneficiario_puede_modificar_su_fecha_de_regreso(inventario, ana):
+    cliente = logueado("ana.ruiz")
+    loan_id = _borrador_listo(cliente)
+    cliente.post(f"/api/loans/{loan_id}/confirmar")
+
+    cuerpo = cliente.patch(
+        f"/api/loans/{loan_id}/fecha-regreso-esperada",
+        json={"fecha_regreso_esperada": "2026-08-15"},
+    ).json()
+    assert cuerpo["fecha_regreso_esperada"] == "2026-08-15"
+
+
+def test_el_aprobador_puede_modificar_la_fecha_de_regreso_de_otro(inventario, ana, melisa):
+    loan_id = logueado("ana.ruiz").post("/api/loans/", json={}).json()["id"]
+
+    resp = logueado("melisa").patch(
+        f"/api/loans/{loan_id}/fecha-regreso-esperada",
+        json={"fecha_regreso_esperada": "2026-08-15"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["fecha_regreso_esperada"] == "2026-08-15"
+
+
+def test_un_custodio_de_equipo_puede_modificar_la_fecha_de_regreso(inventario, ana, db):
+    usuario_con(db, username="custodio", aditivos=("CUSTODIO_EQUIPO",))
+    loan_id = logueado("ana.ruiz").post("/api/loans/", json={}).json()["id"]
+
+    resp = logueado("custodio").patch(
+        f"/api/loans/{loan_id}/fecha-regreso-esperada",
+        json={"fecha_regreso_esperada": "2026-08-15"},
+    )
+    assert resp.status_code == 200
+
+
+def test_un_colaborador_ajeno_no_puede_modificar_la_fecha_de_regreso(inventario, ana, db):
+    usuario_con(db, username="betza")
+    loan_id = logueado("ana.ruiz").post("/api/loans/", json={}).json()["id"]
+
+    resp = logueado("betza").patch(
+        f"/api/loans/{loan_id}/fecha-regreso-esperada",
+        json={"fecha_regreso_esperada": "2026-08-15"},
+    )
+    assert resp.status_code == 403
+
+
+def test_no_se_modifica_la_fecha_de_un_prestamo_ya_devuelto(inventario, ana):
+    cliente = logueado("ana.ruiz")
+    loan_id = _confirmado(cliente)
+    ficha = cliente.get(f"/api/loans/{loan_id}").json()
+    item_id = ficha["items"][0]["id"]
+    subir(cliente, loan_id, "foto_dev_frente", item_id)
+    subir(cliente, loan_id, "foto_dev_atras", item_id)
+    cliente.post(f"/api/loans/{loan_id}/devolucion", json={"items": [{"loan_item_id": item_id}]})
+
+    resp = cliente.patch(
+        f"/api/loans/{loan_id}/fecha-regreso-esperada",
+        json={"fecha_regreso_esperada": "2026-08-15"},
+    )
+    assert resp.status_code == 409
+
+
+def test_modificar_la_fecha_de_regreso_deja_evento_en_bitacora(inventario, ana):
+    cliente = logueado("ana.ruiz")
+    loan_id = _borrador_listo(cliente)
+    cliente.post(f"/api/loans/{loan_id}/confirmar")
+
+    cuerpo = cliente.patch(
+        f"/api/loans/{loan_id}/fecha-regreso-esperada",
+        json={"fecha_regreso_esperada": "2026-08-15"},
+    ).json()
+    ultimo = cuerpo["eventos"][-1]
+    assert ultimo["tipo"] == "fecha_regreso_modificada"
+    assert ultimo["actor"] == ana.full_name
+    assert "2026-08-15" in ultimo["detalle"]
+
+
 # ── Cancelar ────────────────────────────────────────────────────────────────
 
 
