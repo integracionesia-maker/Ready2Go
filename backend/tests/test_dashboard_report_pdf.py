@@ -118,6 +118,58 @@ def test_pdf_sin_gastos_omite_el_top3(logged_in_admin):
     assert "Sin gastos generales ni operativos en este período." in texto
 
 
+# ── Modo periodo único (I11): un solo mes/año oculta las gráficas "por mes" ─
+
+
+def test_mes_cerrado_oculta_graficas_por_mes_y_muestra_por_marca(logged_in_admin, brand_a, creator_a, db):
+    from datetime import datetime as dt
+    from app import models
+
+    ge_id = _crear_general(logged_in_admin, brand_a.id, amount=500).json()["id"]
+    db.query(models.GeneralExpense).filter(models.GeneralExpense.id == ge_id).update(
+        {"upload_date": dt.fromisoformat("2026-08-10T09:00:00")}
+    )
+    ticket = make_ticket(db, creator=creator_a, brand=brand_a, amount=1000, status="aprobado")
+    ticket.upload_date = dt.fromisoformat("2026-08-10T09:00:00")
+    db.commit()
+
+    resp = logged_in_admin.get("/api/dashboard/report.pdf?start_date=2026-08-01&end_date=2026-08-31")
+    assert resp.status_code == 200
+    texto = _texto(resp.content)
+    assert "Transacciones por Mes" not in texto
+    assert "Gastos Generales por Mes" not in texto
+    assert "Gastos Operativos por Mes" not in texto
+    assert "Gastos Generales por Marca" in texto
+    assert "Gastos por Marca" in texto  # de tickets, sigue igual
+
+
+def test_rango_multimes_conserva_graficas_por_mes(logged_in_admin, brand_a, creator_a, db):
+    ticket = make_ticket(db, creator=creator_a, brand=brand_a, amount=1000, status="aprobado")
+    from datetime import datetime as dt
+    ticket.upload_date = dt.fromisoformat("2026-08-10T09:00:00")
+    db.commit()
+
+    resp = logged_in_admin.get("/api/dashboard/report.pdf?start_date=2026-06-01&end_date=2026-08-31")
+    assert resp.status_code == 200
+    texto = _texto(resp.content)
+    assert "Transacciones por Mes" in texto
+    assert "Gastos Generales por Marca" not in texto
+
+
+def test_mes_cerrado_muestra_comparacion_vs_mes_pasado(logged_in_admin, brand_a, creator_a, db):
+    from datetime import datetime as dt
+
+    ticket_agosto = make_ticket(db, creator=creator_a, brand=brand_a, amount=1000, status="aprobado")
+    ticket_agosto.upload_date = dt.fromisoformat("2026-08-10T09:00:00")
+    ticket_julio = make_ticket(db, creator=creator_a, brand=brand_a, amount=500, status="aprobado")
+    ticket_julio.upload_date = dt.fromisoformat("2026-07-10T09:00:00")
+    db.commit()
+
+    resp = logged_in_admin.get("/api/dashboard/report.pdf?start_date=2026-08-01&end_date=2026-08-31")
+    texto = _texto(resp.content)
+    assert "vs el mes pasado" in texto
+
+
 def test_forbidden_para_creador(logged_in_creador):
     assert logged_in_creador.get("/api/dashboard/report.pdf").status_code == 403
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { GlassPanel, KpiTile, InfoTooltip, ICONS, usePageTitle } from "@/design";
 import DateRangeFilter from "./DateRangeFilter";
+import MonthlyEstimateCard from "./MonthlyEstimateCard";
 import MonthlySpendChart from "./charts/MonthlySpendChart";
 import CreatorUsageChart from "./charts/CreatorUsageChart";
 import BrandSpendApexChart from "./charts/BrandSpendApexChart";
@@ -19,8 +20,11 @@ import {
   fetchOperationalDashboard,
   fetchTicketsPerDay,
   fetchTopExpenses,
+  fetchPeriodComparison,
+  fetchGeneralExpensesByBrand,
   downloadDashboardReportPdf,
 } from "@/api";
+import { formatearComparacion } from "../utils/periodoUnico";
 
 import { formatMXN } from "@/design";
 
@@ -87,6 +91,20 @@ function DashboardSection({ icon, title, subtitle, children }) {
   );
 }
 
+/** Badge de comparación vs el periodo anterior equivalente (mes/año pasado),
+ * solo en modo periodo único (ver crud.detectar_periodo_unico) — más gasto
+ * que antes se marca en rojo, menos en verde (es gasto, no ingreso). */
+function ComparisonBadge({ actual, anterior, tipo }) {
+  const cmp = formatearComparacion(actual, anterior, tipo);
+  if (!cmp) return null;
+  return (
+    <>
+      {" · "}
+      <span style={{ color: cmp.subio ? "var(--go-error)" : "var(--go-success)" }}>{cmp.texto}</span>
+    </>
+  );
+}
+
 function fmtDateParam(d) {
   if (!d) return undefined;
   const y = d.getFullYear();
@@ -105,6 +123,8 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
   const [operationalDashboard, setOperationalDashboard] = useState(null);
   const [ticketsPerDay, setTicketsPerDay] = useState([]);
   const [topExpenses, setTopExpenses] = useState([]);
+  const [comparison, setComparison] = useState(null);
+  const [generalExpensesByBrand, setGeneralExpensesByBrand] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pdfState, setPdfState] = useState("idle"); // idle | generating
@@ -121,7 +141,7 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
       // consola). Las cargas subsecuentes (debounced por cambio de fecha)
       // sí usan AbortController para cancelar requests obsoletas.
       const opts = isFirstLoad ? {} : { signal };
-      const [s, m, c, b, ge, od, tpd, te] = await Promise.all([
+      const [s, m, c, b, ge, od, tpd, te, cmp, gexb] = await Promise.all([
         fetchDashboardSummary(start, end, opts),
         fetchMonthlySpend(start, end, opts),
         fetchCreatorUsage(start, end, opts),
@@ -130,6 +150,8 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
         fetchOperationalDashboard(start, end, opts),
         fetchTicketsPerDay(start, end, opts),
         fetchTopExpenses(start, end, opts),
+        fetchPeriodComparison(start, end, opts),
+        fetchGeneralExpensesByBrand(start, end, opts),
       ]);
       setSummary(s);
       setMonthly(m);
@@ -139,6 +161,8 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
       setOperationalDashboard(od);
       setTicketsPerDay(tpd);
       setTopExpenses(te);
+      setComparison(cmp);
+      setGeneralExpensesByBrand(gexb);
     } catch (e) {
       if (e.name === "AbortError") return; // reemplazada por un filtro mas reciente, no es un error real
       setError(e.message);
@@ -190,6 +214,16 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
 
   const operationalTotal = operationalDashboard?.total ?? 0;
   const operationalCount = operationalDashboard?.count ?? 0;
+
+  // Modo periodo único (I11): un solo mes o año de calendario (ver
+  // crud.detectar_periodo_unico en el backend, fuente de verdad única —
+  // nunca se vuelve a decidir aquí). Las gráficas "por mes" degeneran a una
+  // sola barra ahí, así que se reemplazan por el desglose por categoría que
+  // ya existe, y los 3 totales de la fila 2/3 muestran su comparación contra
+  // el periodo anterior equivalente.
+  const isSinglePeriod = comparison?.is_single_period ?? false;
+  const comparisonTipo = comparison?.tipo ?? null;
+  const comparisonAnterior = comparison?.anterior ?? null;
 
   const handleDownloadPdf = async () => {
     if (pdfState !== "idle") return;
@@ -263,6 +297,11 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
 
       {!loading && (
         <>
+          {/* ── Meta de Gasto Mensual: primero lo que responde "vamos bien o
+              mal este mes", con su propia navegación de mes (independiente
+              del filtro de fechas de arriba). ───────────────────────────── */}
+          <MonthlyEstimateCard />
+
           {/* ── KPI row 1: Cumulative ─────────────────────────────────── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiTile
@@ -319,6 +358,13 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
                       </span>
                     </>
                   )}
+                  {isSinglePeriod && summary && (
+                    <ComparisonBadge
+                      actual={summary.total_spent}
+                      anterior={comparisonAnterior?.total_spent}
+                      tipo={comparisonTipo}
+                    />
+                  )}
                 </>
               }
               accentColor={ACCENTS.orange}
@@ -357,7 +403,18 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               label="Gastos Generales"
               value={generalExpensesTotal}
               format={formatMXN}
-              hint={`${generalExpensesCount} ${generalExpensesCount === 1 ? "gasto" : "gastos"} en el periodo`}
+              hint={
+                <>
+                  {generalExpensesCount} {generalExpensesCount === 1 ? "gasto" : "gastos"} en el periodo
+                  {isSinglePeriod && (
+                    <ComparisonBadge
+                      actual={generalExpensesTotal}
+                      anterior={comparisonAnterior?.general_expenses_total}
+                      tipo={comparisonTipo}
+                    />
+                  )}
+                </>
+              }
               info="Gastos generales (ligados a una marca, sin ciclo ni validación) registrados dentro del período filtrado. No incluye Gastos Operativos ni afecta el presupuesto de los creadores."
               accentColor={ACCENTS.orange}
               glass
@@ -370,7 +427,18 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               label="Gastos Operativos"
               value={operationalTotal}
               format={formatMXN}
-              hint={`${operationalCount} ${operationalCount === 1 ? "gasto" : "gastos"} en el periodo`}
+              hint={
+                <>
+                  {operationalCount} {operationalCount === 1 ? "gasto" : "gastos"} en el periodo
+                  {isSinglePeriod && (
+                    <ComparisonBadge
+                      actual={operationalTotal}
+                      anterior={comparisonAnterior?.operational_expenses_total}
+                      tipo={comparisonTipo}
+                    />
+                  )}
+                </>
+              }
               info="Gastos operativos (clasificados por rubro) registrados dentro del período filtrado, según su fecha de gasto manual — independientes de creadores y marcas."
               accentColor={ACCENTS.turquoise}
               glass
@@ -388,14 +456,20 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
             title="Presupuesto de Creadores"
             subtitle="Ciclos, tickets y marcas de los creadores de contenido"
           >
-            <GlassPanel as="section" className="p-4 sm:p-6">
-              <ChartHeader
-                title="Transacciones por Mes"
-                unit="MXN"
-                info="Gasto aprobado por mes (oficial, cuenta contra el ciclo) con el pendiente por confirmar superpuesto en ámbar — el pendiente nunca se suma al total aprobado."
-              />
-              <MonthlySpendChart data={monthly} />
-            </GlassPanel>
+            {/* "Transacciones por Mes" degenera a una sola barra en modo
+                periodo único (un solo mes/año) — se oculta a favor de los
+                desgloses por marca/creador de abajo, que ya cubren esa
+                información sin repetir una gráfica de una sola barra. */}
+            {!isSinglePeriod && (
+              <GlassPanel as="section" className="p-4 sm:p-6">
+                <ChartHeader
+                  title="Transacciones por Mes"
+                  unit="MXN"
+                  info="Gasto aprobado por mes (oficial, cuenta contra el ciclo) con el pendiente por confirmar superpuesto en ámbar — el pendiente nunca se suma al total aprobado."
+                />
+                <MonthlySpendChart data={monthly} />
+              </GlassPanel>
+            )}
 
             <div className="grid gap-8 lg:grid-cols-2">
               <GlassPanel as="section" className="p-4 sm:p-6">
@@ -417,14 +491,18 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
               </GlassPanel>
             </div>
 
-            <GlassPanel as="section" className="p-4 sm:p-6">
-              <ChartHeader
-                title="Tendencia de Gasto Acumulado"
-                unit="MXN"
-                info="Suma acumulada del gasto aprobado, mes a mes, dentro del período filtrado — por definición nunca baja, solo sube o se mantiene."
-              />
-              <SpendTrendChart data={monthly} />
-            </GlassPanel>
+            {/* Igual que "Transacciones por Mes": una tendencia mes a mes no
+                dice nada con un solo mes/año seleccionado. */}
+            {!isSinglePeriod && (
+              <GlassPanel as="section" className="p-4 sm:p-6">
+                <ChartHeader
+                  title="Tendencia de Gasto Acumulado"
+                  unit="MXN"
+                  info="Suma acumulada del gasto aprobado, mes a mes, dentro del período filtrado — por definición nunca baja, solo sube o se mantiene."
+                />
+                <SpendTrendChart data={monthly} />
+              </GlassPanel>
+            )}
           </DashboardSection>
 
           {/* ── Sección: Actividad ──────────────────────────────────────── */}
@@ -449,24 +527,40 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
             title="Gastos Generales y Operativos"
             subtitle="Gastos fuera del ciclo de creadores: ligados a una marca o clasificados por rubro"
           >
-            <GlassPanel as="section" className="p-4 sm:p-6">
-              <ChartHeader
-                title="Gastos Generales por Mes"
-                unit="MXN"
-                info="Gastos generales (ligados a una marca, sin ciclo ni validación) agrupados por el mes en que se subieron."
-              />
-              <GeneralExpensesChart data={generalExpensesMonthly} />
-            </GlassPanel>
-
-            <div className="grid gap-8 lg:grid-cols-2">
+            {/* "por Mes" degenera a una sola barra en modo periodo único —
+                se reemplaza por el desglose por marca (mismo componente que
+                "Gastos por Marca" de arriba, otra fuente de datos). */}
+            {isSinglePeriod ? (
               <GlassPanel as="section" className="p-4 sm:p-6">
                 <ChartHeader
-                  title="Gastos Operativos por Mes"
+                  title="Gastos Generales por Marca"
                   unit="MXN"
-                  info="Gastos operativos (clasificados por rubro) agrupados por su fecha de gasto manual, no por fecha de subida."
+                  info="Cómo se reparte el gasto general (ligado a una marca, sin ciclo ni validación) del período entre las marcas activas."
                 />
-                <OperationalExpensesChart data={operationalDashboard?.mensual} />
+                <BrandSpendApexChart data={generalExpensesByBrand} />
               </GlassPanel>
+            ) : (
+              <GlassPanel as="section" className="p-4 sm:p-6">
+                <ChartHeader
+                  title="Gastos Generales por Mes"
+                  unit="MXN"
+                  info="Gastos generales (ligados a una marca, sin ciclo ni validación) agrupados por el mes en que se subieron."
+                />
+                <GeneralExpensesChart data={generalExpensesMonthly} />
+              </GlassPanel>
+            )}
+
+            <div className={isSinglePeriod ? "grid gap-8" : "grid gap-8 lg:grid-cols-2"}>
+              {!isSinglePeriod && (
+                <GlassPanel as="section" className="p-4 sm:p-6">
+                  <ChartHeader
+                    title="Gastos Operativos por Mes"
+                    unit="MXN"
+                    info="Gastos operativos (clasificados por rubro) agrupados por su fecha de gasto manual, no por fecha de subida."
+                  />
+                  <OperationalExpensesChart data={operationalDashboard?.mensual} />
+                </GlassPanel>
+              )}
 
               <GlassPanel as="section" className="p-4 sm:p-6">
                 <ChartHeader
