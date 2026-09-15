@@ -54,10 +54,12 @@ from ..errores import (
 from ..models_equipos import (
     ESTADOS_PRESTAMO_TERMINAL,
     EstadoOperativo,
+    EstadoPrestamo,
     Equipment,
     KindMedia,
     LoanItem,
     MediaAsset,
+    TipoEvento,
 )
 from ..rbac import permisos_del_request, require_cualquiera, require_perm
 
@@ -370,13 +372,20 @@ async def subir_media(
     kind: str = Form(...),
     loan_item_id: Optional[int] = Form(None),
     db: Session = Depends(get_db),
-    # OR a nivel de endpoint (cualquiera de los dos permisos entra); el
+    # OR a nivel de endpoint (cualquiera de los permisos entra); el
     # permiso EXACTO que aplica depende de `kind` y se resuelve abajo, no aqui
     # — un aprobador puro (paquete APROBADOR_EQUIPO, sin `solicitar`) tiene que
     # poder llegar a este endpoint para subir `firma_entrega`, aunque no pueda
-    # subir fotos ni la firma del beneficiario.
+    # subir fotos ni la firma del beneficiario. La puerta incluye
+    # `ver_propios`/`ver_global` (la puerta de la ficha) porque custodios y
+    # aprobadores reemplazan fotos de entrega sin tener `solicitar`
+    # (docs/equipos/fotos-entrega-reemplazables.md).
     current_user: models.User = Depends(
-        require_cualquiera(("equipos_prestamos", "solicitar"), ("equipos_aprobacion", "autorizar_entrega"))
+        require_cualquiera(
+            ("equipos_prestamos", "ver_propios"),
+            ("equipos_prestamos", "ver_global"),
+            ("equipos_aprobacion", "autorizar_entrega"),
+        )
     ),
 ):
     """Multipart, un archivo por request. Validacion por magic bytes.
@@ -390,9 +399,14 @@ async def subir_media(
     abre todo), y una firma que "cualquier admin puede poner" deja de ser una
     firma. Ni siquiera `APROBADOR_EQUIPO` sustituye ser el titular: ese
     paquete sigue abriendo autorizar entregas/confirmar devoluciones/cerrar
-    incidencias (el resto del flujo de aprobacion), pero no firmar. El resto
-    de los kinds (fotos y `firma_responsable`, la del beneficiario) siguen
-    pidiendo `equipos_prestamos:solicitar`, igual que siempre.
+    incidencias (el resto del flujo de aprobacion), pero no firmar.
+
+    Fotos de ENTREGA: puerta de la ficha (`ver_propios` o `ver_global`), la
+    misma que actualizar la fecha de regreso esperada, y reemplazables en
+    cualquier estado no terminal sin `fecha_regreso_real`
+    (docs/equipos/fotos-entrega-reemplazables.md). Fotos de DEVOLUCION y
+    `firma_responsable`: siguen pidiendo `equipos_prestamos:solicitar`, igual
+    que siempre.
     """
     prestamo = _prestamo_visible(request, db, current_user, loan_id)
 
@@ -414,8 +428,28 @@ async def subir_media(
             raise SinPermiso("Solo el titular de la firma del aprobador puede subir esta firma.")
     else:
         permisos = permisos_del_request(request, db, current_user)
-        if not rbac.tiene_permiso(permisos, "equipos_prestamos", "solicitar"):
+        if kind in loan_state.kinds_de_entrega():
+            # Misma puerta que la ficha (ver_propios/ver_global): quien puede
+            # ver la ficha puede reemplazar la foto de entrega, igual que
+            # actualizar la fecha de regreso esperada.
+            if not rbac.tiene_permiso(permisos, *VER_PROPIOS) and not rbac.tiene_permiso(
+                permisos, *VER_GLOBAL
+            ):
+                raise SinPermiso()
+        elif not rbac.tiene_permiso(permisos, "equipos_prestamos", "solicitar"):
             raise SinPermiso()
+
+    # Fotos de entrega: ventana espejo de fecha-regreso-esperada (loans.py
+    # actualizar_fecha_regreso_esperada). No aplica en un prestamo cerrado ni
+    # una vez que el equipo ya volvio: ahi la foto inicial ya es historia.
+    # `acepta_media` (abajo) ya no bloquea los no terminales, pero sigue
+    # cerrando `completado`/`cancelado` como defensa por kind.
+    if kind in loan_state.kinds_de_entrega() and (
+        prestamo.estado in ESTADOS_PRESTAMO_TERMINAL or prestamo.fecha_regreso_real is not None
+    ):
+        raise TransicionInvalida(
+            "El prestamo ya se cerro; no aplica cambiar las fotos de entrega."
+        )
 
     if not loan_state.acepta_media(prestamo.estado, kind):
         raise TransicionInvalida(
@@ -447,6 +481,23 @@ async def subir_media(
             raise NoEncontrado("Renglon no encontrado en este prestamo.")
 
     contenido = await file.read()
+
+    # Sha de la foto de entrega que se va a reemplazar (si existe), para
+    # dejar constancia en bitacora y auditoria. Se lee ANTES del reemplazo:
+    # `media_manager.reemplazar` borra la fila vieja dentro del threadpool.
+    sha_anterior = None
+    if kind in loan_state.kinds_de_entrega() and prestamo.estado != EstadoPrestamo.BORRADOR.value:
+        anterior = (
+            db.query(MediaAsset.sha256)
+            .filter(
+                MediaAsset.loan_id == prestamo.id,
+                MediaAsset.loan_item_id == loan_item_id,
+                MediaAsset.kind == kind,
+            )
+            .first()
+        )
+        sha_anterior = anterior[0] if anterior else None
+
     # media_manager.reemplazar decodifica con PIL (verificacion de dimensiones)
     # y escribe a disco -- todo sincrono y bloqueante. Corrido directo aqui
     # congelaria el event loop para el resto de requests concurrentes; se
@@ -460,6 +511,28 @@ async def subir_media(
         loan_item_id=loan_item_id,
         actor_user_id=current_user.id,
     )
+
+    # Reemplazo de foto de entrega fuera de borrador: bitacora + auditoria con
+    # el sha anterior -> nuevo (en borrador el wizard sube fotos como rutina y
+    # no se escribe nada, igual que no hay evento de fecha ahi).
+    if kind in loan_state.kinds_de_entrega() and prestamo.estado != EstadoPrestamo.BORRADOR.value:
+        crud_loans.registrar_evento(
+            db,
+            prestamo,
+            TipoEvento.FOTO_ENTREGA_MODIFICADA.value,
+            f"Foto de entrega '{kind}' reemplazada "
+            f"({sha_anterior[:12] if sha_anterior else 'sin foto previa'} -> {fila.sha256[:12]}).",
+            current_user,
+        )
+        crud.log_audit(
+            db,
+            actor_user_id=current_user.id,
+            action="loan.update_foto_entrega",
+            target_type="loan",
+            target_id=prestamo.id,
+            details=f"{prestamo.folio}:{kind}:{sha_anterior or 'null'}->{fila.sha256}",
+        )
+
     db.commit()
     db.refresh(fila)
 

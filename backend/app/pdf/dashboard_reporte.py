@@ -55,6 +55,19 @@ def _moneda(v: float) -> str:
     return f"${v:,.2f}"
 
 
+def _texto_comparacion(actual: float, anterior: float, label: str) -> str | None:
+    """"+12.3% vs el mes pasado" / "−8.0% vs el año pasado". Sin porcentaje si
+    el periodo anterior fue $0 (división por cero) — se muestra el delta en
+    monto para no perder la comparación."""
+    signo = "+" if actual >= anterior else "−"
+    if anterior > 0:
+        pct = abs((actual - anterior) / anterior) * 100
+        return f"{signo}{pct:.1f}% vs {label}"
+    if actual > 0:
+        return f"antes $0.00 vs {label}"
+    return None
+
+
 def _entero(v) -> str:
     return f"{v:,.0f}"
 
@@ -130,10 +143,21 @@ def _banner_encabezado(e: dict, periodo: str, generado_txt: str, generado_por: s
     return banner
 
 
-def _kpi_tarjeta(e: dict, etiqueta: str, valor: str, color_acento, tinte, ancho: float, pendiente_texto: str | None = None) -> Table:
+def _kpi_tarjeta(
+    e: dict,
+    etiqueta: str,
+    valor: str,
+    color_acento,
+    tinte,
+    ancho: float,
+    pendiente_texto: str | None = None,
+    comparacion_texto: str | None = None,
+) -> Table:
     contenido = [Paragraph(etiqueta, e["kpi_etiqueta"]), Paragraph(valor, e["kpi_valor"])]
     if pendiente_texto:
         contenido.append(Paragraph(pendiente_texto, e["kpi_pendiente"]))
+    if comparacion_texto:
+        contenido.append(Paragraph(comparacion_texto, e["kpi_comparacion"]))
     tarjeta = Table([[contenido]], colWidths=[ancho])
     tarjeta.setStyle(
         TableStyle(
@@ -155,12 +179,27 @@ def _tabla_kpis(e: dict, datos: dict, ancho_util: float) -> Table:
     summary = datos["summary"]
     creator_usage = datos["creator_usage"]
     general_expenses_monthly = datos["general_expenses_monthly"]
+    operational_total = datos["operational_dashboard"].total
+    comparacion = datos["period_comparison"]
 
     creadores_activos = sum(1 for c in creator_usage if c.spent > 0 or c.pending > 0)
     gastos_generales_total = sum(m.total for m in general_expenses_monthly)
 
+    # Solo hay comparación (mes/año pasado) en modo periodo único — en un
+    # rango de varios meses no hay "el periodo anterior" con el que comparar.
+    cmp_gastado = cmp_generales = cmp_operativos = None
+    if comparacion.is_single_period and comparacion.anterior:
+        label = comparacion.label_comparacion
+        cmp_gastado = _texto_comparacion(comparacion.actual.total_spent, comparacion.anterior.total_spent, label)
+        cmp_generales = _texto_comparacion(
+            comparacion.actual.general_expenses_total, comparacion.anterior.general_expenses_total, label
+        )
+        cmp_operativos = _texto_comparacion(
+            comparacion.actual.operational_expenses_total, comparacion.anterior.operational_expenses_total, label
+        )
+
     ancho_col = ancho_util / 4 - 6
-    colores = est.TINTES  # [(acento, tinte), ...] x4, mismo orden en ambas filas
+    colores = est.TINTES  # [(acento, tinte), ...] x4, mismo orden en las 3 filas
 
     fila1 = [
         _kpi_tarjeta(e, "PRESUPUESTO TOTAL", _moneda(kpi.total_budget), *colores[0], ancho_col),
@@ -172,21 +211,35 @@ def _tabla_kpis(e: dict, datos: dict, ancho_util: float) -> Table:
         _kpi_tarjeta(
             e, "GASTADO EN EL PERÍODO", _moneda(summary.total_spent), *colores[0], ancho_col,
             pendiente_texto=f"+{_moneda(summary.pending_total)} pendientes" if summary.pending_total > 0 else None,
+            comparacion_texto=cmp_gastado,
         ),
         _kpi_tarjeta(
             e, "TICKETS", _entero(summary.ticket_count), *colores[1], ancho_col,
             pendiente_texto=f"{summary.pending_count} pendientes por confirmar" if summary.pending_count > 0 else None,
         ),
         _kpi_tarjeta(e, "CREADORES ACTIVOS", _entero(creadores_activos), *colores[2], ancho_col),
-        _kpi_tarjeta(e, "GASTOS GENERALES", _moneda(gastos_generales_total), *colores[3], ancho_col),
+        _kpi_tarjeta(
+            e, "GASTOS GENERALES", _moneda(gastos_generales_total), *colores[3], ancho_col,
+            comparacion_texto=cmp_generales,
+        ),
+    ]
+    # Tercera fila: un solo tile (espejo del layout en pantalla, que también
+    # deja "Gastos Operativos" solo en su propia fila) — se rellenan las
+    # celdas vacías con "" para que la tabla siga teniendo 4 columnas.
+    fila3 = [
+        _kpi_tarjeta(
+            e, "GASTOS OPERATIVOS", _moneda(operational_total), *colores[0], ancho_col,
+            comparacion_texto=cmp_operativos,
+        ),
+        "", "", "",
     ]
 
-    tabla = Table([fila1, fila2], colWidths=[ancho_util / 4] * 4, hAlign="LEFT")
+    tabla = Table([fila1, fila2, fila3], colWidths=[ancho_util / 4] * 4, hAlign="LEFT")
     tabla.setStyle(
         TableStyle(
             [
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -2), 6),
                 ("TOPPADDING", (0, 0), (-1, -1), 0),
                 ("LEFTPADDING", (0, 0), (-1, -1), 0),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 0),
@@ -273,6 +326,12 @@ def construir(datos: dict, ancho_util: float) -> list:
     generado = datos.get("generated_at")
     periodo = _periodo_label(datos.get("start_date"), datos.get("end_date"))
     generado_txt = _fecha_hora_larga(generado) if generado else "—"
+    # Modo periodo único (un solo mes o año de calendario, ver
+    # crud.detectar_periodo_unico): las gráficas "por mes" degeneran a una
+    # sola barra ahí, así que se ocultan a favor de los desgloses por
+    # categoría que ya existen (por marca/rubro/creador) — mismo criterio
+    # que en pantalla (Dashboard.jsx), nunca decidido dos veces.
+    es_periodo_unico = datos["period_comparison"].is_single_period
 
     # ── Encabezado ───────────────────────────────────────────────────────
     flujo.append(_banner_encabezado(e, periodo, generado_txt, datos.get("generated_by_name"), ancho_util))
@@ -285,7 +344,7 @@ def construir(datos: dict, ancho_util: float) -> list:
     hubo_contenido_creadores = False
 
     monthly = datos["monthly"]
-    if monthly:
+    if monthly and not es_periodo_unico:
         hubo_contenido_creadores = True
         flujo.append(
             KeepTogether(
@@ -389,7 +448,7 @@ def construir(datos: dict, ancho_util: float) -> list:
     hubo_contenido_gastos = False
 
     gem = datos["general_expenses_monthly"]
-    if gem:
+    if gem and not es_periodo_unico:
         hubo_contenido_gastos = True
         flujo.append(
             KeepTogether(
@@ -406,8 +465,40 @@ def construir(datos: dict, ancho_util: float) -> list:
             )
         )
 
+    if es_periodo_unico:
+        gxb = [b for b in datos.get("general_expenses_by_brand", []) if b.total_spent > 0]
+        gxb.sort(key=lambda b: (_ORDEN_PRIORIDAD.get(b.priority, 3), -b.total_spent))
+        if gxb:
+            hubo_contenido_gastos = True
+            flujo.append(
+                KeepTogether(
+                    [
+                        _color_paragraph(e, "subtitulo", "Gastos Generales por Marca", _COLOR_SECCION_GASTOS),
+                        graf.grafica_horizontal(
+                            [b.brand_name for b in gxb],
+                            [("Gasto", [b.total_spent for b in gxb])],
+                            ancho_util,
+                            max(90, 26 * len(gxb)),
+                            color_principal=est.CIELO,
+                        ),
+                    ]
+                )
+            )
+            flujo.append(Spacer(1, 2 * mm))
+            flujo.append(
+                _tabla_simple(
+                    e,
+                    ["Marca", "Prioridad", "Total gastado"],
+                    [
+                        [b.brand_name, _LABEL_PRIORIDAD.get(b.priority, b.priority), _moneda(b.total_spent)]
+                        for b in gxb
+                    ],
+                    [ancho_util * 0.5, ancho_util * 0.2, ancho_util * 0.3],
+                )
+            )
+
     op = datos["operational_dashboard"]
-    if op.mensual:
+    if op.mensual and not es_periodo_unico:
         hubo_contenido_gastos = True
         flujo.append(Spacer(1, 4 * mm))
         flujo.append(

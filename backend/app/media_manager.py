@@ -192,6 +192,12 @@ def reemplazar(
     en el contrato. Volver a tomar una foto es flujo normal —la maqueta tiene
     boton "Cambiar foto"—, no un caso raro.
 
+    Ademas del re-take en `borrador`, esta funcion es el camino del reemplazo
+    post-confirmacion de las fotos de entrega (ventana en
+    `loan_state.acepta_media` + guard de `fecha_regreso_real`/terminales en el
+    router — ver `docs/equipos/fotos-entrega-reemplazables.md`). Aqui no se
+    valida estado: el router decide cuando es legitimo llamarla.
+
     Se borra tambien el archivo viejo: si no, `uploads/equipos/` se llena de
     huerfanos que nadie sabe a quien pertenecen.
     """

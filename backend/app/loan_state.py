@@ -194,18 +194,24 @@ def kinds_de_devolucion() -> tuple[str, ...]:
 
 
 def acepta_media(estado: str, kind: str) -> bool:
-    """Fotos de entrega solo en `borrador`; fotos de devolucion solo en
-    `prestado`; firmas en **`prestado`, `pendiente_confirmacion` o
+    """Fotos de entrega en cualquier estado no terminal; fotos de devolucion
+    solo en `prestado`; firmas en **`prestado`, `pendiente_confirmacion` o
     `incompleto`** (ver nota 1b del modulo) — nunca en `borrador`: desde que
     `confirmar` dejo de pedir ninguna firma, las dos se completan siempre
     despues, con el prestamo ya confirmado (folio real, responsiva v1 ya
     generada). Firmar un borrador que todavia puede perder o ganar equipos no
     tiene sentido.
 
-    El contrato no lo escribe. Se aplica igual porque no hay flujo legitimo que
-    suba una foto de entrega a un prestamo ya completado, y permitirlo deja
-    reescribir la evidencia que respalda una responsiva firmada (§6: "un
-    documento firmado es evidencia"). Reportado en docs/avances/servidor.md.
+    Las fotos de entrega se pueden reemplazar en cualquier momento del ciclo
+    (revision aprobada: en el mundo real la foto se toma despues de la entrega
+    o sale mal y hay que retomarla) — ver `docs/equipos/fotos-entrega-reemplazables.md`.
+    El candado de cierre real vive en el router: no aplica una vez que el
+    prestamo es terminal o el equipo ya volvio (`fecha_regreso_real` puesto),
+    espejo de `fecha-regreso-esperada`. Esta funcion es pura, sin base de
+    datos, asi que solo puede cerrar la puerta de los estados terminales
+    (`completado`/`cancelado`) y deja `pendiente_confirmacion`/`incompleto`
+    teoricamente abiertos — ahi los cierra el router. Las firmas y las fotos
+    de devolucion no cambian.
 
     Que una firma pase esta funcion NO significa que se pueda resubir una
     firma que ya existe para ese prestamo: esa proteccion depende de una
@@ -215,7 +221,7 @@ def acepta_media(estado: str, kind: str) -> bool:
     if kind in kinds_de_firma():
         return estado in (P, PC, IN)
     if kind in kinds_de_entrega():
-        return estado == B
+        return estado not in (CO, CA)
     if kind in kinds_de_devolucion():
         return estado == P
     return False

@@ -154,6 +154,7 @@ class TipoEvento(str, enum.Enum):
     RESPONSIVA_GENERADA = "responsiva_generada"
     FIRMA_COMPLETADA = "firma_completada"
     FECHA_REGRESO_MODIFICADA = "fecha_regreso_modificada"
+    FOTO_ENTREGA_MODIFICADA = "foto_entrega_modificada"
 
 
 # ── Inventario ──────────────────────────────────────────────────────────────

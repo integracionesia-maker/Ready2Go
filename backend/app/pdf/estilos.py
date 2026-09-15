@@ -318,6 +318,14 @@ def estilos() -> dict[str, ParagraphStyle]:
             textColor=AMBAR,
             spaceAfter=0,
         ),
+        "kpi_comparacion": ParagraphStyle(
+            "kpi_comparacion",
+            parent=base,
+            fontSize=7.5,
+            leading=10,
+            textColor=TEXTO_SECUNDARIO,
+            spaceAfter=0,
+        ),
         "tabla_encabezado": ParagraphStyle(
             "tabla_encabezado",
             parent=base,

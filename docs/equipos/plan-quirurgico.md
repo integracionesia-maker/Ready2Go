@@ -310,7 +310,7 @@ Reglas:
 | GET | `/api/equipment/{id}` | `equipos_inventario:ver` | Ficha + auditorias + historial de prestamos |
 | POST | `/api/loans/` | `equipos_prestamos:solicitar` | Crea `borrador` |
 | POST | `/api/loans/{id}/items` | `equipos_prestamos:solicitar` | Valida disponibilidad (409 si ocupado) |
-| POST | `/api/loans/{id}/media` | `equipos_prestamos:solicitar` (fotos y `firma_responsable`) / **identidad**: `current_user.id == titular_firma_equipo(db).id` (solo `firma_entrega`, no es un permiso) | Multipart, una foto/firma por request; firmas nunca en `borrador` |
+| POST | `/api/loans/{id}/media` | fotos de ENTREGA: `ver_propios` / `ver_global` (puerta de la ficha, reemplazables en todo estado no terminal sin `fecha_regreso_real` — `docs/equipos/fotos-entrega-reemplazables.md`) / fotos de DEVOLUCION y `firma_responsable`: `equipos_prestamos:solicitar` / **identidad**: `current_user.id == titular_firma_equipo(db).id` (solo `firma_entrega`, no es un permiso) | Multipart, una foto/firma por request; firmas nunca en `borrador` |
 | GET | `/api/loans/titular-firma-equipo` | `equipos_prestamos:solicitar` o `equipos_aprobacion:autorizar_entrega` | Quien es hoy el titular (`user_id`/`nombre`) + `soy_titular` para el usuario actual — el cliente lo usa para saber a quien pintarle el boton "Firmar" del aprobador |
 | POST | `/api/loans/{id}/confirmar` | `equipos_prestamos:solicitar` | `borrador → prestado`: valida 2 fotos por equipo; **ninguna firma se exige aqui** (ver `docs/equipos/firma-pendiente-al-confirmar.md`), asigna folio, genera PDF v1, dispara correos |
 | POST | `/api/loans/{id}/cancelar` | `equipos_prestamos:cancelar` | Solo desde `borrador`/`prestado` sin devolucion |
