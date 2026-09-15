@@ -236,9 +236,13 @@ def test_una_foto_sin_loan_item_id_es_422(borrador):
     assert resp.status_code == 422
 
 
-def test_no_se_sube_una_foto_de_entrega_a_un_prestamo_ya_confirmado(inventario, db):
-    """Permitirlo dejaria reescribir la evidencia detras de una responsiva ya
-    firmada."""
+def test_se_reemplaza_la_foto_de_entrega_de_un_prestamo_ya_confirmado(inventario, db):
+    """Revision aprobada (docs/equipos/fotos-entrega-reemplazables.md): la foto
+    de entrega es dato operativo y se puede retomar en cualquier momento del
+    ciclo. La responsiva NO embebe fotos, asi que reemplazarla no reescribe
+    evidencia firmada."""
+    from pathlib import Path
+
     usuario_con(db, username="ana.ruiz")
     cliente = logueado("ana.ruiz")
     loan_id = cliente.post("/api/loans/", json={}).json()["id"]
@@ -247,9 +251,29 @@ def test_no_se_sube_una_foto_de_entrega_a_un_prestamo_ya_confirmado(inventario, 
     subir(cliente, loan_id, "foto_entrega_atras", item_id)
     cliente.post(f"/api/loans/{loan_id}/confirmar")
 
-    resp = subir(cliente, loan_id, "foto_entrega_frente", item_id)
-    assert resp.status_code == 409
-    assert resp.json()["codigo"] == "TRANSICION_INVALIDA"
+    fila_vieja = (
+        db.query(MediaAsset)
+        .filter(
+            MediaAsset.loan_item_id == item_id,
+            MediaAsset.kind == "foto_entrega_frente",
+        )
+        .first()
+    )
+    ruta_vieja, sha_viejo = fila_vieja.file_path, fila_vieja.sha256
+
+    segundo = subir(cliente, loan_id, "foto_entrega_frente", item_id, png_bytes(50, 50))
+    assert segundo.status_code == 201
+    assert segundo.json()["sha256"] != sha_viejo
+    assert not Path(ruta_vieja).exists(), "quedo un archivo huerfano en disco"
+    assert (
+        db.query(MediaAsset)
+        .filter(MediaAsset.loan_item_id == item_id, MediaAsset.kind == "foto_entrega_frente")
+        .count()
+        == 1
+    )
+
+    ficha = cliente.get(f"/api/loans/{loan_id}").json()
+    assert ficha["items"][0]["media"]["foto_entrega_frente"] == segundo.json()["id"]
 
 
 def test_no_se_sube_foto_de_devolucion_a_un_borrador(borrador):
@@ -284,6 +308,89 @@ def test_resubir_el_mismo_kind_reemplaza(borrador, db):
 
     ficha = cliente.get(f"/api/loans/{loan_id}").json()
     assert ficha["items"][0]["media"]["foto_entrega_frente"] == segundo["id"]
+
+
+# ── Reemplazo de fotos de entrega (post-confirmacion) ────────────────────────
+
+
+def test_reemplazar_foto_de_entrega_en_prestado_deja_evento_y_auditoria(confirmado, db):
+    from app import models
+
+    cliente, loan_id, item_id = confirmado
+    subir(cliente, loan_id, "foto_entrega_frente", item_id, png_bytes(50, 50))
+
+    ficha = cliente.get(f"/api/loans/{loan_id}").json()
+    ultimo = ficha["eventos"][-1]
+    assert ultimo["tipo"] == "foto_entrega_modificada"
+    assert "foto_entrega_frente" in ultimo["detalle"]
+    assert "->" in ultimo["detalle"]
+
+    fila_audit = (
+        db.query(models.AuditLog)
+        .filter(
+            models.AuditLog.action == "loan.update_foto_entrega",
+            models.AuditLog.target_id == loan_id,
+        )
+        .all()
+    )
+    assert fila_audit, "no quedo auditoria del reemplazo de la foto"
+    assert "foto_entrega_frente" in fila_audit[-1].details
+
+
+def test_subir_foto_de_entrega_en_borrador_no_deja_evento_ni_auditoria(borrador, db):
+    from app import models
+
+    cliente, loan_id, item_id = borrador
+    subir(cliente, loan_id, "foto_entrega_frente", item_id, png_bytes(50, 50))
+
+    ficha = cliente.get(f"/api/loans/{loan_id}").json()
+    assert not any(ev["tipo"] == "foto_entrega_modificada" for ev in ficha["eventos"])
+    assert (
+        db.query(models.AuditLog)
+        .filter(
+            models.AuditLog.action == "loan.update_foto_entrega",
+            models.AuditLog.target_id == loan_id,
+        )
+        .count()
+        == 0
+    )
+
+
+def test_la_aprobadora_puede_reemplazar_la_foto_de_entrega_de_otro(confirmado, db):
+    usuario_con(db, username="melisa.media", aditivos=("APROBADOR_EQUIPO",))
+    cliente, loan_id, item_id = confirmado
+
+    resp = subir(logueado("melisa.media"), loan_id, "foto_entrega_frente", item_id, png_bytes(50, 50))
+    assert resp.status_code == 201
+
+
+def test_la_custodia_puede_reemplazar_la_foto_de_entrega_de_otro(confirmado, db):
+    usuario_con(db, username="custodia.media", aditivos=("CUSTODIO_EQUIPO",))
+    cliente, loan_id, item_id = confirmado
+
+    resp = subir(logueado("custodia.media"), loan_id, "foto_entrega_frente", item_id, png_bytes(50, 50))
+    assert resp.status_code == 201
+
+
+def test_un_colaborador_ajeno_no_puede_reemplazar_la_foto_de_entrega(confirmado, db):
+    usuario_con(db, username="betza.media")
+    cliente, loan_id, item_id = confirmado
+
+    resp = subir(logueado("betza.media"), loan_id, "foto_entrega_frente", item_id, png_bytes(50, 50))
+    assert resp.status_code == 403
+
+
+def test_no_se_reemplaza_la_foto_de_entrega_con_fecha_regreso_real(confirmado):
+    """Espejo de `test_no_se_modifica_la_fecha_de_un_prestamo_ya_devuelto`: una
+    vez que el equipo volvio, la foto inicial ya es historia."""
+    cliente, loan_id, item_id = confirmado
+    subir(cliente, loan_id, "foto_dev_frente", item_id)
+    subir(cliente, loan_id, "foto_dev_atras", item_id)
+    cliente.post(f"/api/loans/{loan_id}/devolucion", json={"items": [{"loan_item_id": item_id}]})
+
+    resp = subir(cliente, loan_id, "foto_entrega_frente", item_id, png_bytes(50, 50))
+    assert resp.status_code == 409
+    assert resp.json()["codigo"] == "TRANSICION_INVALIDA"
 
 
 def test_las_firmas_cuelgan_del_prestamo_no_del_renglon(confirmado, db):

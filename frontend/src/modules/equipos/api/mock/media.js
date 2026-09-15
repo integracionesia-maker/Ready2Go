@@ -50,6 +50,14 @@ export async function uploadMedia(loanId, { file, kind, loanItemId } = {}) {
     if (!item) throwNotFound("Item de préstamo no encontrado.");
   }
 
+  const esFotoEntrega = kind === "foto_entrega_frente" || kind === "foto_entrega_atras";
+  // Fotos de ENTREGA reemplazables en cualquier momento antes del cierre
+  // (docs/equipos/fotos-entrega-reemplazables.md) — espejo del guard del
+  // servidor real (routers/loans.py::subir_media).
+  if (esFotoEntrega && (["completado", "cancelado"].includes(loan.estado) || loan.fecha_regreso_real)) {
+    throwFixtureError("TRANSICION_INVALIDA");
+  }
+
   // Completar la firma que faltó al confirmar está permitido en cualquier
   // estado no terminal; RE-subir una que ya existe no — es evidencia (mismo
   // candado que el servidor real, ver routers/loans.py::subir_media).
@@ -76,7 +84,22 @@ export async function uploadMedia(loanId, { file, kind, loanItemId } = {}) {
       });
     }
   } else {
+    const anteriorId = item.media[kind];
     item.media[kind] = id;
+    // Reemplazo de foto de entrega fuera de borrador: bitácora con el sha
+    // anterior -> nuevo, y purgar la entrada vieja del Map (espejo del
+    // borrado de fila + archivo que hace `media_manager.reemplazar`).
+    if (esFotoEntrega && loan.estado !== "borrador") {
+      const shaViejo = anteriorId ? state.media.get(anteriorId)?.sha256 : null;
+      loan.eventos.push({
+        id: Date.now(),
+        tipo: "foto_entrega_modificada",
+        actor: loan.responsable?.nombre || "—",
+        detalle: `Foto de entrega '${kind}' reemplazada (${shaViejo ? shaViejo.slice(0, 12) : "sin foto previa"} -> ${state.media.get(id).sha256.slice(0, 12)}).`,
+        created_at: new Date().toISOString(),
+      });
+      if (anteriorId) state.media.delete(anteriorId);
+    }
   }
 
   return { id, kind, sha256: state.media.get(id).sha256 };

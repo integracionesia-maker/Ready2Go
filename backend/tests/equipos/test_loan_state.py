@@ -185,12 +185,16 @@ def test_solo_el_borrador_acepta_items():
             assert loan_state.acepta_items(estado) is False, estado
 
 
-def test_las_fotos_de_entrega_solo_en_borrador():
+def test_las_fotos_de_entrega_se_aceptan_en_todo_estado_no_terminal():
+    """Revision aprobada (docs/equipos/fotos-entrega-reemplazables.md): la foto
+    de entrega se puede reemplazar en cualquier momento del ciclo. Esta
+    funcion es pura y solo cierra los estados terminales; el candado de
+    `fecha_regreso_real` vive en el router y se prueba en test_media.py."""
     for kind in loan_state.kinds_de_entrega():
-        assert loan_state.acepta_media("borrador", kind) is True, kind
-        for estado in ESTADOS:
-            if estado != "borrador":
-                assert loan_state.acepta_media(estado, kind) is False, (estado, kind)
+        for estado in ("borrador", "prestado", "pendiente_confirmacion", "incompleto"):
+            assert loan_state.acepta_media(estado, kind) is True, (estado, kind)
+        for estado in ("completado", "cancelado"):
+            assert loan_state.acepta_media(estado, kind) is False, (estado, kind)
 
 
 def test_las_firmas_nunca_en_borrador_pero_si_hasta_incompleto():

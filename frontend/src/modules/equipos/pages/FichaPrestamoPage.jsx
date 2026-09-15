@@ -4,6 +4,7 @@ import { EmptyState, GlassPanel, SkeletonShimmer, Timeline, MediaViewer, usePage
 import { esCodigo } from "@/api";
 import { fetchLoanByFolio, fetchTitularFirmaEquipo, mediaUrl, loanResponsivaUrl, updateFechaRegresoEsperada } from "../api";
 import CompletarFirmaModal from "../components/CompletarFirmaModal";
+import CambiarFotoEntregaModal from "../components/CambiarFotoEntregaModal";
 import RegistrarDevolucionModal from "../components/RegistrarDevolucionModal";
 import { usePermisos } from "../permisos/usePermisos";
 
@@ -104,6 +105,7 @@ export default function FichaPrestamoPage() {
   const [nuevaFecha, setNuevaFecha] = useState("");
   const [guardandoFecha, setGuardandoFecha] = useState(false);
   const [errorFecha, setErrorFecha] = useState(null);
+  const [cambiandoFoto, setCambiandoFoto] = useState(null); // { itemId, kind, label } | null
 
   useEffect(() => {
     fetchTitularFirmaEquipo()
@@ -201,11 +203,14 @@ export default function FichaPrestamoPage() {
   // tiene la pestaña "Activos" (I9, 07/09/2026), así que la acción vive
   // aquí, en la ficha, para quien sí tenga el permiso.
   const puedeRegistrarDevolucion = loan.estado === "prestado" && puede("equipos_prestamos", "registrar_devolucion");
-  // Mismo criterio que el servidor (routers/loans.py::actualizar_fecha_regreso_esperada):
-  // no aplica en un préstamo cerrado ni una vez que el equipo ya volvió. Sin
-  // permiso extra a propósito — "cualquiera con acceso a la vista" (CLAUDE.md
-  // raíz): quien puede ver esta ficha, puede modificar la fecha.
-  const puedeEditarFecha = !["completado", "cancelado"].includes(loan.estado) && !loan.fecha_regreso_real;
+  // Mismo criterio que el servidor (routers/loans.py::actualizar_fecha_regreso_esperada
+  // y subir_media): no aplica en un préstamo cerrado ni una vez que el equipo ya
+  // volvió. Sin permiso extra a propósito — "cualquiera con acceso a la vista"
+  // (CLAUDE.md raíz): quien puede ver esta ficha, puede modificar la fecha y
+  // reemplazar las fotos de entrega (docs/equipos/fotos-entrega-reemplazables.md).
+  const ventanaActiva = !["completado", "cancelado"].includes(loan.estado) && !loan.fecha_regreso_real;
+  const puedeEditarFecha = ventanaActiva;
+  const puedeCambiarFotos = ventanaActiva;
 
   return (
     <div className="space-y-6">
@@ -430,8 +435,32 @@ export default function FichaPrestamoPage() {
                 Antes / después
               </p>
               <div className="flex flex-wrap gap-3">
-                <Miniatura mediaId={it.media.foto_entrega_frente} label="Frente antes" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
-                <Miniatura mediaId={it.media.foto_entrega_atras} label="Atrás antes" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
+                <div className="flex flex-col items-start gap-1">
+                  <Miniatura mediaId={it.media.foto_entrega_frente} label="Frente antes" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
+                  {puedeCambiarFotos && (
+                    <button
+                      type="button"
+                      onClick={() => setCambiandoFoto({ itemId: it.id, kind: "foto_entrega_frente", label: "Frente antes" })}
+                      className="font-body text-xs underline"
+                      style={{ color: "var(--go-orange)" }}
+                    >
+                      {it.media.foto_entrega_frente ? "Cambiar" : "Subir foto"}
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col items-start gap-1">
+                  <Miniatura mediaId={it.media.foto_entrega_atras} label="Atrás antes" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
+                  {puedeCambiarFotos && (
+                    <button
+                      type="button"
+                      onClick={() => setCambiandoFoto({ itemId: it.id, kind: "foto_entrega_atras", label: "Atrás antes" })}
+                      className="font-body text-xs underline"
+                      style={{ color: "var(--go-orange)" }}
+                    >
+                      {it.media.foto_entrega_atras ? "Cambiar" : "Subir foto"}
+                    </button>
+                  )}
+                </div>
                 <Miniatura mediaId={it.media.foto_dev_frente} label="Frente después" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
                 <Miniatura mediaId={it.media.foto_dev_atras} label="Atrás después" onExpand={(id, label) => setAmpliada({ mediaId: id, label })} />
               </div>
@@ -467,6 +496,20 @@ export default function FichaPrestamoPage() {
           onClose={() => setMostrarDevolucion(false)}
           onSuccess={() => {
             setMostrarDevolucion(false);
+            cargar();
+          }}
+        />
+      )}
+
+      {cambiandoFoto && (
+        <CambiarFotoEntregaModal
+          loanId={loan.id}
+          item={loan.items.find((i) => i.id === cambiandoFoto.itemId)}
+          kind={cambiandoFoto.kind}
+          label={cambiandoFoto.label}
+          onClose={() => setCambiandoFoto(null)}
+          onSuccess={() => {
+            setCambiandoFoto(null);
             cargar();
           }}
         />
