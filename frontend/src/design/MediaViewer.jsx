@@ -51,6 +51,13 @@ export default function MediaViewer({
   onClose,
   /** Si descargar y previsualizar no salen de la misma ruta. */
   downloadUrl,
+  /** Navegación opcional entre varios archivos del mismo grupo (ej. varias
+   * fotos de un ticket). Sin `total > 1` no se pinta nada — comportamiento
+   * idéntico al de antes para quien no las use (Equipos). */
+  index,
+  total,
+  onPrev,
+  onNext,
 }) {
   const esMovil = useMobile();
 
@@ -314,6 +321,31 @@ export default function MediaViewer({
               {title || fileName}
             </h2>
             <div className="flex flex-shrink-0 items-center gap-2">
+              {total > 1 && (
+                <div className="flex items-center gap-1" style={{ color: "var(--go-text-secondary)" }}>
+                  <button
+                    type="button"
+                    onClick={onPrev}
+                    disabled={!onPrev}
+                    aria-label="Foto anterior"
+                    className="rounded-go p-1 text-base transition-colors hover:bg-white/5 disabled:opacity-30"
+                  >
+                    ‹
+                  </button>
+                  <span className="font-mono text-xs tabular-nums">
+                    {index}/{total}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onNext}
+                    disabled={!onNext}
+                    aria-label="Foto siguiente"
+                    className="rounded-go p-1 text-base transition-colors hover:bg-white/5 disabled:opacity-30"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
               {url && (
                 <a
                   href={downloadUrl || url}

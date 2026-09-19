@@ -158,6 +158,32 @@ class Ticket(Base):
     budget_cycle = relationship("BudgetCycle", back_populates="tickets", lazy="selectin")
     reviewed_by = relationship("User", foreign_keys=[reviewed_by_user_id], lazy="selectin")
     deleted_by = relationship("User", foreign_keys=[deleted_by_user_id], lazy="selectin")
+    media = relationship(
+        "TicketMedia", back_populates="ticket",
+        cascade="all, delete-orphan", order_by="TicketMedia.id",
+    )
+
+
+class TicketMedia(Base):
+    """Fotos/comprobantes de un ticket (0..N). `Ticket.file_name/file_path/
+    mime_type` se conservan aparte como la PRIMERA foto (compatibilidad con
+    lo que ya las lee); esta tabla es la fuente de verdad para el listado
+    completo, incluida esa primera foto (ver crud.create_ticket)."""
+
+    __tablename__ = "ticket_media"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
+    file_name = Column(String(255), nullable=False)
+    file_path = Column(String(512), nullable=False)
+    mime_type = Column(String(100), nullable=False)
+    upload_date = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    ticket = relationship("Ticket", back_populates="media")
+
+    __table_args__ = (
+        Index("ix_ticket_media_ticket", "ticket_id"),
+    )
 
 
 class GeneralExpense(Base):

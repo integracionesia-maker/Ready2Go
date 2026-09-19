@@ -102,6 +102,15 @@ class BrandResponse(BrandBase):
     model_config = {"from_attributes": True}
 
 
+class TicketMediaResponse(BaseModel):
+    id: int
+    file_name: str
+    mime_type: str
+    upload_date: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class TicketResponse(BaseModel):
     id: int
     creator_id: int
@@ -117,6 +126,7 @@ class TicketResponse(BaseModel):
     mime_type: str
     upload_date: datetime
     notes: Optional[str] = None
+    media: List[TicketMediaResponse] = []
     creator_name: Optional[str] = None
     brand_name: Optional[str] = None
     brand_priority: Optional[str] = None

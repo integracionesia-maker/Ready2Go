@@ -155,7 +155,9 @@ Todo ticket aprobado o rechazado guarda quién lo hizo (`reviewed_by_user_id`) y
 
 ## 5. Visor de archivos multimedia (R11)
 
-`MediaViewerModal.jsx`: imágenes con zoom básico (100%-250%) o PDF embebido en `<iframe>`, siempre apuntando al endpoint autenticado `GET /api/tickets/file/{id}` (nunca una URL pública) — las cookies de sesión viajan automáticamente por ser mismo origen. Reutilizado en Transacciones, Validación y la vista del creador. Un archivo faltante muestra un mensaje claro en vez de un ícono roto.
+`MediaViewerModal.jsx`: imágenes con zoom básico (100%-250%) o PDF embebido en `<iframe>`, siempre apuntando a un endpoint autenticado (nunca una URL pública) — las cookies de sesión viajan automáticamente por ser mismo origen. Reutilizado en Transacciones, Validación y la vista del creador. Un archivo faltante muestra un mensaje claro en vez de un ícono roto.
+
+**Múltiples fotos por ticket (18/09/2026)**: un ticket puede llevar más de un comprobante — sin límite de negocio, solo un tope técnico de 20 archivos por ticket (`upload_manager.MAX_FILES_PER_TICKET`). `POST /api/tickets/` recibe `files` (repetido, uno o más) en vez de un solo `file`. Cada foto queda como una fila de la tabla `ticket_media` (`ticket.media` en la respuesta: `[{id, file_name, mime_type, upload_date}]`) y se sirve individualmente por `GET /api/tickets/media/{media_id}`, con las mismas reglas de scoping que ya tenía la descarga por ticket completo. Las columnas legacy de `Ticket` (`file_name`/`file_path`/`mime_type`, y el endpoint `GET /api/tickets/file/{id}`) se conservan intactas y siguen reflejando la **primera** foto subida — nada que ya las lea se rompe. `MediaViewerModal.jsx` navega entre las fotos de un ticket (`‹ 2/3 ›` en el visor) cuando hay más de una. Tickets de antes de este cambio se migran a `ticket_media` con `backend/migrate_ticket_media_backfill.py` (idempotente, correr una vez).
 
 ## 6. Reporte PDF (R8)
 

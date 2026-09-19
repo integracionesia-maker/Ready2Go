@@ -14,6 +14,9 @@ const ALLOWED_MIME = [
 // cámara en el selector: la decisión la toman con los MIME. Se dejan las dos
 // formas — los selectores de Windows sí usan las extensiones.
 const ACCEPT = "image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf";
+// Mismo valor que `upload_manager.MAX_FILES_PER_TICKET` — sin límite de
+// negocio, solo salvaguarda técnica.
+const MAX_FILES = 20;
 
 /**
  * Extensión en minúsculas, o cadena vacía si el nombre no trae ninguna.
@@ -42,7 +45,7 @@ export default function UploadTicketModal({
   const [brandId, setBrandId] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [dragOver, setDragOver] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
@@ -69,31 +72,48 @@ export default function UploadTicketModal({
 
   /* ── File validation ─────────────────────────────────────────────────── */
 
-  const validateAndSet = useCallback((f) => {
+  /** Valida cada archivo nuevo y agrega los válidos a la lista ya elegida
+   * (no reemplaza) — un error en uno no descarta los demás. */
+  const addFiles = useCallback((fileList) => {
     setError(null);
-    if (!f) return;
+    const nuevos = Array.from(fileList || []);
+    if (nuevos.length === 0) return;
 
-    const ext = extensionDe(f.name);
-    if (!ALLOWED_EXTS.includes(ext)) {
-      setError(
-        ext
-          ? `Formato no permitido: ${ext}. Solo: ${ALLOWED_EXTS.join(", ")}`
-          : `El archivo no tiene extensión. Solo: ${ALLOWED_EXTS.join(", ")}`
-      );
-      setFile(null);
-      return;
-    }
-    if (!ALLOWED_MIME.includes(f.type)) {
-      setError(`Tipo de archivo no permitido: ${f.type}`);
-      setFile(null);
-      return;
-    }
-    if (f.size > 10 * 1024 * 1024) {
-      setError("El archivo supera los 10 MB.");
-      setFile(null);
-      return;
-    }
-    setFile(f);
+    setFiles((prev) => {
+      const aceptados = [];
+      let errorMsg = null;
+
+      for (const f of nuevos) {
+        const ext = extensionDe(f.name);
+        if (!ALLOWED_EXTS.includes(ext)) {
+          errorMsg = ext
+            ? `Formato no permitido: ${ext}. Solo: ${ALLOWED_EXTS.join(", ")}`
+            : `El archivo no tiene extensión. Solo: ${ALLOWED_EXTS.join(", ")}`;
+          continue;
+        }
+        if (!ALLOWED_MIME.includes(f.type)) {
+          errorMsg = `Tipo de archivo no permitido: ${f.type}`;
+          continue;
+        }
+        if (f.size > 10 * 1024 * 1024) {
+          errorMsg = "El archivo supera los 10 MB.";
+          continue;
+        }
+        aceptados.push(f);
+      }
+
+      const combinados = [...prev, ...aceptados];
+      if (combinados.length > MAX_FILES) {
+        errorMsg = `Máximo ${MAX_FILES} archivos por ticket.`;
+        combinados.length = MAX_FILES;
+      }
+      if (errorMsg) setError(errorMsg);
+      return combinados;
+    });
+  }, []);
+
+  const removeFile = useCallback((index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   /* ── Drag & drop handlers ────────────────────────────────────────────── */
@@ -111,16 +131,18 @@ export default function UploadTicketModal({
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
-    const f = e.dataTransfer.files[0];
-    if (f) validateAndSet(f);
+    addFiles(e.dataTransfer.files);
   };
 
   const handleFileSelect = (e) => {
-    const f = e.target.files[0];
+    // `e.target.files` es un FileList VIVO: limpiar `value` lo vacía a él
+    // también, no solo al input. Hay que copiarlo a un arreglo ANTES de
+    // limpiar, o `addFiles` recibe una lista ya vacía.
+    const selected = Array.from(e.target.files || []);
     // Se limpia `value` para que volver a elegir EL MISMO archivo (típico tras
     // un error de tamaño) dispare `change` otra vez en vez de no hacer nada.
     e.target.value = "";
-    if (f) validateAndSet(f);
+    addFiles(selected);
   };
 
   /* ── Submit ──────────────────────────────────────────────────────────── */
@@ -142,8 +164,8 @@ export default function UploadTicketModal({
       setError("El monto debe ser mayor a $0.");
       return;
     }
-    if (!file) {
-      setError("Adjunta el archivo del ticket.");
+    if (files.length === 0) {
+      setError("Adjunta al menos un archivo del ticket.");
       return;
     }
 
@@ -154,7 +176,7 @@ export default function UploadTicketModal({
         brandId: Number(brandId),
         amount: Number(amount),
         notes: notes || undefined,
-        file,
+        files,
       });
       setSuccessMsg("Ticket registrado exitosamente.");
       setTimeout(() => {
@@ -301,9 +323,14 @@ export default function UploadTicketModal({
             />
           </div>
 
-          {/* File drop zone */}
+          {/* File drop zone — acepta varios archivos, se pueden seguir agregando */}
           <div>
-            <label className="go-eyebrow mb-1.5 block">Comprobante</label>
+            <label className="go-eyebrow mb-1.5 block">
+              Comprobante{" "}
+              <span className="font-normal normal-case tracking-normal" style={{ color: "var(--go-text-muted)" }}>
+                (puedes adjuntar más de una foto)
+              </span>
+            </label>
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -312,18 +339,18 @@ export default function UploadTicketModal({
               style={{
                 borderColor: dragOver
                   ? "var(--go-orange)"
-                  : file
+                  : files.length > 0
                   ? "rgba(0,163,110,0.3)"
                   : "var(--go-surface-sunken)",
                 background: dragOver
                   ? "var(--go-orange-tint)"
-                  : file
+                  : files.length > 0
                   ? "rgba(0,163,110,0.05)"
                   : "var(--go-bg)",
               }}
               onClick={() => fileInputRef.current?.click()}
             >
-              {file ? (
+              {files.length > 0 ? (
                 <div className="text-center">
                   <svg
                     className="mx-auto mb-1.5 h-8 w-8"
@@ -339,10 +366,10 @@ export default function UploadTicketModal({
                     className="font-display text-sm font-semibold"
                     style={{ color: "var(--go-success)" }}
                   >
-                    {file.name}
+                    {files.length} {files.length === 1 ? "archivo" : "archivos"} listo{files.length === 1 ? "" : "s"}
                   </p>
                   <p className="mt-0.5 font-body text-xs" style={{ color: "var(--go-text-secondary)" }}>
-                    {(file.size / 1024).toFixed(0)} KB — Haz clic para cambiar
+                    Haz clic o arrastra para agregar más
                   </p>
                 </div>
               ) : (
@@ -360,11 +387,11 @@ export default function UploadTicketModal({
                   <p className="font-body text-sm" style={{ color: "var(--go-text-primary)" }}>
                     {esMovil ? (
                       <span className="font-semibold" style={{ color: "var(--go-orange)" }}>
-                        Toca para elegir un archivo
+                        Toca para elegir uno o más archivos
                       </span>
                     ) : (
                       <>
-                        Arrastra el archivo aquí o{" "}
+                        Arrastra los archivos aquí o{" "}
                         <span className="font-semibold" style={{ color: "var(--go-orange)" }}>
                           haz clic para seleccionar
                         </span>
@@ -372,7 +399,7 @@ export default function UploadTicketModal({
                     )}
                   </p>
                   <p className="mt-1 font-body text-xs" style={{ color: "var(--go-text-muted)" }}>
-                    PNG, JPG o PDF — Máx. 10 MB
+                    PNG, JPG o PDF — Máx. 10 MB c/u
                   </p>
                 </div>
               )}
@@ -380,17 +407,53 @@ export default function UploadTicketModal({
                 ref={fileInputRef}
                 type="file"
                 accept={ACCEPT}
+                multiple
                 onChange={handleFileSelect}
                 className="hidden"
               />
             </div>
 
+            {files.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {files.map((f, i) => (
+                  <li
+                    key={`${f.name}-${f.size}-${i}`}
+                    className="flex items-center justify-between gap-2 rounded-go px-3 py-1.5"
+                    style={{ background: "var(--go-bg)", border: "1px solid var(--go-border)" }}
+                  >
+                    <span
+                      className="truncate font-body text-xs"
+                      style={{ color: "var(--go-text-primary)" }}
+                      title={f.name}
+                    >
+                      {f.name}{" "}
+                      <span style={{ color: "var(--go-text-secondary)" }}>
+                        ({(f.size / 1024).toFixed(0)} KB)
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      aria-label={`Quitar ${f.name}`}
+                      className="flex-shrink-0 rounded-go p-1 transition-colors hover:bg-white/5"
+                      style={{ color: "var(--go-text-secondary)" }}
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
             {/* Solo se pinta en móvil (ver CameraCaptureButton). La foto llega
                 ya reescalada y en JPEG, así pasa la validación por extensión y
                 MIME de upload_manager.py sin depender de lo que mande la
-                cámara del teléfono. */}
+                cámara del teléfono. Cada toma se agrega a la lista, no la
+                reemplaza. */}
             <div className="mt-2">
-              <CameraCaptureButton onFile={validateAndSet} onError={setError} />
+              <CameraCaptureButton onFile={(f) => addFiles([f])} onError={setError} />
             </div>
           </div>
 

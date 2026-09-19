@@ -4,11 +4,14 @@ descuento solo al aprobar, motivo obligatorio al rechazar, permisos."""
 from .conftest import PASSWORD_ADMIN, PASSWORD_CREADOR
 
 
-def _upload(client, creator_id, brand_id, amount=100):
+def _upload(client, creator_id, brand_id, amount=100, n_files=1):
     return client.post(
         "/api/tickets/",
         data={"creator_id": str(creator_id), "brand_id": str(brand_id), "amount": str(amount)},
-        files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+        files=[
+            ("files", (f"f{i}.pdf", b"%PDF-1.4", "application/pdf"))
+            for i in range(n_files)
+        ],
     )
 
 
@@ -134,3 +137,44 @@ def test_soft_deleted_pending_ticket_not_in_validation_queue(logged_in_creador, 
 
     pendientes = logged_in_admin.get("/api/tickets/?status=pendiente").json()
     assert all(t["id"] != ticket["id"] for t in pendientes)
+
+
+def test_ticket_can_have_multiple_photos(logged_in_admin, creator_a, brand_a):
+    ticket = _upload(logged_in_admin, creator_a.id, brand_a.id, amount=90, n_files=3).json()
+    assert len(ticket["media"]) == 3
+    # Las columnas legacy siguen reflejando la primera foto.
+    assert ticket["file_name"] == ticket["media"][0]["file_name"]
+
+
+def test_ticket_upload_requires_at_least_one_file(logged_in_admin, creator_a, brand_a):
+    resp = _upload(logged_in_admin, creator_a.id, brand_a.id, amount=90, n_files=0)
+    assert resp.status_code in (400, 422)
+
+
+def test_ticket_upload_rejects_over_max_files(logged_in_admin, creator_a, brand_a):
+    from app.upload_manager import MAX_FILES_PER_TICKET
+
+    resp = _upload(
+        logged_in_admin, creator_a.id, brand_a.id, amount=90,
+        n_files=MAX_FILES_PER_TICKET + 1,
+    )
+    assert resp.status_code == 400
+
+
+def test_download_individual_media_by_id(logged_in_admin, creator_a, brand_a):
+    ticket = _upload(logged_in_admin, creator_a.id, brand_a.id, amount=90, n_files=2).json()
+
+    for media in ticket["media"]:
+        resp = logged_in_admin.get(f"/api/tickets/media/{media['id']}")
+        assert resp.status_code == 200
+
+
+def test_creador_cannot_download_media_of_other_creador_ticket(
+    logged_in_creador, logged_in_admin, creator_b, brand_a
+):
+    """`logged_in_creador` está ligado a creator_a; un ticket de creator_b no es suyo."""
+    ticket = _upload(logged_in_admin, creator_b.id, brand_a.id, amount=90, n_files=1).json()
+    media_id = ticket["media"][0]["id"]
+
+    resp = logged_in_creador.get(f"/api/tickets/media/{media_id}")
+    assert resp.status_code == 403

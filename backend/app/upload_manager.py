@@ -13,6 +13,9 @@ ALLOWED_MIME_TYPES = {
     "image/jpeg", "image/png", "image/jpg", "application/pdf",
 }
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+# Sin límite de negocio (un ticket puede llevar varias fotos del mismo
+# comprobante) — este tope es solo salvaguarda técnica contra abuso/errores.
+MAX_FILES_PER_TICKET = 20
 
 
 def validate_file(file: UploadFile) -> Tuple[str, str]:

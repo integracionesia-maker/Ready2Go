@@ -20,7 +20,7 @@ Endpoints: `POST /api/tickets/{id}/soft-delete`, `POST /api/general-expenses/{id
 ## Borrado físico (hard delete)
 
 - El registro se **elimina** de la base de datos.
-- El archivo comprobante se **borra** del disco.
+- **Todos** los archivos comprobante del ticket se **borran** del disco — un ticket puede tener varias fotos (`ticket_media`, ver `docs/presupuestos/presupuestos-y-validacion.md` §5), no solo la primera.
 - Si el ticket estaba aprobado y **no** había sido soft-deleted previamente, también revierte el monto del ciclo (misma regla `max(0, ...)`). Si ya estaba soft-deleted, el ciclo ya se revirtió antes — no se revierte una segunda vez.
 - ⚠️ **Irreversible** — no hay forma de recuperar el registro ni el archivo. La UI exige un paso adicional de confirmación con una advertencia en rojo antes de llamar a este endpoint (nunca se ejecuta con un solo click).
 
