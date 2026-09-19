@@ -11,7 +11,7 @@ from .. import crud, models, schemas
 from ..database import get_db, SessionLocal
 from ..dependencies import get_current_user, require_role
 from ..rbac import require_rol_o_paquete, tiene_paquete
-from ..upload_manager import save_upload, delete_upload
+from ..upload_manager import save_upload, delete_upload, MAX_FILES_PER_TICKET
 
 router = APIRouter(prefix="/api/tickets", tags=["tickets"])
 
@@ -56,6 +56,7 @@ def _ticket_to_response(t: models.Ticket) -> schemas.TicketResponse:
         mime_type=t.mime_type,
         upload_date=t.upload_date,
         notes=t.notes,
+        media=[schemas.TicketMediaResponse.model_validate(m) for m in t.media],
         creator_name=t.creator.name if t.creator else None,
         brand_name=t.brand.name if t.brand else None,
         brand_priority=t.brand.priority if t.brand else None,
@@ -149,20 +150,56 @@ def download_file(
     )
 
 
+@router.get("/media/{media_id}")
+def download_media(
+    media_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Descarga UNA foto de un ticket con varios comprobantes, por su propio
+    id — mismas reglas de autorización que `download_file`, aplicadas contra
+    el ticket dueño de la foto (`media.ticket`)."""
+    media = db.get(models.TicketMedia, media_id)
+    if not media or media.ticket is None or media.ticket.is_deleted:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado.")
+
+    ticket = media.ticket
+    if not _puede_ver_tickets(current_user, db):
+        raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
+    if current_user.role == "creador" and ticket.creator_id != current_user.creator_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
+    if current_user.role == "marketing_basico" and ticket.uploaded_by_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
+
+    return FileResponse(
+        path=media.file_path,
+        media_type=media.mime_type,
+        filename=media.file_name,
+        content_disposition_type="inline",
+    )
+
+
 @router.post("/", response_model=schemas.TicketResponse, status_code=201)
 def create_ticket(
     creator_id: int = Form(...),
     brand_id: int = Form(...),
     amount: float = Form(..., gt=0),
     notes: Optional[str] = Form(None),
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     current_user: models.User = Depends(get_current_user),
 ):
     if current_user.role == "creador" and creator_id != current_user.creator_id:
         raise HTTPException(status_code=403, detail="No tienes permiso para esta acción.")
+    if not files:
+        raise HTTPException(status_code=400, detail="Adjunta al menos un archivo del ticket.")
+    if len(files) > MAX_FILES_PER_TICKET:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Máximo {MAX_FILES_PER_TICKET} archivos por ticket.",
+        )
 
     db: Session = SessionLocal()
-    file_path_on_disk: Optional[str] = None
+    saved_files: list[tuple[str, str, str]] = []
 
     try:
         creator = crud.get_creator(db, creator_id)
@@ -191,16 +228,15 @@ def create_ticket(
             else models.TicketStatus.PENDIENTE.value
         )
 
-        file_name, file_path_on_disk, mime_type = save_upload(file)
+        for f in files:
+            saved_files.append(save_upload(f))
 
         ticket = crud.create_ticket(
             db=db,
             creator=creator,
             brand=brand,
             amount=amount,
-            file_name=file_name,
-            file_path=file_path_on_disk,
-            mime_type=mime_type,
+            files=saved_files,
             notes=notes,
             status=status,
             actor_user_id=current_user.id,
@@ -218,13 +254,13 @@ def create_ticket(
 
     except HTTPException:
         db.rollback()
-        if file_path_on_disk:
-            delete_upload(file_path_on_disk)
+        for _, saved_path, _ in saved_files:
+            delete_upload(saved_path)
         raise
     except Exception as exc:
         db.rollback()
-        if file_path_on_disk:
-            delete_upload(file_path_on_disk)
+        for _, saved_path, _ in saved_files:
+            delete_upload(saved_path)
         raise HTTPException(status_code=500, detail=f"Error inesperado al crear el ticket: {exc}")
     finally:
         db.close()

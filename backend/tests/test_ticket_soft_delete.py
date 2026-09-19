@@ -5,11 +5,14 @@ poder aprobarse/rechazarse. Ver doc/borrado-tickets.md."""
 from pathlib import Path
 
 
-def _upload(client, creator_id, brand_id, amount=100):
+def _upload(client, creator_id, brand_id, amount=100, n_files=1):
     return client.post(
         "/api/tickets/",
         data={"creator_id": str(creator_id), "brand_id": str(brand_id), "amount": str(amount)},
-        files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+        files=[
+            ("files", (f"f{i}.pdf", b"%PDF-1.4", "application/pdf"))
+            for i in range(n_files)
+        ],
     )
 
 
@@ -44,6 +47,22 @@ def test_hard_delete_removes_file(logged_in_admin, creator_a, brand_a):
     resp = logged_in_admin.delete(f"/api/tickets/{ticket['id']}/permanent")
     assert resp.status_code == 200
     assert not file_path.exists()
+
+
+def test_hard_delete_removes_all_photos(logged_in_admin, creator_a, brand_a, db):
+    from app import models
+
+    ticket = _upload(logged_in_admin, creator_a.id, brand_a.id, amount=100, n_files=3).json()
+    media_rows = db.query(models.TicketMedia).filter(
+        models.TicketMedia.ticket_id == ticket["id"]
+    ).all()
+    assert len(media_rows) == 3
+    file_paths = [Path(m.file_path) for m in media_rows]
+    assert all(p.exists() for p in file_paths)
+
+    resp = logged_in_admin.delete(f"/api/tickets/{ticket['id']}/permanent")
+    assert resp.status_code == 200
+    assert not any(p.exists() for p in file_paths)
 
 
 def test_hard_delete_reverts_cycle_if_approved(logged_in_admin, creator_a, brand_a):

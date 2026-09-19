@@ -137,9 +137,7 @@ def test_approve_can_push_cycle_negative(db, brand_a):
         creator=creator,
         brand=brand_a,
         amount=500,
-        file_name="f.pdf",
-        file_path=__file__,
-        mime_type="application/pdf",
+        files=[("f.pdf", __file__, "application/pdf")],
         notes=None,
         status="pendiente",
         actor_user_id=approver.id,
@@ -160,9 +158,7 @@ def test_soft_delete_reverts_cycle_spent(db, brand_a):
         creator=creator,
         brand=brand_a,
         amount=300,
-        file_name="f.pdf",
-        file_path=__file__,
-        mime_type="application/pdf",
+        files=[("f.pdf", __file__, "application/pdf")],
         notes=None,
         status="aprobado",
         actor_user_id=approver.id,
@@ -219,7 +215,7 @@ def test_aplicar_ahora_no_revierte_lo_ya_gastado(db, brand_a):
     approver = make_user(db, username="revisor4", password="ClaveValida123!", role="admin")
     ticket = crud.create_ticket(
         db=db, creator=creator, brand=brand_a, amount=800,
-        file_name="f.pdf", file_path=__file__, mime_type="application/pdf",
+        files=[("f.pdf", __file__, "application/pdf")],
         notes=None, status="aprobado", actor_user_id=approver.id,
     )
     cycle = ticket.budget_cycle

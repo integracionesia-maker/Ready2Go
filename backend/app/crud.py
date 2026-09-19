@@ -286,9 +286,7 @@ def create_ticket(
     creator: models.Creator,
     brand: models.Brand,
     amount: float,
-    file_name: str,
-    file_path: str,
-    mime_type: str,
+    files: list[tuple[str, str, str]],
     notes: Optional[str],
     status: str,
     actor_user_id: int,
@@ -296,21 +294,32 @@ def create_ticket(
     """Crea un ticket asignado a su ciclo (por fecha de subida, hoy). Si nace
     `aprobado` (tickets de admin/superadmin, R10) descuenta de inmediato del
     ciclo — sin validar fondos: los ciclos pueden quedar en negativo a propósito
-    (decisión del usuario, doc/mejoras-diseno-fase1.md §0.B)."""
+    (decisión del usuario, doc/mejoras-diseno-fase1.md §0.B).
+
+    `files` es la lista de comprobantes ya guardados en disco, en orden de
+    subida: cada uno es `(file_name, file_path, mime_type)`. El primero
+    también se copia a las columnas legacy de `Ticket` (compatibilidad con
+    lo que ya las lee, ej. `GET /tickets/file/{id}`); todos, incluido ese
+    primero, quedan además como filas de `TicketMedia`."""
     cycle = get_or_create_cycle_for_date(db, creator, date.today())
+    first_name, first_path, first_mime = files[0]
 
     ticket = models.Ticket(
         creator_id=creator.id,
         brand_id=brand.id,
         budget_cycle_id=cycle.id,
         amount=amount,
-        file_name=file_name,
-        file_path=file_path,
-        mime_type=mime_type,
+        file_name=first_name,
+        file_path=first_path,
+        mime_type=first_mime,
         notes=notes,
         status=status,
         uploaded_by_user_id=actor_user_id,
     )
+    for file_name, file_path, mime_type in files:
+        ticket.media.append(
+            models.TicketMedia(file_name=file_name, file_path=file_path, mime_type=mime_type)
+        )
 
     if status == models.TicketStatus.APROBADO.value:
         cycle.spent += amount
@@ -372,14 +381,16 @@ def soft_delete_ticket(db: Session, ticket: models.Ticket, actor_user_id: int) -
 
 
 def hard_delete_ticket(db: Session, ticket: models.Ticket) -> None:
-    """Borra el registro de la BD y el archivo del disco. Si el ticket ya
-    estaba soft-deleted, el ciclo ya se revirtió antes — no revertir de nuevo."""
+    """Borra el registro de la BD y TODOS sus archivos del disco (uno por
+    cada `TicketMedia`, no solo el primero). Si el ticket ya estaba
+    soft-deleted, el ciclo ya se revirtió antes — no revertir de nuevo."""
     if not ticket.is_deleted:
         _revert_cycle_if_approved(ticket)
-    file_path = ticket.file_path
+    file_paths = [m.file_path for m in ticket.media]
     db.delete(ticket)
     db.commit()
-    delete_upload(file_path)
+    for file_path in file_paths:
+        delete_upload(file_path)
 
 
 def get_brand_spend_breakdown(

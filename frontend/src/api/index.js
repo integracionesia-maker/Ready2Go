@@ -227,13 +227,13 @@ export function fetchBrandSpendBreakdown(startDate, endDate, { signal } = {}) {
   return request(`/tickets/brand-spend${qs ? `?${qs}` : ""}`, { signal });
 }
 
-export async function uploadTicket({ creatorId, brandId, amount, notes, file }) {
+export async function uploadTicket({ creatorId, brandId, amount, notes, files }) {
   const formData = new FormData();
   formData.append("creator_id", creatorId);
   formData.append("brand_id", brandId);
   formData.append("amount", amount);
   if (notes) formData.append("notes", notes);
-  formData.append("file", file);
+  files.forEach((f) => formData.append("files", f));
 
   const res = await fetchWithAuthRetry("/tickets/", {
     method: "POST",
@@ -247,6 +247,10 @@ export async function uploadTicket({ creatorId, brandId, amount, notes, file }) 
 
 export function ticketFileUrl(ticketId) {
   return `${BASE}/tickets/file/${ticketId}`;
+}
+
+export function ticketMediaUrl(mediaId) {
+  return `${BASE}/tickets/media/${mediaId}`;
 }
 
 export function softDeleteTicket(id) {

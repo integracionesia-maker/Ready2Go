@@ -18,7 +18,7 @@ def _upload(client, creator_id, brand_id, amount=100):
     return client.post(
         "/api/tickets/",
         data={"creator_id": str(creator_id), "brand_id": str(brand_id), "amount": str(amount)},
-        files={"file": ("comprobante.pdf", b"%PDF-1.4 contenido", "application/pdf")},
+        files={"files": ("comprobante.pdf", b"%PDF-1.4 contenido", "application/pdf")},
     )
 
 

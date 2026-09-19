@@ -315,7 +315,7 @@ class TestTicketsPermissionsAndIDOR:
         resp = logged_in_creador.post(
             "/api/tickets/",
             data={"creator_id": str(creator_b.id), "brand_id": str(brand_a.id), "amount": "50"},
-            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("f.pdf", b"%PDF-1.4", "application/pdf")},
         )
         assert resp.status_code == 403
 
@@ -323,7 +323,7 @@ class TestTicketsPermissionsAndIDOR:
         resp = logged_in_creador.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
-            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("f.pdf", b"%PDF-1.4", "application/pdf")},
         )
         assert resp.status_code == 201
 
@@ -331,7 +331,7 @@ class TestTicketsPermissionsAndIDOR:
         resp = logged_in_admin.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
-            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("f.pdf", b"%PDF-1.4", "application/pdf")},
         )
         assert resp.status_code == 201
 
@@ -360,7 +360,7 @@ class TestRolesSinAccesoPresupuestos:
         resp = logged_in_usuario.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "500"},
-            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("f.pdf", b"%PDF-1.4", "application/pdf")},
         )
         assert resp.status_code == 201
         assert resp.json()["status"] == "pendiente"
@@ -372,7 +372,7 @@ class TestRolesSinAccesoPresupuestos:
         resp = logged_in_colaborador_mkt.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "500"},
-            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("f.pdf", b"%PDF-1.4", "application/pdf")},
         )
         assert resp.status_code == 201
         assert resp.json()["status"] == "pendiente"
@@ -381,7 +381,7 @@ class TestRolesSinAccesoPresupuestos:
         resp = logged_in_admin.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
-            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("f.pdf", b"%PDF-1.4", "application/pdf")},
         )
         assert resp.status_code == 201
         assert resp.json()["status"] == "aprobado"
@@ -449,7 +449,7 @@ class TestMarketingPresupuestosPermissions:
         resp = logged_in_marketing_presupuestos.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
-            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("f.pdf", b"%PDF-1.4", "application/pdf")},
         )
         assert resp.status_code == 201
 
@@ -511,7 +511,7 @@ class TestMarketingBasicoPermissions:
         resp = client.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
-            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("f.pdf", b"%PDF-1.4", "application/pdf")},
         )
         assert resp.status_code == 201
 
@@ -527,12 +527,12 @@ class TestMarketingBasicoPermissions:
         logged_in_admin.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "999"},
-            files={"file": ("ajeno.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("ajeno.pdf", b"%PDF-1.4", "application/pdf")},
         )
         propio = logged_in_marketing_basico.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
-            files={"file": ("propio.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("propio.pdf", b"%PDF-1.4", "application/pdf")},
         ).json()
 
         vistos = logged_in_marketing_basico.get("/api/tickets/").json()
@@ -567,7 +567,7 @@ class TestTicketDeletePermissions:
         resp = logged_in_admin.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
-            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("f.pdf", b"%PDF-1.4", "application/pdf")},
         ).json()
         assert logged_in_creador.post(f"/api/tickets/{resp['id']}/soft-delete").status_code == 403
 
@@ -575,7 +575,7 @@ class TestTicketDeletePermissions:
         resp = logged_in_admin.post(
             "/api/tickets/",
             data={"creator_id": str(creator_a.id), "brand_id": str(brand_a.id), "amount": "50"},
-            files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")},
+            files={"files": ("f.pdf", b"%PDF-1.4", "application/pdf")},
         ).json()
         assert logged_in_admin.post(f"/api/tickets/{resp['id']}/soft-delete").status_code == 200
         assert logged_in_admin.delete(f"/api/tickets/{resp['id']}/permanent").status_code == 200
