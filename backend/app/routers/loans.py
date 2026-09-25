@@ -593,13 +593,12 @@ def confirmar_prestamo(
     # Los correos van en BackgroundTasks: un SMTP caido jamas tumba el registro
     # del prestamo. El equipo ya salio por la puerta; que el aviso falle no puede
     # deshacer eso (§10.15).
-    notificaciones.encolar(
-        db,
-        plantillas_correo.TIPO_CONFIRMADO_APROBADOR,
-        prestamo,
-        background_tasks,
-        con_responsiva=True,
-    )
+    #
+    # Solo los involucrados directos (25/09/2026): el beneficiario y el titular
+    # de TITULAR_FIRMA_EQUIPO. Ya no se avisa a todos los que tienen
+    # `equipos_aprobacion:autorizar_entrega` — desde que el rol base `admin`
+    # trae ese permiso, eso mandaba el correo a todos los administradores.
+    # La copia oculta la pone `SMTP_BCC` (mailer.py), no este endpoint.
     if prestamo.responsable_email:
         notificaciones.encolar(
             db,

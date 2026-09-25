@@ -303,13 +303,29 @@ def test_el_aviso_de_confirmacion_lleva_lo_que_pide_el_plan(inventario, ana, mel
     cliente = logueado("ana.ruiz")
     _confirmado(cliente)
 
-    aprobador = next(c for c in smtp_falso if c["to"] == melisa.email)
-    assert "CE-0001" in aprobador["subject"]
+    titular = next(c for c in smtp_falso if c["to"] == melisa.email)
+    assert "CE-0001" in titular["subject"]
     for dato in ("ana.ruiz", "Contenido", "Live Plaza Madero", "2026-07-25", "iPhone 17 Pro"):
-        assert dato in aprobador["body"], dato
-    assert "/equipos/aprobaciones" in aprobador["body"]
-    # PDF adjunto (§7): el aprobador tiene que poder leer la carta sin entrar.
-    assert aprobador["adjuntos"] == ["CE-0001_v1.pdf"]
+        assert dato in titular["body"], dato
+    assert "/equipos/prestamo/CE-0001" in titular["body"]
+    # PDF adjunto (§7): el titular tiene que poder leer la carta sin entrar.
+    assert titular["adjuntos"] == ["CE-0001_v1.pdf"]
+
+
+def test_confirmar_solo_avisa_a_los_involucrados_directos(inventario, ana, db, smtp_falso):
+    """25/09/2026: solo el beneficiario y el titular de TITULAR_FIRMA_EQUIPO.
+    Ni los aprobadores (APROBADOR_EQUIPO) ni el rol base `admin` —que trae
+    `equipos_aprobacion:autorizar_entrega`— reciben el aviso."""
+    titular = usuario_con(db, username="firmante", aditivos=("TITULAR_FIRMA_EQUIPO",))
+    aprobadora = usuario_con(db, username="melisa", aditivos=("APROBADOR_EQUIPO",))
+    administrador = usuario_con(db, username="un.admin", role="admin")
+    _confirmado(logueado("ana.ruiz"))
+
+    destinatarios = sorted(c["to"] for c in smtp_falso)
+    assert destinatarios == sorted([ana.email, titular.email])
+    assert aprobadora.email not in destinatarios
+    assert administrador.email not in destinatarios
+    assert not any("listo para autorizar" in c["subject"] for c in smtp_falso)
 
 
 def test_el_responsable_recibe_su_copia_del_pdf(inventario, ana, melisa, smtp_falso):
@@ -335,15 +351,15 @@ def test_confirmar_avisa_al_titular_de_la_firma(inventario, ana, db, smtp_falso)
 
 
 def test_sin_titular_asignado_no_hay_aviso_de_firma(inventario, ana, db, smtp_falso):
-    """Solo aprobador, sin TITULAR_FIRMA_EQUIPO: no debe haber un tercer
-    correo ni un intento a un destinatario vacio."""
+    """Solo aprobador, sin TITULAR_FIRMA_EQUIPO: no debe haber correo de firma
+    ni un intento a un destinatario vacio."""
     usuario_con(db, username="melisa", aditivos=("APROBADOR_EQUIPO",))
     cliente = logueado("ana.ruiz")
     _confirmado(cliente)
 
-    # Solo el aviso al aprobador y la copia al responsable — nada de un
-    # tercer correo de firma sin destinatario.
-    assert len(smtp_falso) == 2
+    # Solo la copia al responsable — el aprobador ya no recibe aviso y no hay
+    # correo de firma sin destinatario.
+    assert len(smtp_falso) == 1
     assert not any("espera tu firma" in c["subject"] for c in smtp_falso)
 
 
