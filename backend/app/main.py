@@ -135,5 +135,12 @@ if os.path.isdir(_frontend_dist):
         candidato = os.path.realpath(os.path.join(_frontend_dist, full_path))
         dentro = candidato == _frontend_dist or candidato.startswith(_frontend_dist + os.sep)
         if dentro and os.path.isfile(candidato):
+            if candidato.endswith(".html"):
+                # El HTML es el cascaron de la SPA: sin no-cache el navegador
+                # puede quedarse con una copia vieja (FileResponse solo manda
+                # Last-Modified/ETag y el browser cachea heuristicamente) y
+                # seguir corriendo un frontend desactualizado — bug real visto
+                # en produccion 30/09/2026 (PDF viejo generado client-side).
+                return FileResponse(candidato, headers={"Cache-Control": "no-cache"})
             return FileResponse(candidato)
-        return FileResponse(_index_html)
+        return FileResponse(_index_html, headers={"Cache-Control": "no-cache"})
