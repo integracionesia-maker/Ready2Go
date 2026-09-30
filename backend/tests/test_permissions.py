@@ -97,6 +97,36 @@ def test_spa_fallback_does_not_serve_outside_dist(client, tmp_path, monkeypatch)
         assert b"SPA" in resp.content
 
 
+def test_spa_index_va_con_cache_control_no_cache(client, tmp_path, monkeypatch):
+    """30/09/2026: el index del SPA debe llevar `Cache-Control: no-cache` —
+    sin él el navegador cachea heuristicamente el cascaron (FileResponse manda
+    Last-Modified/ETag) y puede seguir corriendo un frontend desactualizado
+    (bug real en produccion: bundle viejo generando el PDF client-side)."""
+    import app.main as main_module
+
+    rutas = [r for r in main_module.app.routes if getattr(r, "path", "") == "/{full_path:path}"]
+    if not rutas:
+        pytest.skip("fallback SPA no registrado: frontend/dist no existe en este entorno")
+
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_bytes(b"<html>SPA</html>")
+    (dist / "otra.html").write_bytes(b"<html>OTRA</html>")
+
+    monkeypatch.setattr(main_module, "_frontend_dist", str(dist))
+    monkeypatch.setattr(main_module, "_index_html", str(dist / "index.html"))
+
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert b"SPA" in resp.content
+    assert resp.headers.get("cache-control") == "no-cache"
+
+    resp_otra = client.get("/otra.html")
+    assert resp_otra.status_code == 200
+    assert b"OTRA" in resp_otra.content
+    assert resp_otra.headers.get("cache-control") == "no-cache"
+
+
 class TestCreatorsPermissions:
     def test_creador_sees_only_own_creator_in_list(self, logged_in_creador, creator_a, creator_b):
         resp = logged_in_creador.get("/api/creators/")
