@@ -8,7 +8,10 @@ Sobre las fuentes: Blauer Nue y Conthic son las de marca, pero viven en
 repo. Se usan los respaldos que el propio documento de tokens autoriza:
 Helvetica para titulos y cuerpo, Courier para folios y numeros de serie. Queda
 escrito aqui y no elegido en silencio: el dia que lleguen los woff2/ttf, se
-registran en `_registrar_fuentes()` y nada mas cambia.
+registran en `_registrar_fuentes()` y nada mas cambia. Excepcion desde
+2026-09-30: los numeros de TABLA del reporte del Dashboard usan Helvetica
+tambien (la mezcla Courier/Helvetica daba sensacion de fuentes distintas);
+la carta responsiva conserva Courier para folios y numeros de serie.
 """
 
 from __future__ import annotations
@@ -24,13 +27,17 @@ __all__ = [
     "TEXTO_SECUNDARIO",
     "LINEA",
     "FONDO",
-    "TURQUESA",
+    "VERDE",
     "AMBAR",
     "CIELO",
     "VIOLETA",
+    "NARANJA_CLARO",
+    "VERDE_CLARO",
+    "CIELO_CLARO",
+    "VIOLETA_CLARO",
+    "NARANJA_TINTE",
     "GRIS_CLARO",
     "GRIS_ZEBRA",
-    "TINTES",
     "FUENTE_TITULO",
     "FUENTE_CUERPO",
     "FUENTE_MONO",
@@ -39,37 +46,36 @@ __all__ = [
 ]
 
 # Paleta (tokens_marca.md). El naranja es el UNICO acento para documentos de
-# tipo carta (ej. la responsiva). El reporte del Dashboard es un documento de
-# DATOS con varias secciones y series por grafica — reusa la paleta completa
-# de 4 acentos que ya se ve en pantalla (`Dashboard.jsx`: ACCENTS
-# orange/turquoise/sky/violet) para que el PDF no se sienta mas plano que lo
-# que el usuario ya ve en el navegador, y para que cada seccion/tarjeta tenga
-# su propia identidad visual en vez de repetir un solo color en todo el
-# documento.
+# tipo carta (ej. la responsiva). El reporte del Dashboard usa desde
+# 2026-09-30 UN COLOR FIJO POR TEMA: naranja para los resumenes generales
+# (portada y resumen), verde para tickets/presupuesto de creadores, azul para
+# gastos generales, morado para gastos operativos. Las graficas de dos series
+# usan el color del tema + una sombra clara del mismo color (nunca se mezclan
+# colores de temas distintos); AMBAR queda solo para las lineas "pendiente"
+# de las tarjetas KPI (semantica de toda la app, coincide con la pantalla).
 NARANJA_GO = colors.HexColor("#FB670B")
 TEXTO = colors.HexColor("#262626")
 TEXTO_SECUNDARIO = colors.HexColor("#535353")
 LINEA = colors.HexColor("#C5C5C5")
 FONDO = colors.HexColor("#FFFFFF")
-TURQUESA = colors.HexColor("#14B8A6")  # aprobado / serie principal
-AMBAR = colors.HexColor("#F59E0B")  # pendiente por confirmar / segunda serie
+VERDE = colors.HexColor("#00A36E")  # go-success / GO_CHART_COLORS (apexTheme.js)
+AMBAR = colors.HexColor("#F59E0B")  # pendiente por confirmar en tarjetas KPI
 CIELO = colors.HexColor("#38BDF8")
 VIOLETA = colors.HexColor("#A78BFA")
 GRIS_CLARO = colors.HexColor("#F5F4EF")  # fondo de encabezados de tabla
 GRIS_ZEBRA = colors.HexColor("#FAFAF7")  # renglon alterno de tabla
 
+# Sombras claras (~40% hacia blanco) para la SEGUNDA serie de una grafica del
+# mismo tema — la primera serie usa el color fijo del tema.
+NARANJA_CLARO = colors.HexColor("#FDA46D")
+VERDE_CLARO = colors.HexColor("#66C8A8")
+CIELO_CLARO = colors.HexColor("#88D7FB")
+VIOLETA_CLARO = colors.HexColor("#CAB9FC")
+
 # Tintes (fondo muy claro de cada acento, mismo criterio que --go-orange-tint
-# en el frontend) para las tarjetas de KPI — rotan en ese orden.
-_NARANJA_TINTE = colors.HexColor("#FDEEE3")
-_TURQUESA_TINTE = colors.HexColor("#E1F5F2")
-_CIELO_TINTE = colors.HexColor("#E5F6FE")
-_VIOLETA_TINTE = colors.HexColor("#F1EDFC")
-TINTES = [
-    (NARANJA_GO, _NARANJA_TINTE),
-    (TURQUESA, _TURQUESA_TINTE),
-    (CIELO, _CIELO_TINTE),
-    (VIOLETA, _VIOLETA_TINTE),
-]
+# en el frontend): naranja para las tarjetas de KPI del resumen y el fondo de
+# la portada.
+NARANJA_TINTE = colors.HexColor("#FDEEE3")
 
 FUENTE_TITULO = "Helvetica-Bold"   # respaldo autorizado de Blauer Nue
 FUENTE_CUERPO = "Helvetica"        # respaldo autorizado de Conthic
@@ -236,43 +242,46 @@ def estilos() -> dict[str, ParagraphStyle]:
             textColor=TEXTO_SECUNDARIO,
             spaceBefore=8,
         ),
-        # ── Reporte del Dashboard (backend/app/pdf/dashboard_reporte.py) ────
-        "banner_titulo": ParagraphStyle(
-            "banner_titulo",
+        # ── Portada del reporte del Dashboard (dashboard_reporte.py) ────────
+        "portada_org": ParagraphStyle(
+            "portada_org",
             parent=base,
             fontName=FUENTE_TITULO,
-            fontSize=17,
-            leading=20,
-            textColor=colors.white,
-            alignment=TA_JUSTIFY,
-            spaceAfter=2,
+            fontSize=21,
+            leading=28,
+            alignment=TA_CENTER,
+            textColor=TEXTO,
+            spaceAfter=0,
         ),
-        "banner_subtitulo": ParagraphStyle(
-            "banner_subtitulo",
+        "portada_gocreate": ParagraphStyle(
+            "portada_gocreate",
+            parent=base,
+            fontName=FUENTE_TITULO,
+            fontSize=21,
+            leading=28,
+            alignment=TA_CENTER,
+            textColor=NARANJA_GO,
+            spaceAfter=0,
+        ),
+        "portada_titulo": ParagraphStyle(
+            "portada_titulo",
+            parent=base,
+            fontName=FUENTE_TITULO,
+            fontSize=13,
+            leading=18,
+            alignment=TA_CENTER,
+            textColor=TEXTO,
+            spaceBefore=4,
+            spaceAfter=4,
+        ),
+        "portada_meta": ParagraphStyle(
+            "portada_meta",
             parent=base,
             fontSize=9.5,
-            leading=12,
-            textColor=colors.HexColor("#FFE3CE"),
-            alignment=TA_JUSTIFY,
-            spaceAfter=0,
-        ),
-        "banner_meta": ParagraphStyle(
-            "banner_meta",
-            parent=base,
-            fontSize=8,
-            leading=11,
-            textColor=colors.white,
-            alignment=TA_JUSTIFY,
-            spaceAfter=0,
-        ),
-        "banner_meta_der": ParagraphStyle(
-            "banner_meta_der",
-            parent=base,
-            fontSize=8,
-            leading=11,
-            textColor=colors.white,
-            alignment=TA_RIGHT,
-            spaceAfter=0,
+            leading=14,
+            alignment=TA_CENTER,
+            textColor=TEXTO_SECUNDARIO,
+            spaceAfter=2,
         ),
         "seccion_titulo": ParagraphStyle(
             "seccion_titulo",
@@ -347,7 +356,7 @@ def estilos() -> dict[str, ParagraphStyle]:
         "tabla_num": ParagraphStyle(
             "tabla_num",
             parent=base,
-            fontName=FUENTE_MONO,
+            fontName=FUENTE_CUERPO,
             fontSize=8.5,
             leading=11,
             textColor=TEXTO,

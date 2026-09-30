@@ -197,6 +197,8 @@ def dashboard_report_pdf(
         "general_expenses_monthly": crud.get_general_expenses_monthly(db, start_date=start_date, end_date=end_date),
         "operational_dashboard": crud_operativos.dashboard(db, start_date=start_date, end_date=end_date),
         "top_expenses": crud.get_top_expenses(db, start_date=start_date, end_date=end_date),
+        "top_generales": crud.get_top_expenses(db, start_date=start_date, end_date=end_date, tipo="general", limit=5),
+        "top_operativos": crud.get_top_expenses(db, start_date=start_date, end_date=end_date, tipo="operativo", limit=5),
         "tickets_per_day": crud.get_tickets_per_day(db, start_date=start_date, end_date=end_date),
         "period_comparison": period_comparison_data,
         "general_expenses_by_brand": (

@@ -5,9 +5,16 @@ ApexCharts + html2canvas).
 `VerticalBarChart`/`HorizontalBarChart` de reportlab dibujan series LADO A LADO
 (agrupadas) — no existe un modo "stacked" nativo (verificado contra el
 `reportlab==5.0.0` instalado: `_attrMap` no tiene esa propiedad). Por eso estas
-graficas usan barras agrupadas para "Aprobado" vs "Pendiente por confirmar" en
-vez de apiladas como en pantalla: es lo idiomatico de la libreria, y para un
-reporte impreso dos barras lado a lado se leen igual de claro.
+graficas usan barras agrupadas para series dobles (ej. "Aprobado" vs
+"Pendiente por confirmar") en vez de apiladas como en pantalla: es lo idiomatico
+de la libreria, y para un reporte impreso dos barras lado a lado se leen igual
+de claro.
+
+Colores (2026-09-30): cada grafica recibe sus colores por parametro — el color
+fijo del tema para la primera serie y una sombra clara del mismo tema para la
+segunda (nunca se mezclan colores de temas distintos). El donut
+(`grafica_donut`) usa un Pie con un circulo blanco encima del centro: reportlab
+no tiene donut nativo.
 
 Cada funcion recibe datos ya en listas simples (sin SQLAlchemy, mismo criterio
 que `plantilla.py`) y devuelve un `Drawing` listo para insertar como flowable.
@@ -17,15 +24,10 @@ from __future__ import annotations
 
 from reportlab.graphics.charts.barcharts import HorizontalBarChart, VerticalBarChart
 from reportlab.graphics.charts.legends import Legend
-from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.piecharts import Pie
+from reportlab.graphics.shapes import Circle, Drawing
 
 from . import estilos as est
-
-# Paleta de series, en orden de uso (serie 1, serie 2, ...). La serie de
-# "pendiente" SIEMPRE es la segunda posicion cuando `con_pendiente=True`.
-_COLOR_SERIE_1 = est.TURQUESA
-_COLOR_SERIE_2 = est.AMBAR
-_COLOR_UNA_SOLA = est.NARANJA_GO
 
 
 def _moneda(v: float) -> str:
@@ -36,6 +38,14 @@ def _porcentaje(v: float) -> str:
     return f"{v:.0f}%"
 
 
+def _resolver_colores(series: list, colores: list | None) -> list:
+    """Color por serie: el parametro `colores` si viene (tema + sombra clara
+    del mismo tema), o el default naranja si no se especifica."""
+    if colores is not None:
+        return colores
+    return [est.NARANJA_GO, est.NARANJA_CLARO] if len(series) > 1 else [est.NARANJA_GO]
+
+
 def grafica_vertical(
     categorias: list[str],
     series: list[tuple[str, list[float]]],
@@ -43,7 +53,7 @@ def grafica_vertical(
     alto: float,
     formato_valor=_moneda,
     categorias_densas: bool = False,
-    color_principal=None,
+    colores: list | None = None,
 ) -> Drawing:
     """Barras verticales, una o dos series (agrupadas si son dos).
 
@@ -77,8 +87,7 @@ def grafica_vertical(
     chart.valueAxis.gridStrokeColor = est.LINEA
     chart.valueAxis.visibleGrid = True
 
-    colores = [_COLOR_SERIE_1, _COLOR_SERIE_2] if len(series) > 1 else [color_principal or _COLOR_UNA_SOLA]
-    for i, color in enumerate(colores):
+    for i, color in enumerate(_resolver_colores(series, colores)):
         chart.bars[i].fillColor = color
         chart.bars[i].strokeColor = None
     chart.barSpacing = 2
@@ -97,7 +106,9 @@ def grafica_vertical(
         leyenda.dy = 6
         leyenda.deltax = 0
         leyenda.columnMaximum = 1
-        leyenda.colorNamePairs = [(colores[i], s[0]) for i, s in enumerate(series)]
+        leyenda.colorNamePairs = [
+            (_resolver_colores(series, colores)[i], s[0]) for i, s in enumerate(series)
+        ]
         d.add(leyenda)
 
     return d
@@ -109,7 +120,7 @@ def grafica_horizontal(
     ancho: float,
     alto: float,
     formato_valor=_moneda,
-    color_principal=None,
+    colores: list | None = None,
 ) -> Drawing:
     """Barras horizontales, una o dos series (agrupadas si son dos) —
     Gastos por Marca / por Rubro (una serie) o Uso por Creador (dos: %
@@ -136,8 +147,7 @@ def grafica_horizontal(
     chart.valueAxis.gridStrokeColor = est.LINEA
     chart.valueAxis.visibleGrid = True
 
-    colores = [_COLOR_SERIE_1, _COLOR_SERIE_2] if len(series) > 1 else [color_principal or _COLOR_UNA_SOLA]
-    for i, color in enumerate(colores):
+    for i, color in enumerate(_resolver_colores(series, colores)):
         chart.bars[i].fillColor = color
         chart.bars[i].strokeColor = None
     chart.barSpacing = 2
@@ -155,7 +165,61 @@ def grafica_horizontal(
         leyenda.dx = 6
         leyenda.dy = 6
         leyenda.columnMaximum = 1
-        leyenda.colorNamePairs = [(colores[i], s[0]) for i, s in enumerate(series)]
+        leyenda.colorNamePairs = [
+            (_resolver_colores(series, colores)[i], s[0]) for i, s in enumerate(series)
+        ]
         d.add(leyenda)
 
+    return d
+
+
+def grafica_donut(
+    segmentos: list[tuple[str, float]],
+    colores: list,
+    ancho: float,
+    alto: float = 150,
+    radio_agujero: float = 0.55,
+) -> Drawing:
+    """Donut con leyenda a la derecha ("nombre · $monto"). ReportLab no tiene
+    donut nativo: se dibuja un circulo blanco encima del centro de un Pie.
+    Los valores 0 no dibujan rebanada; el llamador omite la grafica si todo
+    es 0."""
+    d = Drawing(ancho, alto)
+    diametro = alto
+    pie = Pie()
+    pie.x = 0
+    pie.y = 0
+    pie.width = diametro
+    pie.height = diametro
+    pie.data = [v for _, v in segmentos]
+    pie.startAngle = 90
+    pie.sideLabels = 0
+    pie.simpleLabels = 0  # alias retrocompatible
+    for i, color in enumerate(colores):
+        pie.slices[i].fillColor = color
+        pie.slices[i].strokeColor = est.FONDO
+        pie.slices[i].strokeWidth = 1.5
+    d.add(pie)
+    d.add(
+        Circle(
+            diametro / 2,
+            diametro / 2,
+            diametro / 2 * radio_agujero,
+            fillColor=est.FONDO,
+            strokeColor=None,
+        )
+    )
+    leyenda = Legend()
+    leyenda.x = diametro + 12
+    leyenda.y = alto - 10
+    leyenda.alignment = "right"
+    leyenda.fontName = "Helvetica"
+    leyenda.fontSize = 8
+    leyenda.dx = 6
+    leyenda.dy = 6
+    leyenda.columnMaximum = 1
+    leyenda.colorNamePairs = [
+        (colores[i], f"{nombre} · {_moneda(valor)}") for i, (nombre, valor) in enumerate(segmentos)
+    ]
+    d.add(leyenda)
     return d

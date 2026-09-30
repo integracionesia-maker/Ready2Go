@@ -94,8 +94,8 @@ ssh gocreate-prod "sudo -n /bin/launchctl kickstart -k system/com.go.gocreate.ap
 # Health real:
 ssh gocreate-prod "curl -s http://127.0.0.1:8000/api/health"
 
-# Que el commit desplegado sea el esperado:
-ssh gocreate-prod "cat /opt/go/gocreate/deploy/current.sha"
+# Que el commit desplegado sea el esperado (requiere sudo -u _gocreate: deploy/ no es legible para integraciones):
+ssh gocreate-prod "sudo -n -u _gocreate cat /opt/go/gocreate/deploy/current.sha"
 
 # Config de correo cargando bien, SIN mandar nada (lee el .env real, no envía):
 ssh gocreate-prod "sudo -n -u _gocreate /opt/go/gocreate/releases/\$(ls -t /opt/go/gocreate/releases | head -1)/backend/venv/bin/python -c \"
