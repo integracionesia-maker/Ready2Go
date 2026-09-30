@@ -15,9 +15,14 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 - **Fuente**: `tabla_num` pasa de Courier-Bold a Helvetica para que los números no parezcan de otra familia (todo el reporte queda en Helvetica). La carta responsiva conserva Courier por diseño.
 - **Logo**: `isotipo-go-naranja.png` copiado de `frontend/src/assets/logos/` a `backend/app/pdf/assets/` y cargado relativo a `__file__` con fallback a solo-texto si falta.
 
+### Corregido
+
+- **El resumen en modo periodo único (donut + comparación lado a lado) salía desordenado y recortado hacia la izquierda**: la tabla se armó con dos FILAS de una celda en vez de una fila con dos celdas (`Table(columnas, ...)` vs `Table([columnas], ...)`) y los `Drawing` desbordaban sus celdas. Ahora es una fila con dos celdas y paddings en cero, y la leyenda del donut va apilada debajo del pie (`grafica_donut(..., leyenda_abajo=True)`) para que los montos largos no desborden la columna. De paso se corrigió `columnMaximum` de la leyenda: en reportlab 5.0 es items POR columna (`nCols = ceil(n/columnMaximum)`), así que con 1 salía en fila horizontal; ahora se apila con `len(segmentos)`. Encontrado con un PDF real descargado de producción (09-01..09-30), verificado por coordenadas de texto con PyMuPDF.
+- **El index del SPA se sirve ahora con `Cache-Control: no-cache`** (`main.py`): sin ese encabezado, el navegador cacheaba heuristicamente el cascarón de la app (FileResponse solo manda Last-Modified/ETag) y podía seguir corriendo un frontend desactualizado — caso real en producción: un bundle anterior al 01/09 seguía generando el PDF del dashboard client-side aunque el backend ya era nuevo.
+
 ### Pruebas
 
-- Backend: 893 passed, 1 skipped (antes 892). Actualizados: `test_dashboard_report_pdf.py::test_sin_datos_no_revienta`, `::test_pdf_sin_gastos_omite_el_top3` (mensajes "sin datos" ahora por página temática). Nuevos: `::test_rango_vacio_genera_exactamente_5_paginas`, `::test_cada_pagina_tiene_su_tema_en_rango_vacio`, `::test_el_logo_aparece_en_la_portada`, `::test_donut_aparece_cuando_hay_datos`, `::test_comparacion_este_periodo_vs_anterior_solo_en_periodo_unico`, `::test_paginas_de_gastos_tienen_sus_propios_tops`.
+- Backend: 894 passed, 1 skipped (antes 892). Actualizados: `test_dashboard_report_pdf.py::test_sin_datos_no_revienta`, `::test_pdf_sin_gastos_omite_el_top3` (mensajes "sin datos" ahora por página temática). Nuevos: `::test_rango_vacio_genera_exactamente_5_paginas`, `::test_cada_pagina_tiene_su_tema_en_rango_vacio`, `::test_el_logo_aparece_en_la_portada`, `::test_donut_aparece_cuando_hay_datos`, `::test_comparacion_este_periodo_vs_anterior_solo_en_periodo_unico`, `::test_paginas_de_gastos_tienen_sus_propios_tops`, `test_permissions.py::test_spa_index_va_con_cache_control_no_cache`.
 
 ---
 

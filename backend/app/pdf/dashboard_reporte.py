@@ -707,15 +707,21 @@ def _pagina_resumen(e: dict, datos: dict, es_periodo_unico: bool, ancho_util: fl
     # LADO A LADO para que el resumen quepa en una página. Si solo hay una,
     # ocupa el ancho completo.
     if hay_donut or hay_comparacion:
-        ancho_col = ancho_util / 2 if (hay_donut and hay_comparacion) else ancho_util
+        lado_a_lado = hay_donut and hay_comparacion
+        ancho_col = ancho_util / 2 if lado_a_lado else ancho_util
         columnas = []
         if hay_donut:
             columnas.append(
                 [
                     Paragraph("Distribución del Gasto del Período", _subtitulo_estilo(e, _COLOR_SECCION_RESUMEN)),
                     graf.grafica_donut(
-                        valores_donut, [est.VERDE, est.CIELO, est.VIOLETA], ancho_col,
-                        alto=150 if ancho_col == ancho_util else 120,
+                        valores_donut,
+                        [est.VERDE, est.CIELO, est.VIOLETA],
+                        ancho_col,
+                        alto=150,
+                        # En columna angosta la leyenda va abajo del pie: los
+                        # montos largos desbordarían a la derecha de la celda.
+                        leyenda_abajo=lado_a_lado,
                     ),
                 ]
             )
@@ -750,10 +756,23 @@ def _pagina_resumen(e: dict, datos: dict, es_periodo_unico: bool, ancho_util: fl
                 ]
             )
         flujo.append(Spacer(1, 5 * mm))
-        if len(columnas) > 1:
-            flujo.append(
-                KeepTogether([Table(columnas, colWidths=[ancho_col] * len(columnas), hAlign="CENTER")])
+        if lado_a_lado:
+            # UNA fila con dos celdas (no dos filas): cada celda es una lista
+            # de flowables. Paddings en cero para que cada Drawing reciba
+            # exactamente su `ancho_col` y no desborde la celda.
+            fila = Table([columnas], colWidths=[ancho_col] * len(columnas), hAlign="CENTER")
+            fila.setStyle(
+                TableStyle(
+                    [
+                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                        ("TOPPADDING", (0, 0), (-1, -1), 0),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ]
+                )
             )
+            flujo.append(KeepTogether([fila]))
         else:
             flujo.append(KeepTogether(columnas[0]))
 
