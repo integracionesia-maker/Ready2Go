@@ -179,16 +179,27 @@ def grafica_donut(
     ancho: float,
     alto: float = 150,
     radio_agujero: float = 0.55,
+    leyenda_abajo: bool = False,
 ) -> Drawing:
-    """Donut con leyenda a la derecha ("nombre · $monto"). ReportLab no tiene
-    donut nativo: se dibuja un circulo blanco encima del centro de un Pie.
-    Los valores 0 no dibujan rebanada; el llamador omite la grafica si todo
-    es 0."""
+    """Donut con leyenda ("nombre · $monto"). Sin `leyenda_abajo`: la leyenda
+    va a la derecha del pie. Con `leyenda_abajo=True` (modo lado a lado del
+    resumen, columnas angostas): el pie va arriba centrado y la leyenda
+    apilada abajo, para no desbordar la columna con montos largos. ReportLab
+    no tiene donut nativo: se dibuja un circulo blanco encima del centro de un
+    Pie. Los valores 0 no dibujan rebanada; el llamador omite la grafica si
+    todo es 0."""
     d = Drawing(ancho, alto)
-    diametro = alto
+    if leyenda_abajo:
+        diametro = alto - 45
+        pie_x = (ancho - diametro) / 2
+        pie_y = alto - diametro
+    else:
+        diametro = alto
+        pie_x = 0
+        pie_y = 0
     pie = Pie()
-    pie.x = 0
-    pie.y = 0
+    pie.x = pie_x
+    pie.y = pie_y
     pie.width = diametro
     pie.height = diametro
     pie.data = [v for _, v in segmentos]
@@ -202,22 +213,31 @@ def grafica_donut(
     d.add(pie)
     d.add(
         Circle(
-            diametro / 2,
-            diametro / 2,
+            pie_x + diametro / 2,
+            pie_y + diametro / 2,
             diametro / 2 * radio_agujero,
             fillColor=est.FONDO,
             strokeColor=None,
         )
     )
     leyenda = Legend()
-    leyenda.x = diametro + 12
-    leyenda.y = alto - 10
+    if leyenda_abajo:
+        # Los items se apilan hacia ABAJO desde y: 3 items ~34pt, dentro del
+        # espacio libre bajo el pie.
+        leyenda.x = 0
+        leyenda.y = alto - diametro - 16
+    else:
+        leyenda.x = diametro + 12
+        leyenda.y = alto - 10
     leyenda.alignment = "right"
     leyenda.fontName = "Helvetica"
     leyenda.fontSize = 8
     leyenda.dx = 6
     leyenda.dy = 6
-    leyenda.columnMaximum = 1
+    # OJO: columnMaximum = items POR columna (nCols = ceil(n/columnMaximum)),
+    # asi que para una pila vertical de los N items hay que usar N — con 1
+    # la leyenda saldria en fila horizontal (verificado en el source 5.0.0).
+    leyenda.columnMaximum = len(segmentos)
     leyenda.colorNamePairs = [
         (colores[i], f"{nombre} · {_moneda(valor)}") for i, (nombre, valor) in enumerate(segmentos)
     ]
