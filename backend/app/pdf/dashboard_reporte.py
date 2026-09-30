@@ -242,15 +242,23 @@ def _tabla_kpis(e: dict, datos: dict, ancho_util: float) -> Table:
             comparacion_texto=cmp_generales,
         ),
     ]
-    # Tercera fila: un solo tile (espejo del layout en pantalla, que también
-    # deja "Gastos Operativos" solo en su propia fila) — se rellenan las
-    # celdas vacías con "" para que la tabla siga teniendo 4 columnas.
+    # Tercera fila: el tile de operativos + la SUMA de generales y operativos
+    # (espejo del layout en pantalla, que también deja "Gastos Operativos"
+    # solo en su propia fila) — se rellenan las celdas vacías con "" para que
+    # la tabla siga teniendo 4 columnas.
     fila3 = [
         _kpi_tarjeta(
             e, "GASTOS OPERATIVOS", _moneda(operational_total), *colores[0], ancho_col,
             comparacion_texto=cmp_operativos,
         ),
-        "", "", "",
+        _kpi_tarjeta(
+            e,
+            "GENERALES + OPERATIVOS",
+            _moneda(gastos_generales_total + operational_total),
+            *colores[1],
+            ancho_col,
+        ),
+        "", "",
     ]
 
     tabla = Table([fila1, fila2, fila3], colWidths=[ancho_util / 4] * 4, hAlign="LEFT")

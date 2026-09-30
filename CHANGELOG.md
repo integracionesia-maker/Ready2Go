@@ -12,6 +12,7 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 - **Un color fijo por tema** en títulos, barras, gráficas y acentos; las gráficas de dos series usan el color del tema + una sombra clara del mismo color (se elimina la mezcla turquesa/ámbar; TURQUESA sale de `estilos.py`). ÁMBAR queda solo para las líneas "pendiente" de las tarjetas KPI.
 - **Nuevo donut "Distribución del Gasto del Período"** (Creadores / Gastos Generales / Gastos Operativos en verde/azul/morado, con leyenda) y **barras "Este Período vs Anterior"** (solo en periodo único con dato anterior), lado a lado en la página de resumen para que quepa en una hoja — calculados dentro del módulo PDF con los datos ya existentes; cero lógica nueva en CRUD y sin cambios en la ruta.
 - **Las páginas de Gastos Generales y Gastos Operativos llevan datos específicos además de sus gráficas**: tabla "Mayores Gastos Generales" (top 5 del período, con su marca) y "Mayores Gastos Operativos" (top 5, con su rubro) más la tabla de totales exactos por rubro. `crud.get_top_expenses` gana parámetros `tipo`/`limit` — sin `tipo` conserva exactamente el top-3 mixto que ya ve el dashboard.
+- **Nuevo recuadro "GENERALES + OPERATIVOS" en la grilla de KPIs del resumen**: la suma de gastos generales y operativos del período, junto a la tarjeta de Gastos Operativos (solicitado por marketing, 30/09/2026).
 - **Fuente**: `tabla_num` pasa de Courier-Bold a Helvetica para que los números no parezcan de otra familia (todo el reporte queda en Helvetica). La carta responsiva conserva Courier por diseño.
 - **Logo**: `isotipo-go-naranja.png` copiado de `frontend/src/assets/logos/` a `backend/app/pdf/assets/` y cargado relativo a `__file__` con fallback a solo-texto si falta.
 
@@ -22,7 +23,7 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 
 ### Pruebas
 
-- Backend: 894 passed, 1 skipped (antes 892). Actualizados: `test_dashboard_report_pdf.py::test_sin_datos_no_revienta`, `::test_pdf_sin_gastos_omite_el_top3` (mensajes "sin datos" ahora por página temática). Nuevos: `::test_rango_vacio_genera_exactamente_5_paginas`, `::test_cada_pagina_tiene_su_tema_en_rango_vacio`, `::test_el_logo_aparece_en_la_portada`, `::test_donut_aparece_cuando_hay_datos`, `::test_comparacion_este_periodo_vs_anterior_solo_en_periodo_unico`, `::test_paginas_de_gastos_tienen_sus_propios_tops`, `test_permissions.py::test_spa_index_va_con_cache_control_no_cache`.
+- Backend: 895 passed, 1 skipped (antes 894). Actualizados: `test_dashboard_report_pdf.py::test_sin_datos_no_revienta`, `::test_pdf_sin_gastos_omite_el_top3` (mensajes "sin datos" ahora por página temática). Nuevos: `::test_rango_vacio_genera_exactamente_5_paginas`, `::test_cada_pagina_tiene_su_tema_en_rango_vacio`, `::test_el_logo_aparece_en_la_portada`, `::test_donut_aparece_cuando_hay_datos`, `::test_comparacion_este_periodo_vs_anterior_solo_en_periodo_unico`, `::test_paginas_de_gastos_tienen_sus_propios_tops`, `::test_resumen_muestra_suma_generales_mas_operativos`, `test_permissions.py::test_spa_index_va_con_cache_control_no_cache`.
 
 ---
 

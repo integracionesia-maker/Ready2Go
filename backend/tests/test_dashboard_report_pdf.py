@@ -217,6 +217,21 @@ def test_paginas_de_gastos_tienen_sus_propios_tops(logged_in_admin, brand_a):
     assert "IA" in paginas[3]  # etiqueta = rubro
 
 
+def test_resumen_muestra_suma_generales_mas_operativos(logged_in_admin, brand_a):
+    # La página de resumen lleva un recuadro con la SUMA de gastos generales
+    # y operativos del período (solicitado por marketing, 30/09/2026).
+    rubro_id = _crear_rubro(logged_in_admin)
+    _crear_gasto(logged_in_admin, rubro_id, amount=300, descripcion="op suma")
+    _crear_general(logged_in_admin, brand_a.id, amount=200, description="gen suma")
+
+    resp = logged_in_admin.get("/api/dashboard/report.pdf")
+    assert resp.status_code == 200
+    paginas = _paginas(resp.content)
+
+    assert "GENERALES + OPERATIVOS" in paginas[-1]
+    assert "$500.00" in paginas[-1]
+
+
 def test_comparacion_este_periodo_vs_anterior_solo_en_periodo_unico(logged_in_admin, db, creator_a, brand_a):
     from datetime import datetime as dt
 
