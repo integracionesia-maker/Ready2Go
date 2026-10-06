@@ -7,10 +7,19 @@ import { BASE, fetchWithAuthRetry, throwApiError } from "@/api";
  * poner el `boundary` él mismo. Por eso esto usa `fetchWithAuthRetry`
  * directo (que no fuerza ningún header), no `request()` (que sí fuerza
  * `application/json`, ver client.js).
+ *
+ * Firmas (docs/equipos/firma-guardada.md): con `usarFirmaGuardada` NO se manda
+ * `file` — el servidor copia la firma del perfil del usuario logueado.
+ * `guardarComoPredeterminada` (con `file`) guarda lo dibujado en el perfil.
  */
-export async function uploadMedia(loanId, { file, kind, loanItemId }) {
+export async function uploadMedia(loanId, { file, kind, loanItemId, usarFirmaGuardada, guardarComoPredeterminada }) {
   const formData = new FormData();
-  formData.append("file", file);
+  if (usarFirmaGuardada) {
+    formData.append("usar_firma_guardada", "true");
+  } else {
+    formData.append("file", file);
+    if (guardarComoPredeterminada) formData.append("guardar_como_predeterminada", "true");
+  }
   formData.append("kind", kind);
   if (loanItemId != null) formData.append("loan_item_id", loanItemId);
 

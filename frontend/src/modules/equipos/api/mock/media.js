@@ -30,7 +30,13 @@ function fileToDataUrl(file) {
  * el wizard tendría que recordar llamar después): así el mock no puede
  * quedar en el estado a medias que dejaría subir la foto sin adjuntarla.
  */
-export async function uploadMedia(loanId, { file, kind, loanItemId } = {}) {
+// PNG transparente de 1x1: el mock no tiene perfil con firma real, así que
+// "usar firma guardada" adjunta este placeholder.
+const FIRMA_GUARDADA_MOCK =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+export async function uploadMedia(loanId, { file: archivo, kind, loanItemId, usarFirmaGuardada } = {}) {
+  const file = usarFirmaGuardada ? new Blob([], { type: "image/png" }) : archivo;
   checkGlobalInjection();
   // 401 a mitad del wizard: subir fotos/firmas (pasos 3-4) es exactamente
   // donde el plan pide simular la sesión caída sin perder lo ya subido.
@@ -66,7 +72,7 @@ export async function uploadMedia(loanId, { file, kind, loanItemId } = {}) {
   }
 
   const id = ++state.mediaIdCounter;
-  const dataUrl = await fileToDataUrl(file);
+  const dataUrl = usarFirmaGuardada ? FIRMA_GUARDADA_MOCK : await fileToDataUrl(file);
   state.media.set(id, { kind, loanId, dataUrl, sha256: fakeSha256(file.size) });
 
   if (esFirma) {

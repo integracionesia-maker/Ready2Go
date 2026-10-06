@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
-from .. import crud, models, rbac_catalog, schemas, security
+from .. import crud, models, rbac_catalog, schemas, security, user_signature
 from ..database import get_db
 from ..dependencies import get_current_user
 from ..rbac import paquetes_aditivos_de, permisos_del_request
@@ -242,6 +242,7 @@ def me(
         permisos_del_request(request, db, current_user)
     )
     respuesta.paquetes_aditivos = paquetes_aditivos_de(db, current_user)
+    respuesta.tiene_firma_guardada = user_signature.tiene(db, current_user.id)
     return respuesta
 
 

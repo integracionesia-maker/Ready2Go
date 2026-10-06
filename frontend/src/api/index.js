@@ -45,6 +45,27 @@ export function changePassword(currentPassword, newPassword) {
   });
 }
 
+/* ── Firma predeterminada del perfil ─────────────────────────────────────── */
+
+/** URL para pintar la firma guardada en un <img> (la sesión viaja por cookie,
+ * igual que `mediaUrl`). `version` rompe el caché del navegador tras cambiarla. */
+export function mySignatureUrl(version) {
+  return `${BASE}/auth/me/signature${version ? `?v=${version}` : ""}`;
+}
+
+/** Multipart: nunca fijar `Content-Type` a mano (ver equipos/api/real/media.js). */
+export async function saveMySignature(blob) {
+  const formData = new FormData();
+  formData.append("file", new File([blob], "firma.png", { type: "image/png" }));
+  const res = await fetchWithAuthRetry("/auth/me/signature", { method: "PUT", body: formData });
+  if (!res.ok) await throwApiError(res);
+  return res.json();
+}
+
+export function deleteMySignature() {
+  return request("/auth/me/signature", { method: "DELETE" });
+}
+
 /* ── Usuarios (Administración) ──────────────────────────────────────────── */
 
 export function fetchUsers(params = {}) {

@@ -300,6 +300,7 @@ export default function AprobacionesPage() {
         <CompletarFirmaModal
           loanId={firmandoLoan.id}
           kind="firma_entrega"
+          permiteFirmaGuardada
           onClose={() => setFirmandoLoan(null)}
           onSuccess={() => {
             setFirmandoLoan(null);

@@ -20,7 +20,7 @@ from .routers import auth, creators, brands, tickets, dashboard, users, general_
 from .routers import roles, user_roles, empresas, equipos_dashboard, equipment
 from .routers import loans, approvals, media, responsivas, notifications
 from .routers import audit_logs
-from .routers import rubros, operational_expenses
+from .routers import rubros, operational_expenses, firma_guardada
 
 Base.metadata.create_all(bind=engine)
 
@@ -70,6 +70,7 @@ registrar_manejadores(app)
 registrar_manejador_cuenta_bloqueada(app)
 
 app.include_router(auth.router)
+app.include_router(firma_guardada.router)
 app.include_router(users.router)
 app.include_router(creators.router)
 app.include_router(brands.router)

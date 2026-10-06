@@ -345,6 +345,9 @@ class UserResponse(BaseModel):
     # (ej. mostrar la cola de Validación) sin que un rol base que ya liste el
     # mismo permiso en el catálogo cuele por la unión general. Solo /me lo llena.
     paquetes_aditivos: list[str] = []
+    # ¿Tiene una firma predeterminada guardada en su perfil? Solo /me lo llena
+    # (la UI decide con esto si ofrece "firmar con mi firma guardada").
+    tiene_firma_guardada: bool = False
 
     model_config = {"from_attributes": True}
 
