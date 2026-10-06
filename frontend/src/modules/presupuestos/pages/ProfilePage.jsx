@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { changePassword, fetchCreators, updateMe } from "@/api";
+import { changePassword, deleteMySignature, fetchCreators, mySignatureUrl, saveMySignature, updateMe } from "@/api";
 import { GlassPanel, usePageTitle } from "@/design";
+import SignaturePad from "@/modules/equipos/components/SignaturePad";
 
 const ROLE_LABELS = {
   superadmin: "Superadministrador",
@@ -31,6 +32,112 @@ function Banner({ type, children }) {
     >
       {children}
     </div>
+  );
+}
+
+/** "Mi firma": la firma predeterminada para firmar préstamos de Equipos con un
+ * solo botón (docs/equipos/firma-guardada.md). Solo la ve y la edita su dueño. */
+function MiFirmaPanel() {
+  const { user, refreshUser } = useAuth();
+  const padRef = useRef(null);
+  const tiene = Boolean(user?.tiene_firma_guardada);
+  const [editando, setEditando] = useState(false);
+  const [version, setVersion] = useState(() => Date.now());
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState(null);
+  const [exito, setExito] = useState(null);
+
+  const mostrandoPad = !tiene || editando;
+
+  async function handleGuardar() {
+    setError(null);
+    setExito(null);
+    if (padRef.current.isEmpty()) {
+      setError("Dibuja tu firma antes de guardar.");
+      return;
+    }
+    setEnviando(true);
+    try {
+      const blob = await padRef.current.getBlob();
+      await saveMySignature(blob);
+      await refreshUser();
+      setVersion(Date.now());
+      setEditando(false);
+      setExito("Firma guardada. Ya puedes firmar con un solo botón.");
+    } catch (err) {
+      setError(err.detail || err.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function handleEliminar() {
+    if (!window.confirm("¿Eliminar tu firma guardada? Las firmas que ya pusiste en préstamos no se modifican.")) return;
+    setError(null);
+    setExito(null);
+    setEnviando(true);
+    try {
+      await deleteMySignature();
+      await refreshUser();
+      setEditando(false);
+      setExito("Firma eliminada.");
+    } catch (err) {
+      setError(err.detail || err.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <GlassPanel className="space-y-4 p-4 sm:p-6" data-testid="panel-mi-firma">
+      <div>
+        <span className="go-eyebrow">Mi firma</span>
+        <p className="mt-1 font-body text-sm" style={{ color: "var(--go-text-secondary)" }}>
+          Guárdala una vez y úsala para firmar préstamos de equipo con un solo botón, sin volver a dibujarla.
+        </p>
+      </div>
+
+      {mostrandoPad ? (
+        <div className="space-y-3">
+          <SignaturePad ref={padRef} />
+          <div className="flex justify-end gap-3">
+            {tiene && (
+              <button type="button" onClick={() => setEditando(false)} disabled={enviando} className="btn-go-ghost">
+                Cancelar
+              </button>
+            )}
+            <button type="button" onClick={handleGuardar} disabled={enviando} className="btn-go" data-testid="guardar-mi-firma">
+              {enviando ? "Guardando..." : "Guardar firma"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div
+            className="flex items-center justify-center border p-3"
+            style={{ background: "var(--go-white)", borderRadius: "var(--go-radius)", borderColor: "var(--go-border)", height: "160px" }}
+          >
+            <img
+              data-testid="mi-firma-preview"
+              src={mySignatureUrl(version)}
+              alt="Tu firma guardada"
+              style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={handleEliminar} disabled={enviando} className="btn-go-ghost" style={{ color: "var(--go-error)" }}>
+              Eliminar
+            </button>
+            <button type="button" onClick={() => setEditando(true)} disabled={enviando} className="btn-go-ghost">
+              Cambiar firma
+            </button>
+          </div>
+        </div>
+      )}
+
+      <Banner type="error">{error}</Banner>
+      <Banner type="success">{exito}</Banner>
+    </GlassPanel>
   );
 }
 
@@ -212,6 +319,8 @@ export default function ProfilePage() {
           </GlassPanel>
         </form>
       )}
+
+      {!forcedChange && <MiFirmaPanel />}
 
       <form onSubmit={handlePasswordSubmit}>
         <GlassPanel className="space-y-4 p-4 sm:p-6">

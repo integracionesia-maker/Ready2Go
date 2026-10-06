@@ -12,6 +12,7 @@ prestamos ajenos.
 
 import csv
 import io
+import logging
 from datetime import date
 from typing import Optional
 
@@ -42,6 +43,7 @@ from .. import (
     rbac,
     schemas_loans,
     tz,
+    user_signature,
 )
 from ..database import get_db
 from ..errores import (
@@ -62,6 +64,8 @@ from ..models_equipos import (
     TipoEvento,
 )
 from ..rbac import permisos_del_request, require_cualquiera, require_perm
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/loans", tags=["loans"])
 
@@ -368,9 +372,11 @@ def titular_de_la_firma_del_aprobador(
 async def subir_media(
     loan_id: int,
     request: Request,
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
     kind: str = Form(...),
     loan_item_id: Optional[int] = Form(None),
+    usar_firma_guardada: bool = Form(False),
+    guardar_como_predeterminada: bool = Form(False),
     db: Session = Depends(get_db),
     # OR a nivel de endpoint (cualquiera de los permisos entra); el
     # permiso EXACTO que aplica depende de `kind` y se resuelve abajo, no aqui
@@ -407,6 +413,17 @@ async def subir_media(
     (docs/equipos/fotos-entrega-reemplazables.md). Fotos de DEVOLUCION y
     `firma_responsable`: siguen pidiendo `equipos_prestamos:solicitar`, igual
     que siempre.
+
+    **Firma guardada** (`usar_firma_guardada=true`, sin `file`): el servidor
+    toma la firma predeterminada del perfil del usuario logueado y la COPIA
+    como evidencia del prestamo — el cliente nunca manda la imagen en ese
+    caso, asi que no se puede estampar la firma de otra persona. Solo aplica a
+    kinds de firma, y no abre ninguna puerta nueva: `firma_entrega` sigue
+    siendo identidad del titular, y `firma_responsable` con firma guardada solo
+    la puede poner **el propio beneficiario** (quien tiene el equipo enfrente
+    puede dibujarla, pero no estampar su firma guardada por otro).
+    `guardar_como_predeterminada=true` (junto con `file`) guarda la firma recien
+    dibujada en el perfil — docs/equipos/firma-guardada.md.
     """
     prestamo = _prestamo_visible(request, db, current_user, loan_id)
 
@@ -414,6 +431,30 @@ async def subir_media(
     if kind not in validos:
         raise ErrorEquipos(
             422, f"kind invalido: '{kind}'. Validos: {', '.join(sorted(validos))}.", "VALOR_INVALIDO"
+        )
+
+    if usar_firma_guardada == (file is not None):
+        raise ErrorEquipos(
+            422,
+            "Manda el archivo de la firma, o usar_firma_guardada=true, pero no ambos ni ninguno.",
+            "VALOR_INVALIDO",
+        )
+    if (usar_firma_guardada or guardar_como_predeterminada) and kind not in media_manager.KINDS_FIRMA:
+        raise ErrorEquipos(
+            422, "La firma guardada solo aplica a firma_entrega o firma_responsable.", "VALOR_INVALIDO"
+        )
+    if guardar_como_predeterminada and usar_firma_guardada:
+        raise ErrorEquipos(
+            422, "guardar_como_predeterminada solo aplica al dibujar una firma nueva.", "VALOR_INVALIDO"
+        )
+    if (
+        usar_firma_guardada
+        and kind == KindMedia.FIRMA_RESPONSABLE.value
+        and prestamo.responsable_user_id != current_user.id
+    ):
+        raise SinPermiso(
+            "La firma guardada solo se puede usar para firmar como beneficiario del prestamo. "
+            "Si firmas por otra persona, dibuja la firma."
         )
 
     es_firma_aprobador = kind == KindMedia.FIRMA_ENTREGA.value
@@ -480,7 +521,13 @@ async def subir_media(
         if item is None or item.loan_id != prestamo.id:
             raise NoEncontrado("Renglon no encontrado en este prestamo.")
 
-    contenido = await file.read()
+    if usar_firma_guardada:
+        guardada = user_signature.obtener(db, current_user.id)
+        contenido = user_signature.leer_bytes(guardada) if guardada else None
+        if contenido is None:
+            raise NoEncontrado("No tienes una firma guardada. Configurala en tu Perfil o dibujala.")
+    else:
+        contenido = await file.read()
 
     # Sha de la foto de entrega que se va a reemplazar (si existe), para
     # dejar constancia en bitacora y auditoria. Se lee ANTES del reemplazo:
@@ -549,8 +596,17 @@ async def subir_media(
             action="loan.signature_completed",
             target_type="loan",
             target_id=prestamo.id,
-            details=f"{prestamo.folio}:{kind}",
+            details=f"{prestamo.folio}:{kind}" + (":guardada" if usar_firma_guardada else ""),
         )
+        if guardar_como_predeterminada:
+            # La firma del prestamo ya quedo firme (commit arriba): que no se
+            # pueda guardar en el perfil no debe deshacer ni fallar el firmado.
+            try:
+                user_signature.guardar(db, current_user.id, contenido)
+                db.commit()
+            except Exception:  # noqa: BLE001
+                db.rollback()
+                logger.warning("No se pudo guardar la firma predeterminada del usuario %s", current_user.id)
         # Sin correo aqui a proposito: el unico disparador de correo en todo
         # el modulo es la creacion del prestamo (`confirmar_prestamo`). Firmar
         # sigue regenerando la responsiva de inmediato (arriba), solo que ya

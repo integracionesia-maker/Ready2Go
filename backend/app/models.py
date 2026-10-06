@@ -318,6 +318,27 @@ class RefreshToken(Base):
     user = relationship("User", back_populates="refresh_tokens")
 
 
+class UserSignature(Base):
+    """Firma predeterminada de un usuario (una sola por usuario).
+
+    Solo la guarda y la lee su dueño (`/api/auth/me/signature`). Al firmar un
+    préstamo con ella, el servidor COPIA el archivo a un `MediaAsset` del
+    préstamo — la evidencia del préstamo nunca depende de que el usuario cambie
+    o borre después su firma guardada. Archivo en disco con sha256, nunca
+    base64 en la base (mismo criterio que `MediaAsset`).
+    """
+
+    __tablename__ = "user_signature"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    file_path = Column(String(512), nullable=False)
+    mime_type = Column(String(100), nullable=False)
+    size_bytes = Column(Integer, nullable=False, default=0)
+    sha256 = Column(String(64), nullable=False)
+    updated_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

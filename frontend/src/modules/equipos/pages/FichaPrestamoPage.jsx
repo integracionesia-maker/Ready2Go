@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState, GlassPanel, SkeletonShimmer, Timeline, MediaViewer, usePageTitle } from "@/design";
 import { esCodigo } from "@/api";
+import { useAuth } from "@/context/AuthContext";
 import { fetchLoanByFolio, fetchTitularFirmaEquipo, mediaUrl, loanResponsivaUrl, updateFechaRegresoEsperada } from "../api";
 import CompletarFirmaModal from "../components/CompletarFirmaModal";
 import CambiarFotoEntregaModal from "../components/CambiarFotoEntregaModal";
@@ -93,6 +94,7 @@ export default function FichaPrestamoPage() {
   usePageTitle("Ficha de Préstamo");
   const { folio } = useParams();
   const { puede } = usePermisos();
+  const { user } = useAuth();
   const [loan, setLoan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [permisosNoDisponibles, setPermisosNoDisponibles] = useState(false);
@@ -482,6 +484,10 @@ export default function FichaPrestamoPage() {
         <CompletarFirmaModal
           loanId={loan.id}
           kind={completarFirma}
+          // Firma del beneficiario con firma guardada: solo si quien firma ES
+          // el beneficiario (el servidor lo exige igual — loans.py::subir_media).
+          // La del aprobador ya es del titular, sin más condición aquí.
+          permiteFirmaGuardada={completarFirma === "firma_entrega" || loan.responsable?.user_id === user?.id}
           onClose={() => setCompletarFirma(null)}
           onSuccess={() => {
             setCompletarFirma(null);

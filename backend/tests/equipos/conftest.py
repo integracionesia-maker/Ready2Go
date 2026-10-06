@@ -45,9 +45,10 @@ def _uploads_aislados(tmp_path, monkeypatch):
     el arbol de trabajo entre corridas.
     """
     import seed_prestamo_demo
-    from app import crud_loans, media_manager
+    from app import crud_loans, media_manager, user_signature
 
     monkeypatch.setattr(media_manager, "DIRECTORIO", tmp_path / "equipos")
+    monkeypatch.setattr(user_signature, "DIRECTORIO", tmp_path / "firmas_usuario")
     monkeypatch.setattr(crud_loans, "DIRECTORIO_RESPONSIVAS", tmp_path / "responsivas")
     monkeypatch.setattr(seed_prestamo_demo, "DIRECTORIO_MEDIA", tmp_path / "seed_equipos")
     monkeypatch.setattr(
