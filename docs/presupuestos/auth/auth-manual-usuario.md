@@ -70,7 +70,7 @@ Cada marca tiene una prioridad — **Alta**, **Media** (default) o **Baja** — 
 
 ## Reporte en PDF del dashboard
 
-Botón "Descargar PDF" en el Dashboard (solo admin/superadmin): genera un PDF con los KPIs, las gráficas y las tablas de desglose (por marca y por creador) tal como se ven en pantalla, con branding de Grupo Ortiz, para el período que tengas seleccionado en el filtro de fechas (incluye los atajos "Este mes", "Mes pasado", etc., o un rango personalizado).
+Botón "Descargar reporte" en el Dashboard (admin/superadmin/marketing con acceso a Presupuestos): descarga un archivo HTML autocontenido para compartir — se abre en cualquier navegador, con pestañas (Resumen, Creadores, Gastos generales, Gastos operativos), alertas, filtros y modo claro/oscuro — para el período que tengas seleccionado en el filtro de fechas (incluye los atajos "Este mes", "Mes pasado", etc., o un rango personalizado). Los datos quedan dentro del archivo: no consulta nada ni pide iniciar sesión.
 
 ## Para Admin/Superadmin: Gastos Generales
 
