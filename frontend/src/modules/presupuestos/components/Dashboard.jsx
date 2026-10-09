@@ -22,7 +22,7 @@ import {
   fetchTopExpenses,
   fetchPeriodComparison,
   fetchGeneralExpensesByBrand,
-  downloadDashboardReportPdf,
+  downloadDashboardReportHtml,
 } from "@/api";
 import { formatearComparacion } from "../utils/periodoUnico";
 
@@ -230,13 +230,13 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
     setError(null);
     setPdfState("generating");
     try {
-      // El PDF se genera en el backend (reportlab, vectores nativos) — ya no
-      // hay plantilla off-screen ni captura de pantalla que esperar.
+      // El reporte es un HTML autocontenido que arma el backend (datos
+      // incrustados, sin consultas posteriores): se descarga tal cual.
       const start = fmtDateParam(dateRange.start);
       const end = fmtDateParam(dateRange.end);
-      await downloadDashboardReportPdf(start, end);
+      await downloadDashboardReportHtml(start, end);
     } catch (e) {
-      setError(e.message || "No se pudo generar el PDF.");
+      setError(e.message || "No se pudo generar el reporte.");
     } finally {
       setPdfState("idle");
     }
@@ -257,8 +257,8 @@ export default function Dashboard({ kpi, dateRange, onDateRangeChange }) {
           disabled={loading || pdfState !== "idle"}
           className="btn-go-ghost shrink-0"
         >
-          {pdfState === "idle" && "Descargar PDF"}
-          {pdfState === "generating" && "Generando PDF…"}
+          {pdfState === "idle" && "Descargar reporte"}
+          {pdfState === "generating" && "Generando reporte…"}
         </button>
       </GlassPanel>
 

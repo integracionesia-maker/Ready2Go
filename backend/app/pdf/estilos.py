@@ -8,10 +8,8 @@ Sobre las fuentes: Blauer Nue y Conthic son las de marca, pero viven en
 repo. Se usan los respaldos que el propio documento de tokens autoriza:
 Helvetica para titulos y cuerpo, Courier para folios y numeros de serie. Queda
 escrito aqui y no elegido en silencio: el dia que lleguen los woff2/ttf, se
-registran en `_registrar_fuentes()` y nada mas cambia. Excepcion desde
-2026-09-30: los numeros de TABLA del reporte del Dashboard usan Helvetica
-tambien (la mezcla Courier/Helvetica daba sensacion de fuentes distintas);
-la carta responsiva conserva Courier para folios y numeros de serie.
+registran en `_registrar_fuentes()` y nada mas cambia. La carta responsiva
+conserva Courier para folios y numeros de serie.
 """
 
 from __future__ import annotations
@@ -46,13 +44,9 @@ __all__ = [
 ]
 
 # Paleta (tokens_marca.md). El naranja es el UNICO acento para documentos de
-# tipo carta (ej. la responsiva). El reporte del Dashboard usa desde
-# 2026-09-30 UN COLOR FIJO POR TEMA: naranja para los resumenes generales
-# (portada y resumen), verde para tickets/presupuesto de creadores, azul para
-# gastos generales, morado para gastos operativos. Las graficas de dos series
-# usan el color del tema + una sombra clara del mismo color (nunca se mezclan
-# colores de temas distintos); AMBAR queda solo para las lineas "pendiente"
-# de las tarjetas KPI (semantica de toda la app, coincide con la pantalla).
+# tipo carta (ej. la responsiva). Los demas colores (verde/cielo/violeta/ambar
+# y sus sombras claras) venian del reporte PDF del Dashboard, hoy reemplazado
+# por un HTML (`app/reporte_dashboard.py`); quedan como tokens de marca.
 NARANJA_GO = colors.HexColor("#FB670B")
 TEXTO = colors.HexColor("#262626")
 TEXTO_SECUNDARIO = colors.HexColor("#535353")
@@ -241,136 +235,5 @@ def estilos() -> dict[str, ParagraphStyle]:
             alignment=TA_CENTER,
             textColor=TEXTO_SECUNDARIO,
             spaceBefore=8,
-        ),
-        # ── Portada del reporte del Dashboard (dashboard_reporte.py) ────────
-        "portada_org": ParagraphStyle(
-            "portada_org",
-            parent=base,
-            fontName=FUENTE_TITULO,
-            fontSize=21,
-            leading=28,
-            alignment=TA_CENTER,
-            textColor=TEXTO,
-            spaceAfter=0,
-        ),
-        "portada_gocreate": ParagraphStyle(
-            "portada_gocreate",
-            parent=base,
-            fontName=FUENTE_TITULO,
-            fontSize=21,
-            leading=28,
-            alignment=TA_CENTER,
-            textColor=NARANJA_GO,
-            spaceAfter=0,
-        ),
-        "portada_titulo": ParagraphStyle(
-            "portada_titulo",
-            parent=base,
-            fontName=FUENTE_TITULO,
-            fontSize=13,
-            leading=18,
-            alignment=TA_CENTER,
-            textColor=TEXTO,
-            spaceBefore=4,
-            spaceAfter=4,
-        ),
-        "portada_meta": ParagraphStyle(
-            "portada_meta",
-            parent=base,
-            fontSize=9.5,
-            leading=14,
-            alignment=TA_CENTER,
-            textColor=TEXTO_SECUNDARIO,
-            spaceAfter=2,
-        ),
-        "seccion_titulo": ParagraphStyle(
-            "seccion_titulo",
-            parent=base,
-            fontName=FUENTE_TITULO,
-            fontSize=11.5,
-            leading=14,
-            textColor=TEXTO,
-            spaceBefore=2,
-            spaceAfter=0,
-        ),
-        "pie_pagina": ParagraphStyle(
-            "pie_pagina",
-            parent=base,
-            fontSize=7.5,
-            leading=10,
-            textColor=TEXTO_SECUNDARIO,
-            alignment=TA_CENTER,
-            spaceAfter=0,
-        ),
-        "kpi_etiqueta": ParagraphStyle(
-            "kpi_etiqueta",
-            parent=base,
-            fontSize=7.5,
-            leading=10,
-            textColor=TEXTO_SECUNDARIO,
-            spaceAfter=1,
-        ),
-        "kpi_valor": ParagraphStyle(
-            "kpi_valor",
-            parent=base,
-            fontName=FUENTE_TITULO,
-            fontSize=13,
-            leading=16,
-            textColor=TEXTO,
-            spaceAfter=1,
-        ),
-        "kpi_pendiente": ParagraphStyle(
-            "kpi_pendiente",
-            parent=base,
-            fontSize=7.5,
-            leading=10,
-            textColor=AMBAR,
-            spaceAfter=0,
-        ),
-        "kpi_comparacion": ParagraphStyle(
-            "kpi_comparacion",
-            parent=base,
-            fontSize=7.5,
-            leading=10,
-            textColor=TEXTO_SECUNDARIO,
-            spaceAfter=0,
-        ),
-        "tabla_encabezado": ParagraphStyle(
-            "tabla_encabezado",
-            parent=base,
-            fontName=FUENTE_CUERPO_NEGRITA,
-            fontSize=8.5,
-            leading=11,
-            textColor=TEXTO,
-            spaceAfter=0,
-        ),
-        "tabla_celda": ParagraphStyle(
-            "tabla_celda",
-            parent=base,
-            fontSize=8.5,
-            leading=11,
-            textColor=TEXTO,
-            alignment=TA_JUSTIFY,
-            spaceAfter=0,
-        ),
-        "tabla_num": ParagraphStyle(
-            "tabla_num",
-            parent=base,
-            fontName=FUENTE_CUERPO,
-            fontSize=8.5,
-            leading=11,
-            textColor=TEXTO,
-            alignment=TA_RIGHT,
-            spaceAfter=0,
-        ),
-        "sin_datos": ParagraphStyle(
-            "sin_datos",
-            parent=base,
-            fontSize=9,
-            leading=13,
-            textColor=TEXTO_SECUNDARIO,
-            alignment=TA_CENTER,
-            spaceBefore=6,
-            spaceAfter=6,
         ),
     }

@@ -471,19 +471,20 @@ export function updateMonthlyEstimate(year, month, categoria, amount) {
   });
 }
 
-/** Reporte del dashboard generado en backend (reportlab, vectores nativos —
- * ver backend/app/pdf/dashboard_reporte.py). Descarga directa: a diferencia
- * del resto del archivo, esta función no devuelve JSON, dispara un archivo. */
-export async function downloadDashboardReportPdf(startDate, endDate) {
+/** Reporte del dashboard como HTML autocontenido para compartir (generado en
+ * backend, ver backend/app/reporte_dashboard.py; los datos viajan dentro del
+ * archivo, no consulta nada despues). Descarga directa: a diferencia del resto
+ * del archivo, esta funcion no devuelve JSON, dispara un archivo. */
+export async function downloadDashboardReportHtml(startDate, endDate) {
   const params = new URLSearchParams();
   if (startDate) params.set("start_date", startDate);
   if (endDate) params.set("end_date", endDate);
   const qs = params.toString();
-  const res = await fetchWithAuthRetry(`/dashboard/report.pdf${qs ? `?${qs}` : ""}`);
+  const res = await fetchWithAuthRetry(`/dashboard/report.html${qs ? `?${qs}` : ""}`);
   if (!res.ok) await throwApiError(res);
   const blob = await res.blob();
   const disposition = res.headers.get("Content-Disposition") || "";
-  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] || "reporte-presupuesto.pdf";
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] || "reporte-presupuesto.html";
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

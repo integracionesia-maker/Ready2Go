@@ -4,6 +4,30 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 
 ---
 
+## 2026-10-09 — Reporte del Dashboard: de PDF a HTML autocontenido
+
+### Actualizado
+
+- **El reporte del Dashboard de Presupuestos ya no es un PDF: es un HTML autocontenido para compartir** (`GET /api/dashboard/report.html`, reemplaza a `/report.pdf`). Pestañas Resumen / Creadores / Gastos generales / Gastos operativos, modo claro/oscuro, filtros por responsable/marca/rubro y tooltips. Los datos se incrustan como JSON dentro del archivo (nunca consulta la API ni pide sesión); lo único externo son las fuentes de Google, con respaldo de sistema. Al imprimirlo/guardarlo como PDF sale en tema claro con todas las secciones seguidas. El botón del Dashboard dice "Descargar reporte". Detalle: `docs/presupuestos/reporte-html-dashboard.md`.
+- **Alertas y textos automáticos generados por reglas** (`backend/app/reporte_dashboard.py`): creador que excedió su ciclo, creador que gastó sin ciclo asignado, tickets pendientes, un gasto que pesa >= 30% de su sección, categoría que subió >= 50% (y >= $500) vs el periodo anterior, frase de reparto del gasto y "Notas sobre los datos" (ciclo vigente vs periodo, creadores sin ciclo, tickets 14 vs gráfica, comparativo parcial).
+- `crud.get_top_expenses`: el top global respeta `limit` (antes fijo en 3 sin `tipo`); el dashboard normal sigue pidiendo 3, el reporte pide 5.
+- **Estilos de GOCreate sobre la estructura original del HTML de marketing** (solo CSS, sin rediseñar el marcado): fondo oscuro con ruido y retícula, cristal en encabezado y pestañas, naranja como acento, tema claro con neutros de marca, animación de entrada (respeta `prefers-reduced-motion`). Sin imágenes ni logo (nada que falle al compartir); fuentes Nunito/Inter/JetBrains Mono incrustadas en base64 desde `backend/app/reporte_assets/`, sin Google Fonts ni internet.
+- Un periodo con una sola fecha (solo "Desde" o solo "Hasta") ya no se etiqueta "Todo el histórico".
+
+### Eliminado
+
+- `backend/app/pdf/dashboard_reporte.py`, `dashboard_graficas.py`, el logo `pdf/assets/isotipo-go-naranja.png`, los estilos de portada/KPI/tabla de `pdf/estilos.py` y `tests/test_dashboard_report_pdf.py`. `estilos.py`/`plantilla.py`/`responsiva.py` (carta responsiva de Equipos) siguen igual en lo demás.
+
+### Seguridad
+
+- Nombres y descripciones son texto libre: el JSON se serializa con `<`, `>`, `&` escapados y la plantilla escapa todo valor antes de `innerHTML` (probado con `</script><img onerror>` en una descripción).
+
+### Pruebas
+
+- Nuevo `tests/test_dashboard_report_html.py` (headers, permisos, datos, top 5, escape de texto libre, periodo/comparativo, alertas y notas). E2E `presupuesto-flujo-completo.spec.js` actualizado a la descarga HTML.
+
+---
+
 ## 2026-09-30 — Reporte del Dashboard en 5 páginas temáticas
 
 ### Actualizado

@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#09090b">
+<title>__TITULO__</title>
+<style>
+/* Tipografía de marca: Blauer Nue / Conthic si están instaladas; si no, los mismos respaldos que usa la app
+   (Nunito, Inter, JetBrains Mono), incrustados en este archivo para que se vea igual sin internet.
+   No hay imágenes: nada que pueda fallar al compartir el archivo. */
+@font-face{font-family:"Nunito";font-weight:700;font-display:swap;src:url(data:font/woff2;base64,__F_NUNITO_700__) format("woff2")}
+@font-face{font-family:"Nunito";font-weight:800;font-display:swap;src:url(data:font/woff2;base64,__F_NUNITO_800__) format("woff2")}
+@font-face{font-family:"Inter";font-weight:400;font-display:swap;src:url(data:font/woff2;base64,__F_INTER_400__) format("woff2")}
+@font-face{font-family:"Inter";font-weight:600;font-display:swap;src:url(data:font/woff2;base64,__F_INTER_600__) format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-weight:500;font-display:swap;src:url(data:font/woff2;base64,__F_MONO_500__) format("woff2")}
+
+/* Layout: encabezado + pestañas por sección arriba; cada sección abre con su resumen y baja al detalle. Color de sección = color de su serie. */
+/* ── Tokens GOCreate (tokens.css de la app): oscuro por defecto, claro con data-theme="light" ── */
+:root{
+  --orange:#fb670b; --orange-tint:rgba(251,103,11,.12);
+  --accent:#fb670b; --accent-text:#ff8a3d; --accent-soft:rgba(251,103,11,.14);
+  --bg:#09090b; --panel:#111113; --raised:#18181b; --soft:#27272a;
+  --line:#27272a; --hair:rgba(255,255,255,.06); --hl:inset 0 1px 0 rgba(255,255,255,.06);
+  --fg:#ffffff; --fg2:#c5c5c5; --muted:#8b8f98;
+  --s-cre:#fb670b; --s-gen:#14b8a6; --s-ope:#a78bfa;
+  --good:#00a36e; --good-bg:rgba(0,163,110,.14); --warn:#f59e0b; --warn-bg:rgba(245,158,11,.14); --bad:#f26b6b; --bad-bg:rgba(229,62,62,.16);
+  --glass:color-mix(in srgb, #09090b 78%, transparent);
+  --glass-shadow:0 24px 48px -12px rgba(0,0,0,.55);
+  --dot:rgba(255,255,255,.07); --glow:rgba(251,103,11,.20);
+  --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.38  0 0 0 0 0.38  0 0 0 0 0.38  0.15 0 0 0 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  --display:"Blauer Nue","Nunito","Poppins",system-ui,sans-serif;
+  --body:"Conthic","Inter",system-ui,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --accent:#d9480f; --accent-text:#c2490a; --accent-soft:#fdeee6;
+  --bg:#ffffff; --panel:#ffffff; --raised:#f7f6f0; --soft:#ecebe0;
+  --line:#dcdbd0; --hair:rgba(38,38,38,.07); --hl:inset 0 1px 0 rgba(255,255,255,.9);
+  --fg:#262626; --fg2:#535353; --muted:#6f6f6f;
+  --s-gen:#0d9488; --s-ope:#7c5ce0;
+  --good:#00855a; --good-bg:rgba(0,163,110,.12); --warn:#a86400; --warn-bg:rgba(245,158,11,.16); --bad:#c53030; --bad-bg:rgba(229,62,62,.10);
+  --glass:color-mix(in srgb, #ffffff 82%, transparent); --glass-shadow:0 18px 40px -14px rgba(38,38,38,.25);
+  --dot:rgba(0,0,0,.08); --glow:rgba(251,103,11,.16);
+  color-scheme:light}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background-color:var(--bg);color:var(--fg2);font-family:var(--body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(900px 460px at 12% -6%, var(--glow), transparent 65%), radial-gradient(700px 380px at 100% 0%, color-mix(in srgb, var(--s-ope) 10%, transparent), transparent 70%), var(--noise), radial-gradient(circle, var(--dot) 1px, transparent 1px);
+  background-size:auto, auto, 200px 200px, 20px 20px;
+  background-attachment:fixed;
+  min-height:100vh}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:24px 56px}
+.num{font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--display);color:var(--fg);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(1.7rem,4vw,2.5rem);line-height:1.08;font-weight:800}
+h2{font-size:1.25rem;font-weight:800}
+h3{font-size:1rem;font-weight:700}
+b,strong{color:var(--fg)}
+.eyebrow{font-family:var(--display);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+p{margin:0}
+
+/* Encabezado: tarjeta de cristal */
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 24px;margin-bottom:18px;padding:24px 26px;border-radius:24px;
+  background:var(--glass);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);box-shadow:var(--hl),inset 0 0 0 1px var(--hair),var(--glass-shadow)}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.brand b{background:var(--orange);color:#fff;font-family:var(--display);font-weight:800;font-size:.85rem;padding:3px 9px;border-radius:8px;box-shadow:0 6px 16px -4px rgba(251,103,11,.55)}
+.brand .eyebrow{color:var(--accent-text)}
+.period{color:var(--fg2);font-size:.9rem}
+.period strong{color:var(--fg)}
+
+/* Pestañas: barra de cristal pegajosa, pestaña activa con el color de su sección */
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;position:sticky;top:10px;z-index:20;margin-bottom:26px;padding:6px;border-radius:999px;
+  background:var(--glass);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);box-shadow:var(--hl),inset 0 0 0 1px var(--hair),0 10px 30px -12px rgba(0,0,0,.45)}
+nav.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:0;background:none;font:inherit;font-family:var(--display);font-weight:700;font-size:.9rem;color:var(--fg2);padding:10px 18px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:9px;white-space:nowrap;transition:background .2s,color .2s}
+.tab:hover{color:var(--fg);background:var(--hair)}
+.tab[aria-selected="true"]{color:var(--fg);background:color-mix(in srgb, var(--tc,var(--accent)) 18%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--tc,var(--accent)) 55%, transparent)}
+.tab .dot{width:9px;height:9px;border-radius:50%;background:var(--tc,var(--accent));box-shadow:0 0 10px var(--tc,var(--accent))}
+.tab:focus-visible,.chip:focus-visible,.alert:focus-visible,.seg button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+
+section{display:grid;gap:20px}
+section[hidden]{display:none}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.025),transparent 60%),var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px;min-width:0;box-shadow:var(--hl)}
+:root[data-theme="light"] .panel{background:var(--panel);box-shadow:0 1px 2px rgba(38,38,38,.04)}
+.panel[hidden]{display:none}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px 16px;margin-bottom:16px}
+.panel-head h2{font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:10px}
+.panel-head h2::before{content:"";width:4px;height:15px;border-radius:2px;background:var(--accent)}
+.panel-head p{color:var(--muted);font-size:.82rem}
+.panel-head>div>h2{font-size:1.05rem;text-transform:none;letter-spacing:-.01em}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--kc,var(--accent));border-radius:14px;padding:15px 18px;display:grid;gap:3px;align-content:start;box-shadow:var(--hl)}
+.kpi .v{font-family:var(--display);font-size:1.75rem;font-weight:800;line-height:1.15;color:var(--fg);overflow-wrap:anywhere}
+.kpi .d{font-size:.82rem;color:var(--fg2)}
+#resumen .kpis .kpi:nth-child(2){--kc:var(--s-cre)}
+#resumen .kpis .kpi:nth-child(3){--kc:var(--s-gen)}
+#resumen .kpis .kpi:nth-child(4){--kc:var(--s-ope)}
+#generales .kpi{--kc:var(--s-gen)}
+#operativos .kpi{--kc:var(--s-ope)}
+.kpi.hero{border:1px solid color-mix(in srgb, var(--orange) 40%, var(--line));border-left-width:1px;
+  background:radial-gradient(260px 140px at 0% 0%, color-mix(in srgb, var(--orange) 24%, transparent), transparent 70%),var(--panel);
+  box-shadow:var(--hl),0 20px 40px -24px color-mix(in srgb, var(--orange) 55%, transparent)}
+.kpi.hero .eyebrow{color:var(--accent-text)}
+.kpi.hero .v{font-size:2rem;background:linear-gradient(100deg,var(--fg) 10%,#ffb787 60%,var(--orange) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+:root[data-theme="light"] .kpi.hero .v{background:linear-gradient(100deg,#262626 10%,#a83b05 60%,#fb670b 100%);-webkit-background-clip:text;background-clip:text}
+
+/* Pills de estado */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;line-height:1.35}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.good{background:var(--good-bg);color:var(--good)}
+.pill.up{background:var(--hair);color:var(--fg2)}
+
+/* Alertas */
+.alerts{display:grid;gap:10px}
+.alert{appearance:none;font:inherit;color:inherit;text-align:left;width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:var(--raised);border:1px solid var(--line);border-left:3px solid var(--k,var(--line));border-radius:12px;padding:12px 14px;cursor:pointer;transition:transform .2s var(--ease),border-color .15s}
+.alert:has(.ico.bad){--k:var(--bad)}
+.alert:has(.ico.warn){--k:var(--warn)}
+.alert:hover{transform:translateX(3px);border-color:var(--k,var(--muted))}
+.alert .ico{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.85rem}
+.alert .ico.bad{background:var(--bad-bg);color:var(--bad)}
+.alert .ico.warn{background:var(--warn-bg);color:var(--warn)}
+.alert b{font-weight:600}
+.alert small{display:block;color:var(--fg2);font-size:.83rem;margin-top:1px}
+.alert .go{color:var(--muted);font-size:.8rem;white-space:nowrap}
+.alert:hover .go{color:var(--accent-text)}
+
+/* Barra apilada de distribución */
+.stack{display:flex;height:36px;gap:3px;border-radius:999px;overflow:hidden;margin:6px 0 14px}
+.stack div{min-width:6px;cursor:default;transition:filter .15s}
+.stack div:hover{filter:brightness(1.15)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:.87rem;color:var(--fg2)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.legend b{color:var(--fg);font-family:var(--mono);font-weight:500;font-size:.82rem}
+
+/* Barras horizontales */
+.bars{display:grid;gap:12px}
+.bar-row{display:grid;grid-template-columns:minmax(0,170px) 1fr auto;gap:14px;align-items:center;font-size:.88rem}
+.bar-row .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg2)}
+.bar-row .lbl b{font-weight:600}
+.track{height:12px;position:relative;background:var(--soft);border-radius:999px;overflow:hidden}
+.fill{height:100%;border-radius:999px;min-width:6px}
+.bar-row .val{font-family:var(--mono);font-weight:500;font-size:.84rem;min-width:92px;text-align:right;color:var(--fg)}
+.bar-row.dim{opacity:.3}
+
+/* Comparativo vs periodo anterior */
+.cmp{display:grid;gap:16px}
+.cmp-row{display:grid;grid-template-columns:minmax(0,130px) 1fr;gap:14px;align-items:center;font-size:.88rem}
+.cmp-bars{display:grid;gap:4px}
+.cmp-bars .track{height:10px}
+.cmp-bars .prev .fill{opacity:.35}
+.cmp-meta{display:flex;justify-content:space-between;gap:8px;font-size:.8rem;color:var(--fg2);flex-wrap:wrap;margin-top:2px}
+.cmp-meta.num{font-family:var(--mono);font-size:.78rem}
+
+/* Botones de responsable / marca */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{appearance:none;font:inherit;font-size:.85rem;font-weight:600;color:var(--fg);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,background .15s}
+.chip:hover{border-color:var(--orange)}
+.chip[aria-pressed="true"]{background:var(--orange-tint);border-color:var(--orange);color:var(--fg);box-shadow:0 0 0 3px var(--orange-tint)}
+.chip .st{width:8px;height:8px;border-radius:50%}
+.st.bad{background:var(--bad)} .st.warn{background:var(--warn)} .st.good{background:var(--good)}
+.seg{display:inline-flex;background:var(--soft);border-radius:999px;padding:3px;gap:2px}
+.seg button{appearance:none;border:0;font:inherit;font-size:.84rem;font-weight:600;padding:7px 14px;border-radius:999px;background:none;color:var(--fg2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--orange);color:#fff}
+#theme-btn{padding:7px 14px}
+
+/* Tarjetas de responsable */
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}
+.people[hidden]{display:none}
+.person{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:12px;align-content:start;box-shadow:var(--hl);transition:border-color .2s,transform .25s var(--ease)}
+.person:hover{border-color:color-mix(in srgb, var(--orange) 45%, var(--line));transform:translateY(-2px)}
+.person .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.person .name{font-weight:600;line-height:1.3;color:var(--fg)}
+.person .spent{font-family:var(--display);font-size:1.6rem;font-weight:800;color:var(--fg)}
+.meter{height:10px;background:var(--soft);border-radius:999px;position:relative;overflow:visible}
+.meter .fill{border-radius:999px;height:100%;max-width:100%}
+.meter .cap{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:var(--fg)}
+.person .facts{display:flex;justify-content:space-between;flex-wrap:wrap;font-size:.82rem;color:var(--fg2);gap:4px 8px}
+.person .facts b{font-family:var(--mono);font-weight:500;font-size:.8rem}
+.person .note{font-size:.83rem;color:var(--fg2);border-top:1px dashed var(--line);padding-top:10px}
+.person.focus{grid-column:1/-1;border-color:color-mix(in srgb, var(--orange) 55%, var(--line))}
+.person.focus .spent{font-size:2.3rem}
+
+/* Tabla */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{font-family:var(--display);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:800;text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:12px;border-bottom:1px solid var(--hair);vertical-align:top;color:var(--fg2)}
+tbody tr:hover{background:var(--hair)}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+td.r b{font-family:var(--mono);font-weight:500}
+.tag{display:inline-flex;align-items:center;gap:7px;font-size:.8rem;color:var(--fg2);white-space:nowrap}
+.tag i{width:9px;height:9px;border-radius:3px}
+
+/* Columnas de tickets */
+.cols{display:grid;grid-template-columns:30px 1fr;gap:8px}
+.cols .yaxis{display:flex;flex-direction:column;justify-content:space-between;font-family:var(--mono);font-size:.7rem;color:var(--muted);text-align:right;height:160px}
+.cols .plot{height:160px;display:flex;align-items:flex-end;border-bottom:1px solid var(--line);background-image:linear-gradient(to top,var(--hair) 1px,transparent 1px);background-size:100% 33.3333%}
+.cols .col{flex:1;background:linear-gradient(180deg,var(--s-cre),color-mix(in srgb, var(--s-cre) 55%, transparent));border-radius:6px 6px 0 0;position:relative;cursor:default;min-width:1px;transition:filter .15s}
+.cols .col:hover{filter:brightness(1.2)}
+.cols .col span{position:absolute;top:-20px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:.74rem;font-weight:500;color:var(--fg)}
+.cols .xaxis{grid-column:2;display:flex;font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+.cols .xaxis span{flex:1;text-align:center;white-space:nowrap;overflow:visible;min-width:1px}
+
+.notes{font-size:.86rem;color:var(--fg2);display:grid;gap:10px;padding:0;margin:0;list-style:none}
+.notes li{position:relative;padding-left:20px}
+.notes li::before{content:"";position:absolute;left:2px;top:.55em;width:7px;height:7px;border-radius:50%;background:var(--orange)}
+.foot{margin-top:28px;font-size:.78rem;color:var(--muted)}
+
+#tip{position:fixed;pointer-events:none;background:var(--fg);color:var(--bg);font-size:.8rem;padding:6px 10px;border-radius:8px;z-index:50;max-width:260px;line-height:1.35;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+#tip[hidden]{display:none}
+
+@media (max-width:560px){
+  .wrap{padding-inline:12px}
+  header{padding:20px}
+  .bar-row{grid-template-columns:minmax(0,105px) 1fr auto}
+  .bar-row .val{min-width:76px}
+  .alert{grid-template-columns:auto 1fr}
+  .alert .go{display:none}
+  .tab{padding:9px 14px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .fill,.col{transition:width .5s var(--ease),height .5s var(--ease)}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  section:not([hidden])>*{animation:rise .6s var(--ease) both}
+  section:not([hidden])>*:nth-child(2){animation-delay:70ms}
+  section:not([hidden])>*:nth-child(3){animation-delay:140ms}
+  section:not([hidden])>*:nth-child(4){animation-delay:210ms}
+  section:not([hidden])>*:nth-child(n+5){animation-delay:280ms}
+}
+
+/* Impresión / "Guardar como PDF": tema claro y todas las secciones seguidas */
+@media print{
+  :root,:root[data-theme="dark"],:root[data-theme="light"]{
+    --accent:#d9480f; --accent-text:#c2490a; --accent-soft:#fdeee6;
+    --bg:#ffffff; --panel:#ffffff; --raised:#f7f6f0; --soft:#ecebe0;
+    --line:#dcdbd0; --hair:rgba(38,38,38,.07); --hl:none;
+    --fg:#262626; --fg2:#535353; --muted:#6f6f6f;
+    --s-cre:#fb670b; --s-gen:#0d9488; --s-ope:#7c5ce0;
+    --good:#00855a; --good-bg:rgba(0,163,110,.12); --warn:#a86400; --warn-bg:rgba(245,158,11,.16); --bad:#c53030; --bad-bg:rgba(229,62,62,.10);
+    --glass:#ffffff; --glass-shadow:none;
+    color-scheme:light}
+  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  nav.tabs,#theme-btn,.seg,.go,#tip{display:none !important}
+  header{backdrop-filter:none;box-shadow:none;border:1px solid var(--line)}
+  section[hidden]{display:grid !important}
+  #view-marca,#marca-body{display:none !important}
+  .panel,.person,.kpi,.alert{break-inside:avoid;box-shadow:none}
+  section{break-before:page}
+  section#resumen{break-before:auto}
+  section>*{animation:none !important}
+  .kpi.hero .v{-webkit-text-fill-color:#a83b05;background:none;color:#a83b05}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand"><b>GO</b><span class="eyebrow">GOCreate · Control de presupuestos</span></div>
+      <h1 id="h1"></h1>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px">
+      <p class="period" id="period"></p>
+      <button class="chip" id="theme-btn" type="button">Modo claro</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button class="tab" role="tab" id="t-resumen" data-tab="resumen" style="--tc:var(--accent)"><span class="dot"></span>Resumen</button>
+    <button class="tab" role="tab" id="t-creadores" data-tab="creadores" style="--tc:var(--s-cre)"><span class="dot"></span>Creadores</button>
+    <button class="tab" role="tab" id="t-generales" data-tab="generales" style="--tc:var(--s-gen)"><span class="dot"></span>Gastos generales</button>
+    <button class="tab" role="tab" id="t-operativos" data-tab="operativos" style="--tc:var(--s-ope)"><span class="dot"></span>Gastos operativos</button>
+  </nav>
+
+  <!-- RESUMEN -->
+  <section id="resumen" role="tabpanel" aria-labelledby="t-resumen">
+    <div class="kpis" id="kpis-resumen"></div>
+
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-head"><h2>¿En qué se fue el dinero?</h2><p>Reparto del gasto del periodo</p></div>
+        <div class="stack" id="stack"></div>
+        <div class="legend" id="stack-legend"></div>
+        <p id="reparto-texto" style="margin-top:14px;font-size:.88rem;color:var(--fg2)"></p>
+      </div>
+      <div class="panel" id="cmp-panel">
+        <div class="panel-head"><h2 id="cmp-titulo">Comparativo</h2><p>Barra clara = periodo anterior</p></div>
+        <div class="cmp" id="cmp"></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-head"><h2>Lo que requiere atención</h2><p>Toca una alerta para ver el detalle</p></div>
+        <div class="alerts" id="alerts"></div>
+      </div>
+      <div class="panel" id="ciclos-panel"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Los 5 gastos más grandes del periodo</h2><p>Generales y operativos</p></div>
+      <div class="tbl-wrap"><table id="top-all"></table></div>
+    </div>
+  </section>
+
+  <!-- CREADORES -->
+  <section id="creadores" role="tabpanel" aria-labelledby="t-creadores" hidden>
+    <div class="panel">
+      <div class="panel-head">
+        <div><h2>Creadores de contenido</h2><p id="cre-sub" style="margin-top:2px"></p></div>
+        <div class="seg" role="group" aria-label="Vista">
+          <button id="v-resp" data-view="resp" aria-pressed="true">Por responsable</button>
+          <button id="v-marca" data-view="marca" aria-pressed="false">Por marca</button>
+        </div>
+      </div>
+      <div id="view-resp">
+        <p class="eyebrow" style="margin-bottom:8px">Responsable</p>
+        <div class="chips" id="resp-chips"></div>
+        <div class="legend" style="margin-top:12px;font-size:.8rem">
+          <span><i style="background:var(--bad);border-radius:50%"></i>Excedió su ciclo</span>
+          <span><i style="background:var(--warn);border-radius:50%"></i>Gastó sin presupuesto asignado</span>
+          <span><i style="background:var(--good);border-radius:50%"></i>Dentro de su ciclo</span>
+        </div>
+      </div>
+      <div id="view-marca" hidden>
+        <p class="eyebrow" style="margin-bottom:8px">Marca</p>
+        <div class="chips" id="marca-chips"></div>
+      </div>
+    </div>
+
+    <div id="resp-body" class="people"></div>
+
+    <div id="marca-body" class="panel" hidden>
+      <div class="panel-head"><h2>Gasto de creadores por marca</h2><p id="marca-sub"></p></div>
+      <div class="bars" id="marca-bars"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Tickets subidos por día</h2><p id="tickets-sub"></p></div>
+      <div class="cols" id="tickets"></div>
+    </div>
+  </section>
+
+  <!-- GENERALES -->
+  <section id="generales" role="tabpanel" aria-labelledby="t-generales" hidden>
+    <div class="kpis" id="kpis-gen"></div>
+    <div class="panel">
+      <div class="panel-head"><h2>Por marca</h2><p>Toca una marca para filtrar la lista de abajo</p></div>
+      <div class="chips" id="gen-chips" style="margin-bottom:16px"></div>
+      <div class="bars" id="gen-bars"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Mayores gastos generales</h2><p id="gen-sub"></p></div>
+      <div class="tbl-wrap"><table id="gen-table"></table></div>
+    </div>
+  </section>
+
+  <!-- OPERATIVOS -->
+  <section id="operativos" role="tabpanel" aria-labelledby="t-operativos" hidden>
+    <div class="kpis" id="kpis-ope"></div>
+    <div class="panel">
+      <div class="panel-head"><h2>Por rubro</h2><p>Toca un rubro para filtrar la lista</p></div>
+      <div class="chips" id="ope-chips" style="margin-bottom:16px"></div>
+      <div class="bars" id="ope-bars"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Mayores gastos operativos</h2><p id="ope-sub"></p></div>
+      <div class="tbl-wrap"><table id="ope-table"></table></div>
+    </div>
+  </section>
+
+  <div class="panel" style="margin-top:20px">
+    <div class="panel-head"><h2>Notas sobre los datos</h2><p>Cosas que conviene saber al leer este reporte</p></div>
+    <ul class="notes" id="notas"></ul>
+  </div>
+  <p class="foot" id="foot"></p>
+</div>
+<div id="tip" hidden></div>
+
+<script type="application/json" id="report-data">__DATOS__</script>
+<script>
+const DATA = JSON.parse(document.getElementById('report-data').textContent);
+const fmt = n => (n<0?'−':'') + '$' + Math.abs(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const $ = s => document.querySelector(s);
+/* Todo texto que viene de los datos (nombres, descripciones, marcas) es texto libre: se escapa antes de entrar a innerHTML. */
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TYPE = {cre:{n:'Creadores',c:'var(--s-cre)'}, gen:{n:'Gastos generales',c:'var(--s-gen)'}, ope:{n:'Gastos operativos',c:'var(--s-ope)'}};
+const T = DATA.totales, CI = DATA.ciclos, CMP = DATA.comparacion;
+const plural = (n, uno, varios) => n + ' ' + (n===1 ? uno : varios);
+
+/* ---------- Encabezado y pie ---------- */
+$('#h1').textContent = DATA.meta.titulo;
+$('#period').innerHTML = `Periodo <strong>${esc(DATA.meta.periodo)}</strong> · Reporte generado el ${esc(DATA.meta.generado)}` + (DATA.meta.generado_por ? ` por ${esc(DATA.meta.generado_por)}` : '');
+$('#foot').textContent = `Fuente: GOCreate · Reporte del dashboard, periodo ${DATA.meta.periodo_largo}. Montos en pesos mexicanos.`;
+
+/* ---------- Resumen ---------- */
+function pillCmp(k){
+  const it = CMP && CMP.items[k];
+  if(!it || !it.txt) return '';
+  return `<span class="pill ${it.dir==='down'?'good':'up'}">${esc(it.txt)}</span>`;
+}
+$('#kpis-resumen').innerHTML = `
+  <div class="kpi hero"><span class="eyebrow">Gasto total del periodo</span><span class="v num">${fmt(T.total)}</span><span class="d">Creadores + generales + operativos</span></div>
+  <div class="kpi"><span class="eyebrow">Creadores</span><span class="v num">${fmt(T.cre)}</span><span class="d">${plural(T.tickets,'ticket aprobado','tickets aprobados')} ${pillCmp('cre')}</span></div>
+  <div class="kpi"><span class="eyebrow">Gastos generales</span><span class="v num">${fmt(T.gen)}</span><span class="d">${plural(T.gen_count,'gasto','gastos')} ${pillCmp('gen')}</span></div>
+  <div class="kpi"><span class="eyebrow">Gastos operativos</span><span class="v num">${fmt(T.ope)}</span><span class="d">${plural(T.ope_count,'gasto','gastos')} ${pillCmp('ope')}</span></div>`;
+
+const dist = [['cre',T.cre],['gen',T.gen],['ope',T.ope]].filter(([,v])=>v>0);
+if(dist.length){
+  $('#stack').innerHTML = dist.map(([k,v])=>`<div style="flex:${v};background:${TYPE[k].c}" data-tip="${esc(TYPE[k].n+': '+fmt(v)+' · '+(v/T.total*100).toFixed(0)+'%')}"></div>`).join('');
+  $('#stack-legend').innerHTML = dist.map(([k,v])=>`<span><i style="background:${TYPE[k].c}"></i>${TYPE[k].n} <b class="num">${fmt(v)}</b> · ${(v/T.total*100).toFixed(0)}%</span>`).join('');
+} else {
+  $('#stack').style.display='none';
+  $('#stack-legend').innerHTML = '<span style="color:var(--muted)">Sin gasto registrado en el periodo.</span>';
+}
+if(DATA.textos.reparto) $('#reparto-texto').textContent = DATA.textos.reparto; else $('#reparto-texto').remove();
+
+if(CMP){
+  const cap = CMP.label.charAt(0).toUpperCase()+CMP.label.slice(1);
+  $('#cmp-titulo').textContent = `Este periodo vs ${CMP.label}`;
+  const ks = ['cre','gen','ope'];
+  const cmpMax = Math.max(1, ...ks.flatMap(k=>[CMP.items[k].a, CMP.items[k].p]));
+  $('#cmp').innerHTML = ks.map(k=>{
+    const it = CMP.items[k];
+    return `<div class="cmp-row">
+      <div><b>${TYPE[k].n}</b></div>
+      <div class="cmp-bars">
+        <div class="track" data-tip="${esc('Este periodo: '+fmt(it.a))}"><div class="fill" style="width:${it.a/cmpMax*100}%;background:${TYPE[k].c}"></div></div>
+        <div class="track prev" data-tip="${esc(cap+': '+fmt(it.p))}"><div class="fill" style="width:${it.p/cmpMax*100}%;background:${TYPE[k].c}"></div></div>
+        <div class="cmp-meta num"><span>${fmt(it.a)} <span style="color:var(--muted)">vs ${fmt(it.p)}</span></span>${it.txt?`<span class="pill ${it.dir==='down'?'good':'up'}">${esc(it.txt)}</span>`:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+} else {
+  $('#cmp-panel').hidden = true;
+}
+
+const alerts = DATA.alertas;
+$('#alerts').innerHTML = alerts.length
+  ? alerts.map((a,i)=>`<button class="alert" id="al-${i}" data-i="${i}"><span class="ico ${esc(a.k)}">${esc(a.ico)}</span><span><b>${esc(a.t)}</b><small>${esc(a.s)}</small></span><span class="go">Ver →</span></button>`).join('')
+  : '<p style="color:var(--muted);font-size:.9rem">Nada fuera de lo normal en este periodo.</p>';
+$('#alerts').addEventListener('click',e=>{
+  const b=e.target.closest('.alert'); if(!b) return;
+  const a=alerts[b.dataset.i]; showTab(a.go[0]);
+  if(a.go[1]!=null){ setView('resp'); selectResp(a.go[1]); }
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+(function ciclos(){
+  const asig = CI.asignado, gas = CI.gastado, disp = CI.disponible;
+  let meter = '', texto;
+  if(asig>0){
+    const scale = Math.max(gas, asig);
+    const over = gas>asig;
+    meter = `<div class="meter" style="margin:16px 0 8px"><div class="fill" style="width:${gas/scale*100}%;background:var(--${over?'bad':'good'})"></div><div class="cap" style="left:calc(${asig/scale*100}% - 1px)" data-tip="${esc('Límite del presupuesto: '+fmt(asig))}"></div></div>`;
+    texto = over
+      ? `Se gastó <b style="color:var(--bad)">${(gas/asig).toFixed(1)} veces</b> lo asignado. La línea marca dónde terminaba el presupuesto de ${fmt(asig)}.`
+      : `Se ha ejecutado el <b>${(gas/asig*100).toFixed(0)}%</b> del presupuesto asignado.`;
+  } else {
+    texto = 'Ningún creador activo tiene presupuesto asignado en su ciclo vigente.';
+  }
+  const big = 'font-family:var(--display);font-size:1.5rem;font-weight:800';
+  $('#ciclos-panel').innerHTML = `
+    <div class="panel-head"><h2>Presupuesto de creadores</h2><p>Ciclos vigentes al generar el reporte</p></div>
+    <div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr))">
+      <div><span class="eyebrow">Asignado</span><div class="num" style="${big};color:var(--fg)">${fmt(asig)}</div></div>
+      <div><span class="eyebrow">Gastado</span><div class="num" style="${big};color:var(--fg)">${fmt(gas)}</div></div>
+      <div><span class="eyebrow">Disponible</span><div class="num" style="${big};color:var(${disp<0?'--bad':'--fg'})">${fmt(disp)}</div></div>
+    </div>${meter}
+    <p style="font-size:.85rem;color:var(--fg2)">${texto}</p>
+    <p style="font-size:.85rem;color:var(--fg2);margin-top:10px">${plural(T.marcas_activas,'marca activa','marcas activas')} · ${plural(CI.creadores_activos,'creador activo','creadores activos')} · ${plural(T.tickets,'ticket','tickets')}${T.tickets_pendientes?` · <span style="color:var(--warn)">${plural(T.tickets_pendientes,'pendiente','pendientes')} (${fmt(T.pendiente_monto)})</span>`:''}</p>`;
+})();
+
+function topTable(el, rows, cols){
+  const head = cols.map(c=>`<th${c.r?' class="r"':''}>${c.h}</th>`).join('');
+  $(el).innerHTML = `<thead><tr>${head}</tr></thead><tbody>` +
+    (rows.length ? rows.map((r,i)=>`<tr>${cols.map(c=>c.cell(r,i)).join('')}</tr>`).join('')
+                 : `<tr><td colspan="${cols.length}" style="color:var(--muted)" class="empty">Sin gastos en este periodo.</td></tr>`) + `</tbody>`;
+}
+topTable('#top-all', DATA.top_all, [
+  {h:'Sección', cell:r=>`<td><span class="tag"><i style="background:${TYPE[r.t].c}"></i>${TYPE[r.t].n}</span></td>`},
+  {h:'Descripción', cell:r=>`<td>${esc(r.d)}<div style="color:var(--muted);font-size:.78rem">${esc(r.m)}</div></td>`},
+  {h:'Fecha', cell:r=>`<td style="white-space:nowrap">${esc(r.f)}</td>`},
+  {h:'Monto', r:true, cell:r=>`<td class="r num"><b>${fmt(r.g)}</b></td>`},
+]);
+
+/* ---------- Creadores ---------- */
+const creadores = DATA.creadores;
+const sumaCre = creadores.reduce((a,c)=>a+c.g,0);
+const shareBase = T.cre>0 ? T.cre : sumaCre;
+$('#cre-sub').textContent = creadores.length
+  ? `${fmt(T.cre)} gastados por ${plural(creadores.length,'responsable','responsables')} en ${plural(DATA.marcas_cre.length,'marca','marcas')}`
+  : 'Sin actividad de creadores en el periodo';
+
+function estado(c){
+  if(c.ciclo<=0) return {k:'warn', t:'Sin presupuesto asignado', ico:'!'};
+  if(c.g>c.ciclo) return {k:'bad', t:'Excedió su ciclo', ico:'▲'};
+  return {k:'good', t:'Dentro de su ciclo', ico:'✓'};
+}
+let respSel = 'todos';
+function chipsResp(){
+  $('#resp-chips').innerHTML = `<button class="chip" id="rc-todos" data-id="todos" aria-pressed="${respSel==='todos'}">Todos</button>` +
+    creadores.map(c=>`<button class="chip" id="rc-${c.id}" data-id="${c.id}" aria-pressed="${String(respSel)===String(c.id)}"><span class="st ${estado(c).k}"></span>${esc(c.short)}</button>`).join('');
+}
+function personCard(c, focus){
+  const e=estado(c);
+  const pct = c.ciclo>0 ? c.g/c.ciclo*100 : null;
+  const scale = c.ciclo>0 ? Math.max(c.g,c.ciclo) : c.g;
+  const fillW = c.ciclo>0 && scale>0 ? c.g/scale*100 : 100;
+  const capL = c.ciclo>0 ? c.ciclo/scale*100 : null;
+  const share = shareBase>0 ? c.g/shareBase*100 : 0;
+  let note;
+  if(e.k==='warn') note = `No tiene ciclo vigente, por eso no hay porcentaje de uso. Representa el ${share.toFixed(0)}% del gasto de creadores.`;
+  else if(e.k==='bad') note = `Se pasó por ${fmt(c.g-c.ciclo)}. Representa el ${share.toFixed(0)}% del gasto de creadores.`;
+  else note = `Le quedan ${fmt(c.ciclo-c.g)} de su ciclo. Representa el ${share.toFixed(0)}% del gasto de creadores.`;
+  const tip = c.ciclo>0 ? `Gastó ${fmt(c.g)} de ${fmt(c.ciclo)} (${pct.toFixed(1)}%)` : `Gastó ${fmt(c.g)} sin ciclo asignado`;
+  return `<article class="person${focus?' focus':''}">
+    <div class="top"><span class="name">${esc(c.n)}</span><span class="pill ${e.k}">${e.ico} ${e.t}</span></div>
+    <div class="spent num">${fmt(c.g)}</div>
+    <div class="meter" data-tip="${esc(tip)}">
+      <div class="fill" style="width:${fillW}%;background:var(--${e.k})"></div>
+      ${capL!==null?`<div class="cap" style="left:calc(${capL}% - 1px)"></div>`:''}
+    </div>
+    <div class="facts num"><span>Ciclo: <b>${c.ciclo>0?fmt(c.ciclo):'Sin asignar'}</b></span><span>Usado: <b>${pct!==null?pct.toFixed(1)+'%':'—'}</b></span>${c.p>0?`<span>Pendiente: <b>${fmt(c.p)}</b></span>`:''}</div>
+    ${focus?`<p class="note">${esc(note)}</p>`:''}
+  </article>`;
+}
+function renderResp(){
+  chipsResp();
+  if(!creadores.length){ $('#resp-body').innerHTML = '<p style="color:var(--muted);font-size:.9rem">Sin tickets de creadores en este periodo.</p>'; return; }
+  const list = respSel==='todos'? creadores : creadores.filter(c=>String(c.id)===String(respSel));
+  $('#resp-body').innerHTML = list.map(c=>personCard(c, respSel!=='todos')).join('');
+}
+function selectResp(id){ respSel=String(id)==='todos'?'todos':id; renderResp(); }
+$('#resp-chips').addEventListener('click',e=>{const b=e.target.closest('.chip'); if(b) selectResp(b.dataset.id);});
+
+/* Barras + chips reutilizados por marca (creadores y generales) y por rubro (operativos). Selección por índice: -1 = todas. */
+function bars(el, rows, color, sel, labelFn){
+  if(!rows.length){ $(el).innerHTML = '<p style="color:var(--muted);font-size:.9rem">Sin datos en este periodo.</p>'; return; }
+  const max = Math.max(...rows.map(r=>r.g));
+  $(el).innerHTML = rows.map((r,i)=>`<div class="bar-row${sel>=0&&sel!==i?' dim':''}">
+    <span class="lbl">${labelFn(r)}</span>
+    <div class="track" data-tip="${esc(r.n+': '+fmt(r.g))}"><div class="fill" style="width:${max>0?r.g/max*100:0}%;background:${color}"></div></div>
+    <span class="val num">${fmt(r.g)}</span></div>`).join('');
+}
+function chipRow(el, rows, sel, allLabel){
+  $(el).innerHTML = `<button class="chip" data-i="-1" aria-pressed="${sel===-1}">${allLabel}</button>` +
+    rows.map((r,i)=>`<button class="chip" data-i="${i}" aria-pressed="${sel===i}">${esc(r.n)}${r.p==='Alta'?' <span class="pill bad" style="padding:0 6px">Alta</span>':''}</button>`).join('');
+}
+const bold = r => `<b>${esc(r.n)}</b>`;
+
+let marcaSel = -1;
+function renderMarca(){
+  const rows = DATA.marcas_cre;
+  chipRow('#marca-chips', rows, marcaSel, 'Todas');
+  bars('#marca-bars', rows, 'var(--s-cre)', marcaSel, bold);
+  const m = rows[marcaSel];
+  $('#marca-sub').textContent = m
+    ? `${m.n}: ${fmt(m.g)} · ${(shareBase>0?m.g/shareBase*100:0).toFixed(0)}% del gasto de creadores · prioridad ${m.p}`
+    : plural(rows.length,'marca','marcas') + (rows.some(r=>r.p==='Alta') ? ' · las de prioridad alta van marcadas' : '');
+}
+$('#marca-chips').addEventListener('click',e=>{const b=e.target.closest('.chip'); if(b){marcaSel=+b.dataset.i; renderMarca();}});
+
+function setView(v){
+  $('#v-resp').setAttribute('aria-pressed', v==='resp'); $('#v-marca').setAttribute('aria-pressed', v==='marca');
+  $('#view-resp').hidden = v!=='resp'; $('#resp-body').hidden = v!=='resp';
+  $('#view-marca').hidden = v!=='marca'; $('#marca-body').hidden = v!=='marca';
+}
+document.querySelector('.seg').addEventListener('click',e=>{const b=e.target.closest('button'); if(b) setView(b.dataset.view);});
+
+(function renderTickets(){
+  const rows = DATA.tickets_dia, el = $('#tickets');
+  $('#tickets-sub').textContent = DATA.tickets_sub;
+  if(!rows.length){ el.className=''; el.innerHTML='<p style="color:var(--muted);font-size:.9rem">Sin tickets subidos en el periodo.</p>'; return; }
+  const max = Math.max(...rows.map(r=>r.n)), top = Math.ceil(max/3)*3;
+  const gap = rows.length>16 ? 2 : 10, step = Math.ceil(rows.length/12);
+  const labels = rows.length>16;
+  el.innerHTML = `<div class="yaxis"><span>${top}</span><span>${top*2/3}</span><span>${top/3}</span><span>0</span></div>
+    <div class="plot" style="gap:${gap}px">${rows.map(r=>`<div class="col" style="height:${r.n/top*100}%" data-tip="${esc(r.d+': '+plural(r.n,'ticket','tickets'))}">${labels?'':`<span>${r.n}</span>`}</div>`).join('')}</div>
+    <div class="xaxis" style="gap:${gap}px">${rows.map((r,i)=>`<span>${!labels||i%step===0?esc(r.d):''}</span>`).join('')}</div>`;
+})();
+
+/* ---------- Generales y operativos ---------- */
+function filtTable(el, rows, selName, colName){
+  const list = selName===null ? rows : rows.filter(r=>r.m===selName);
+  topTable(el, list, [
+    {h:'#', cell:r=>`<td class="num" style="color:var(--muted)">${rows.indexOf(r)+1}</td>`},
+    {h:'Descripción', cell:r=>`<td>${esc(r.d)}</td>`},
+    {h:colName, cell:r=>`<td style="white-space:nowrap">${esc(r.m)}</td>`},
+    {h:'Fecha', cell:r=>`<td style="white-space:nowrap">${esc(r.f)}</td>`},
+    {h:'Monto', r:true, cell:r=>`<td class="r num"><b>${fmt(r.g)}</b></td>`},
+  ]);
+  if(!list.length && rows.length) $(el).querySelector('td.empty').textContent = 'Esta selección no tiene gastos dentro del top 5 del reporte.';
+}
+const kpi = (label, v, d) => `<div class="kpi"><span class="eyebrow">${esc(label)}</span><span class="v num">${v}</span><span class="d">${d}</span></div>`;
+
+let genSel = -1;
+$('#kpis-gen').innerHTML = kpi('Total gastos generales', fmt(T.gen), `${plural(T.gen_count,'gasto','gastos')} ${pillCmp('gen')}`) +
+  (DATA.gen_marcas.length ? `<div class="kpi"><span class="eyebrow">Marca con más gasto</span><span class="v">${esc(DATA.gen_marcas[0].n)}</span><span class="d">${(T.gen>0?DATA.gen_marcas[0].g/T.gen*100:0).toFixed(0)}% del total · ${fmt(DATA.gen_marcas[0].g)}</span></div>` : '');
+function renderGen(){
+  const rows = DATA.gen_marcas, top = DATA.gen_top;
+  chipRow('#gen-chips', rows, genSel, 'Todas las marcas');
+  bars('#gen-bars', rows, 'var(--s-gen)', genSel, bold);
+  filtTable('#gen-table', top, genSel>=0 ? rows[genSel].n : null, 'Marca');
+  const m = rows[genSel], suma = top.reduce((a,r)=>a+r.g,0);
+  if(m){ const mostrado = top.filter(r=>r.m===m.n).reduce((a,r)=>a+r.g,0);
+    $('#gen-sub').textContent = `${m.n}: ${fmt(m.g)} en total · el top 5 explica ${fmt(mostrado)}${m.g-mostrado>0.005?`, faltan ${fmt(m.g-mostrado)} en gastos menores`:''}`; }
+  else $('#gen-sub').textContent = top.length ? `Top 5 del reporte · explica ${fmt(suma)} de ${fmt(T.gen)}` : 'Sin gastos generales en el periodo';
+}
+$('#gen-chips').addEventListener('click',e=>{const b=e.target.closest('.chip'); if(b){genSel=+b.dataset.i; renderGen();}});
+
+let opeSel = -1;
+{
+  const mayor = DATA.ope_top[0], rubro = DATA.ope_rubros[0];
+  $('#kpis-ope').innerHTML = kpi('Total gastos operativos', fmt(T.ope), `${plural(T.ope_count,'gasto','gastos')} ${pillCmp('ope')}`) +
+    (mayor ? kpi('Pago más grande', fmt(mayor.g), `${esc(mayor.d)} · ${(T.ope>0?mayor.g/T.ope*100:0).toFixed(0)}% del total`) : '') +
+    (rubro ? `<div class="kpi"><span class="eyebrow">Rubro principal</span><span class="v">${esc(rubro.n)}</span><span class="d">${(T.ope>0?rubro.g/T.ope*100:0).toFixed(0)}% del total · ${plural(rubro.k,'gasto','gastos')}</span></div>` : '');
+}
+function renderOpe(){
+  const rows = DATA.ope_rubros, top = DATA.ope_top;
+  chipRow('#ope-chips', rows, opeSel, 'Todos los rubros');
+  bars('#ope-bars', rows, 'var(--s-ope)', opeSel, r=>`<b>${esc(r.n)}</b> · ${plural(r.k,'gasto','gastos')}`);
+  filtTable('#ope-table', top, opeSel>=0 ? rows[opeSel].n : null, 'Rubro');
+  const m = rows[opeSel], suma = top.reduce((a,r)=>a+r.g,0);
+  if(m){ const mostrado = top.filter(r=>r.m===m.n).reduce((a,r)=>a+r.g,0);
+    $('#ope-sub').textContent = `${m.n}: ${plural(m.k,'gasto','gastos')} por ${fmt(m.g)} · el top 5 explica ${fmt(mostrado)}${m.g-mostrado>0.005?`, faltan ${fmt(m.g-mostrado)}`:''}`; }
+  else $('#ope-sub').textContent = top.length ? `Top 5 del reporte · explica ${fmt(suma)} de ${fmt(T.ope)}` : 'Sin gastos operativos en el periodo';
+}
+$('#ope-chips').addEventListener('click',e=>{const b=e.target.closest('.chip'); if(b){opeSel=+b.dataset.i; renderOpe();}});
+
+/* ---------- Notas ---------- */
+$('#notas').innerHTML = DATA.notas.map(n=>`<li><b>${esc(n.t)}</b> ${esc(n.s)}</li>`).join('');
+
+/* ---------- Pestañas ---------- */
+const TABS=['resumen','creadores','generales','operativos'];
+function showTab(t){
+  if(!TABS.includes(t)) t='resumen';
+  TABS.forEach(x=>{ $('#'+x).hidden = x!==t; $('#t-'+x).setAttribute('aria-selected', x===t); });
+  try{ history.replaceState(null,'','#'+t); }catch(e){}
+  try{ localStorage.setItem('gocreate-tab',t); }catch(e){}
+}
+document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('.tab'); if(b) showTab(b.dataset.tab);});
+
+/* ---------- Tooltip ---------- */
+const tip=$('#tip');
+document.addEventListener('pointermove',e=>{
+  const el=e.target.closest('[data-tip]');
+  if(!el){ tip.hidden=true; return; }
+  tip.textContent=el.dataset.tip; tip.hidden=false;
+  const w=tip.offsetWidth, x=Math.min(e.clientX+14, innerWidth-w-8);
+  tip.style.left=x+'px'; tip.style.top=(e.clientY+16)+'px';
+});
+document.addEventListener('pointerleave',()=>tip.hidden=true);
+
+/* ---------- Tema (oscuro por defecto) ---------- */
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  $('#theme-btn').textContent = t==='dark' ? 'Modo claro' : 'Modo oscuro';
+  try{ localStorage.setItem('gocreate-theme', t); }catch(e){}
+}
+let savedTheme = null; try{ savedTheme = localStorage.getItem('gocreate-theme'); }catch(e){}
+setTheme(savedTheme || 'dark');
+$('#theme-btn').addEventListener('click',()=>setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+renderResp(); renderMarca(); renderGen(); renderOpe(); setView('resp');
+let start = location.hash.slice(1);
+if(!TABS.includes(start)){ try{ start = localStorage.getItem('gocreate-tab'); }catch(e){} }
+showTab(start||'resumen');
+</script>
+</body>
+</html>

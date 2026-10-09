@@ -297,21 +297,24 @@ test.describe.serial("Flujo completo de negocio (R1-R11)", () => {
     await logout(page);
   });
 
-  test("el PDF del dashboard se descarga con contenido real", async ({ page }) => {
+  test("el reporte HTML del dashboard se descarga con contenido real", async ({ page }) => {
     await login(page, ADMIN.username, ADMIN.newPassword);
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
 
     const [download] = await Promise.all([
       page.waitForEvent("download", { timeout: 60_000 }),
-      page.click('button:has-text("Descargar PDF")'),
+      page.click('button:has-text("Descargar reporte")'),
     ]);
     const downloadPath = await download.path();
     expect(downloadPath).toBeTruthy();
 
     const fs = await import("node:fs");
     const buffer = fs.readFileSync(downloadPath);
-    expect(buffer.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    const html = buffer.toString("utf8");
+    expect(download.suggestedFilename()).toMatch(/\.html$/);
+    expect(html.toLowerCase().startsWith("<!doctype html>")).toBe(true);
+    expect(html).toContain('id="report-data"');
     expect(buffer.byteLength).toBeGreaterThan(10_000);
 
     await logout(page);

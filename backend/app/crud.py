@@ -702,9 +702,10 @@ def get_top_expenses(
     limit: int = 3,
 ) -> List[schemas.TopExpenseItem]:
     """Top gastos INDIVIDUALES del período (sin sumatorias por marca/rubro).
-    Sin `tipo`: el top-3 global del dashboard, mezclando generales y
-    operativos — cada tabla con su `limit(3)` es correcto porque el top-3
-    global siempre está contenido en la unión de los top-3 de cada tabla.
+    Sin `tipo`: el top-`limit` global (3 por defecto en el dashboard, 5 en el
+    reporte HTML), mezclando generales y operativos — cada tabla con su
+    `limit(limit)` es correcto porque el top global siempre está contenido en
+    la unión de los top de cada tabla.
     Con `tipo` ("general" | "operativo"): solo esa tabla, top `limit` — para
     las páginas temáticas del reporte PDF. Cada tabla se filtra por su campo
     de fecha semántico: generales por `upload_date`, operativos por
@@ -713,7 +714,7 @@ def get_top_expenses(
         raise ValueError(f"tipo inválido para top de gastos: {tipo!r}")
     pedir_generales = tipo in (None, "general")
     pedir_operativos = tipo in (None, "operativo")
-    tope = 3 if tipo is None else limit
+    tope = limit
 
     items: List[schemas.TopExpenseItem] = []
     if pedir_generales:
@@ -763,7 +764,7 @@ def get_top_expenses(
         # en la clave lanzaría TypeError. El sort es estable: los empates quedan
         # deterministas (generales primero, en el orden amount.desc() de SQL).
         items.sort(key=lambda i: i.monto, reverse=True)
-        return items[:3]
+        return items[:limit]
     # Ya viene ordenado por monto desc desde SQL, sin mezcla entre tablas.
     return items
 
