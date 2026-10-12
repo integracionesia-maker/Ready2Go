@@ -295,7 +295,7 @@ export default function MediaViewer({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center ${esMovil ? "" : "p-4"}`}
+      className={`fixed inset-0 !m-0 z-50 flex items-center justify-center ${esMovil ? "" : "p-4"}`}
       style={{ background: "var(--go-overlay)" }}
       onClick={onClose}
     >

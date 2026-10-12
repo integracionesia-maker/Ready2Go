@@ -82,7 +82,7 @@ export default function Sidebar({ collapsed, onToggle, onNewTicket, pendingCount
       {/* ── Backdrop móvil ────────────────────────────────────────────── */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 md:hidden"
+          className="fixed inset-0 !m-0 z-30 md:hidden"
           style={{ background: "var(--go-overlay)" }}
           onClick={onCloseMobile}
         />

@@ -61,7 +61,7 @@ export default function GlassModal({ open, onClose, title, children, footer, cla
     <AnimatePresence>
       {open && (
         <motion.div
-          className={`fixed inset-0 z-[90] flex items-center justify-center ${mobileFullscreen ? "p-0 sm:p-4" : "p-4"}`}
+          className={`fixed inset-0 !m-0 z-[90] flex items-center justify-center ${mobileFullscreen ? "p-0 sm:p-4" : "p-4"}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

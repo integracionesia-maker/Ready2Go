@@ -11,7 +11,7 @@
 export default function Modal({ title, onClose, submitting = false, children }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 !m-0 z-50 flex items-center justify-center p-4"
       style={{ background: "var(--go-overlay)" }}
       onClick={submitting ? undefined : onClose}
     >
