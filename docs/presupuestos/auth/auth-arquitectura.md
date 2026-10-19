@@ -124,6 +124,20 @@ Dos formas nuevas de salir de un bloqueo por intentos fallidos sin esperar el ba
 - **Desbloqueo de superadmin, de un clic**: `GET /api/users/?locked_only=true` (mismo `require_perm("usuarios","gestionar")` que el resto de `/api/users/*`, exclusivo de superadmin) lista las cuentas bloqueadas ahora mismo; `POST /api/users/{id}/unlock` limpia el bloqueo sin tocar contraseña ni sesiones. No aplica sobre la cuenta superadmin (`_ensure_not_superadmin_target`, igual que el resto de la gestión de usuarios) — un superadmin bloqueado sigue resolviéndose vía `reset-password-superadmin` (R4.1), que ya desbloqueaba de paso.
 - Todo el estado nuevo (`_unlock_challenges`, `_self_unlock_count_by_user`) vive en memoria en `app/security.py`, mismo patrón y misma limitación que `_login_attempts_by_ip` (§6).
 
+### 4.2 Rol `creador` y perfil de creador (19/10/2026)
+
+`users.creator_id` → `creators.id` es el único enlace (índice único parcial: un perfil, a lo sumo un usuario). `PUT /api/users/{id}` lo mantiene al cambiar el rol:
+
+| Cambio | Efecto sobre el perfil | `creador_accion` |
+|---|---|---|
+| a `creador`, sin perfil | se crea (nombre = nombre completo, sin ciclo) y se enlaza | `creado` |
+| a `creador`, con perfil inactivo enlazado | se reactiva | `reactivado` |
+| a `creador` con `creator_id` explícito | se vincula (404 si no existe, 409 si es de otro usuario; reactiva si estaba inactivo) | `vinculado` / `reactivado` |
+| de `creador` a otro rol | se desactiva; el enlace se **conserva** | `desactivado` |
+| edición de un `creador` que ya lo era | no cambia el estado del perfil (un perfil desactivado a propósito sigue desactivado); si no tenía perfil (dato roto), se crea | — / `creado` |
+
+`creator_id: null` en el body se ignora (no desvincula), y un `creator_id` con un rol que no es `creador` responde 400. `PATCH /api/users/{id}/estado` sobre un `creador` activa/desactiva también su perfil. La inversa (desactivar el perfil en Admin → Creadores) no toca la cuenta. Pruebas: `tests/test_cambio_rol_creador.py`.
+
 ## 5. Decisiones y desviaciones respecto al diseño de Fase 1
 
 Estas surgieron durante la implementación/verificación y **no** estaban en `auth-diseno-fase1.md`:

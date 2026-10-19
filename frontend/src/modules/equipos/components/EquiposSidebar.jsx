@@ -97,7 +97,7 @@ export default function EquiposSidebar({ collapsed, onToggle, mobileOpen, onClos
       {/* ── Backdrop móvil ────────────────────────────────────────────── */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 md:hidden"
+          className="fixed inset-0 !m-0 z-30 md:hidden"
           style={{ background: "var(--go-overlay)" }}
           onClick={onCloseMobile}
         />

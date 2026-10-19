@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { AboutPanel, APP_VERSION, ICONS } from "@/design";
+import { puedeAdministrarUsuarios } from "../roles";
 
 /** Clics sobre la versión que abren el panel "acerca de" (design/AboutPanel.jsx). */
 const TAPS_PARA_ABRIR = 7;
@@ -159,7 +160,7 @@ export default function ProfilePopover({ onBeforeToggle }) {
               </svg>
               Mi perfil
             </button>
-            {user.role === "superadmin" && (
+            {puedeAdministrarUsuarios(user) && (
               <button
                 role="menuitem"
                 onClick={() => navigate("/administracion-sistema")}

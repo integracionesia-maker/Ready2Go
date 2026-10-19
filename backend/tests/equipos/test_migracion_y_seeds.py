@@ -356,7 +356,9 @@ def test_la_secuencia_completa_corre_dos_veces_seguidas(tmp_path):
         # paquete aditivo APROBADOR_PRESUPUESTOS (validar_ticket, borrar_ticket).
         # +4 por el rol base `creador` (I9, 07/09/2026): equipos_inventario:ver
         # + equipos_prestamos:{solicitar,ver_propios,registrar_devolucion}.
-        assert conn.execute(text("SELECT COUNT(*) FROM role_permissions")).scalar() == 119
+            # +4 por las acciones nuevas de `usuarios` (administrar_cuentas, ver_roles)
+            # para superadmin (comodin) y el paquete aditivo ADMIN_USUARIOS (19/10/2026).
+        assert conn.execute(text("SELECT COUNT(*) FROM role_permissions")).scalar() == 123
     motor.dispose()
 
 

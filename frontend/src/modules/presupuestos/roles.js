@@ -81,3 +81,24 @@ export function puedeValidarTickets(user) {
 
 /** Gestión de usuarios y RBAC (R4). */
 export const SUPERADMIN_ONLY = ["superadmin"];
+
+/**
+ * Nombre del paquete aditivo que delega la administración de cuentas a un
+ * admin sin darle superadmin. Espejo de `ADMIN_USUARIOS` en
+ * `backend/app/rbac_catalog.py`.
+ */
+export const PAQUETE_ADMIN_USUARIOS = "ADMIN_USUARIOS";
+
+/**
+ * ¿Puede abrir Administración del Sistema (usuarios y catálogo de roles)?
+ * Superadmin, o quien tenga `usuarios:administrar_cuentas` en los permisos
+ * efectivos de `/auth/me` (el backend ya filtra el paquete por rol base, así
+ * que un paquete colgado de un usuario que ya no es admin no aparece aquí).
+ * La UI solo pinta: cada endpoint valida por su cuenta y limita al delegado a
+ * cuentas por debajo de admin.
+ */
+export function puedeAdministrarUsuarios(user) {
+  if (!user) return false;
+  if (user.role === "superadmin") return true;
+  return (user.permisos?.usuarios || []).includes("administrar_cuentas");
+}

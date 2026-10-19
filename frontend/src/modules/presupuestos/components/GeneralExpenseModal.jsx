@@ -169,7 +169,7 @@ export default function GeneralExpenseModal({ brands, rubros, onClose, onSuccess
   /* ── Render ──────────────────────────────────────────────────────────── */
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--go-overlay)" }} onClick={submitting ? undefined : onClose}>
+    <div className="fixed inset-0 !m-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--go-overlay)" }} onClick={submitting ? undefined : onClose}>
       <div
         className="glass relative w-full max-w-lg overflow-hidden"
         onClick={(e) => e.stopPropagation()}

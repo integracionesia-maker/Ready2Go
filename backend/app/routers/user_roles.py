@@ -10,13 +10,13 @@ aditivo se suma al rol base; jamas lo reemplaza.
 
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .. import crud, crud_rbac, models, rbac_catalog, schemas, schemas_rbac
 from ..database import get_db
 from ..errores import NoEncontrado, SinPermiso
-from ..rbac import permisos_efectivos, require_perm
+from ..rbac import permisos_efectivos, require_cualquiera, require_perm
 
 router = APIRouter(prefix="/api/users", tags=["roles"])
 
@@ -62,9 +62,17 @@ def _a_grant_response(grant) -> schemas_rbac.GrantResponse:
 def listar_roles_de_usuario(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm("usuarios", "gestionar_roles")),
+    current_user: models.User = Depends(
+        require_cualquiera(("usuarios", "gestionar_roles"), ("usuarios", "ver_roles"))
+    ),
 ):
     target = _usuario_objetivo(db, user_id)
+    # El delegado (solo `ver_roles`) no ve cuentas superadmin.
+    if (
+        target.role == models.UserRole.SUPERADMIN.value
+        and current_user.role != models.UserRole.SUPERADMIN.value
+    ):
+        raise NoEncontrado("Usuario no encontrado.")
     grants = crud_rbac.listar_grants(db, target.id)
     return schemas_rbac.UserRolesResponse(
         user_id=target.id,
@@ -84,6 +92,12 @@ def conceder_rol(
     target = _usuario_objetivo(db, user_id)
     _bloquear_superadmin(target)
     role_name = _paquete_aditivo(data.role_name)
+    if not rbac_catalog.es_concedible_a(role_name, target.role):
+        permitidos = ", ".join(rbac_catalog.roles_base_permitidos(role_name) or ())
+        raise HTTPException(
+            status_code=400,
+            detail=f"El paquete '{role_name}' solo puede concederse a usuarios con rol base: {permitidos}.",
+        )
 
     # El paquete tiene que estar sembrado: la FK de user_role_grants apunta a
     # roles.name. Si la migracion no corrio, esto lo dice claro en vez de

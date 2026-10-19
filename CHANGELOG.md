@@ -4,6 +4,43 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 
 ---
 
+## 2026-10-19 — Paquete `ADMIN_USUARIOS`: administrar cuentas sin ser superadmin
+
+### Agregado
+
+- **Paquete aditivo `ADMIN_USUARIOS`** (solo concedible a rol base `admin`, solo lo concede un superadmin): delega el alta y soporte de cuentas sin dar superadmin. Abre dos acciones nuevas de `usuarios`: `administrar_cuentas` (`/api/users/*`: listar, crear, editar nombre/correo/rol, activar/desactivar, desbloquear, resetear contraseña) y `ver_roles` (solo lectura del catálogo y de los paquetes de cada usuario). No reutiliza `usuarios:gestionar` porque esa también guarda Empresas y Notificaciones.
+- **Límites impuestos por el backend**: el delegado solo opera sobre cuentas por debajo de admin — no ve ni toca superadmins, no toca admins (ni la suya), no crea ni promueve a nadie a `admin`, no toca al titular de la firma de Equipos, y no concede ni revoca paquetes (solo los ve). Sigue sin acceso a Auditoría, Empresas ni Notificaciones.
+- Un paquete restringido por rol base se ignora si el usuario ya no tiene ese rol, y cambiar a un admin a otro rol le revoca el paquete.
+- UI: "Administración" en el menú de perfil y pestañas Usuarios / Roles y Permisos para el delegado (sin Asignaciones, sin tabla de superadmins, sin acciones sobre admins, sin la opción de rol "Administrador").
+- `crud.list_users` acepta `exclude_roles` (lista). Detalle: `docs/presupuestos/auth/admin-usuarios-delegado.md`.
+
+### Pruebas
+
+- Nuevo `tests/test_admin_usuarios_delegado.py` (32 casos); ajustada la tabla de superadmin en `tests/rbac/test_permisos_efectivos.py`.
+
+### Pendiente en cada entorno
+
+- Correr `python migrate_rbac_aditivo.py` desde `backend/` (idempotente) para sembrar el paquete. **Pendiente en producción.**
+
+---
+
+## 2026-10-19 — Cambio de rol a/desde `creador` ya mantiene el perfil de creador
+
+### Corregido
+
+- **Pasar un usuario (p. ej. un `admin`) a rol `creador` no creaba su perfil de creador**: quedaba una cuenta `creador` sin `creator_id`, invisible para tickets/ciclos/Equipos, y crearlo a mano fallaba con "ya existe ese correo". Ahora `PUT /api/users/{id}` lo resuelve solo: si el usuario no tiene perfil lo **crea** (nombre = nombre completo, sin ciclo; se configura en Admin → Creadores) y lo enlaza; si tenía uno inactivo de antes lo **reactiva**; si se manda un `creator_id` explícito lo **vincula** (404 si no existe, 409 si ya es de otro usuario). Un creador sin perfil (dato roto previo) se repara al editarlo.
+- **Sacar a alguien del rol `creador` desactiva su perfil** (`is_active=False`, conserva tickets/historial y el enlace para poder reactivarlo si vuelve). Ya no sale en las listas de activos (p. ej. beneficiarios de Equipos).
+- La respuesta del PUT trae `creador_accion` (`creado|reactivado|vinculado|desactivado`) y `creador_nombre`; el formulario de edición avisa **antes de guardar** qué va a pasar y confirma con un aviso al guardar.
+- `PUT /api/users/{id}` ya no desvincula el creador por recibir `creator_id: null` ni acepta un `creator_id` para un rol que no es `creador` (400, igual que el POST).
+- **`POST /api/creators/` ya no deja un creador huérfano** cuando el username/email ya existe: el conflicto se revisa antes de crear y creador + usuario se guardan en una sola transacción.
+- Desactivar/reactivar la **cuenta** de un usuario `creador` (`PATCH /estado`) también desactiva/reactiva su perfil. Desactivar el perfil desde Admin → Creadores sigue sin tocar la cuenta (la gestión de usuarios es solo de superadmin, R4).
+
+### Pruebas
+
+- Nuevo `tests/test_cambio_rol_creador.py` (16 casos).
+
+---
+
 ## 2026-10-09 — Reporte del Dashboard: de PDF a HTML autocontenido
 
 ### Actualizado

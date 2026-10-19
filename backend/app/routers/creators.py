@@ -4,6 +4,7 @@ from datetime import date
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import crud, models, schemas, security
@@ -81,9 +82,9 @@ def create_creator(
 ):
     if data.cycle_period is not None:
         _validate_period(data.cycle_period)
-    creator = crud.create_creator(db, data)
 
-    # Crear usuario vinculado con rol "creador"
+    # El conflicto de usuario se revisa ANTES de crear nada: si no, el 409
+    # dejaba un creador huérfano (sin cuenta) y el reintento lo duplicaba.
     existing_user = db.query(models.User).filter(
         (models.User.username == data.username) | (models.User.email == data.email)
     ).first()
@@ -93,6 +94,8 @@ def create_creator(
             detail=f"Ya existe un usuario con ese username ('{existing_user.username}') o email ('{existing_user.email}').",
         )
 
+    # Creador + usuario vinculado ("creador") en UNA transacción.
+    creator = crud.create_creator(db, data, commit=False)
     temp_password = security.generate_temp_password()
     user = models.User(
         username=data.username,
@@ -105,7 +108,14 @@ def create_creator(
         must_change_password=True,
     )
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Ya existe un usuario con ese username o email.",
+        )
 
     crud.log_audit(
         db,

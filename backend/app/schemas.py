@@ -348,6 +348,10 @@ class UserResponse(BaseModel):
     # ¿Tiene una firma predeterminada guardada en su perfil? Solo /me lo llena
     # (la UI decide con esto si ofrece "firmar con mi firma guardada").
     tiene_firma_guardada: bool = False
+    # Solo PUT /api/users/{id} los llena, cuando el cambio de rol tocó el perfil
+    # de creador enlazado: "creado" | "reactivado" | "vinculado" | "desactivado".
+    creador_accion: Optional[str] = None
+    creador_nombre: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

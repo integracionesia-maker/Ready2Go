@@ -72,18 +72,24 @@ def modo_rbac() -> str:
     return MODO_LEGACY if valor == MODO_LEGACY else MODO_ADITIVO
 
 
-def _aditivos_concedidos(db: Session, user_id: int) -> list[str]:
+def _aditivos_concedidos(db: Session, user) -> list[str]:
     """Paquetes aditivos vigentes del usuario. Un paquete desactivado
     (`roles.is_active = 0`) no cuenta aunque la concesion siga en la tabla: es la
-    forma de apagar un paquete sin ir a revocarlo usuario por usuario."""
+    forma de apagar un paquete sin ir a revocarlo usuario por usuario.
+
+    Tampoco cuenta un paquete restringido a ciertos roles base (p. ej.
+    ADMIN_USUARIOS, solo para `admin`) si el usuario ya no tiene uno de esos
+    roles: una concesion que quedo de cuando si lo tenia no se vuelve poder."""
     filas = (
         db.query(UserRoleGrant.role_name)
         .join(Role, Role.name == UserRoleGrant.role_name)
-        .filter(UserRoleGrant.user_id == user_id)
+        .filter(UserRoleGrant.user_id == user.id)
         .filter(Role.is_active.is_(True))
         .all()
     )
-    return [fila[0] for fila in filas]
+    return [
+        fila[0] for fila in filas if rbac_catalog.es_concedible_a(fila[0], user.role)
+    ]
 
 
 def paquetes_aditivos_de(db: Session, user) -> list[str]:
@@ -97,7 +103,7 @@ def paquetes_aditivos_de(db: Session, user) -> list[str]:
     if user is None or user.role == SUPERADMIN:
         return []
     try:
-        return _aditivos_concedidos(db, user.id)
+        return _aditivos_concedidos(db, user)
     except SQLAlchemyError as exc:
         raise PermisosNoDisponibles() from exc
 
@@ -129,7 +135,7 @@ def permisos_efectivos(db: Session, user) -> dict[str, set[str]]:
         raise PermisosNoDisponibles("Sin sesion de base para resolver permisos.")
 
     try:
-        aditivos = _aditivos_concedidos(db, user.id)
+        aditivos = _aditivos_concedidos(db, user)
     except SQLAlchemyError as exc:
         # Aqui es donde se decide 503 vs 403. Devolver {} seria un 403 masivo
         # que parece politica; el cliente desloguearia y nadie miraria la base.

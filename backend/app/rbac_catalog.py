@@ -45,7 +45,12 @@ MODULOS: dict[str, tuple[str, ...]] = {
         "exportar",
     ),
     "equipos_aprobacion": ("autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"),
-    "usuarios": ("gestionar", "gestionar_roles"),
+    # `gestionar`/`gestionar_roles`: exclusivos de superadmin (R4). `gestionar`
+    # tambien guarda empresas y notificaciones, por eso el paquete delegado
+    # NO lo reusa: `administrar_cuentas` (cuentas de usuario) y `ver_roles`
+    # (solo lectura del catalogo y de los paquetes de cada usuario) son acciones
+    # propias de ADMIN_USUARIOS, sin tocar nada mas.
+    "usuarios": ("gestionar", "gestionar_roles", "administrar_cuentas", "ver_roles"),
     "auditoria": ("ver",),
 }
 
@@ -62,6 +67,10 @@ KIND_ADITIVO = "aditivo"
 # que `crud_rbac.titular_firma_equipo()` y `pdf/responsiva.py` no repitan el
 # literal.
 TITULAR_FIRMA_EQUIPO = "TITULAR_FIRMA_EQUIPO"
+
+# Paquete delegado de administracion de cuentas (ver su entrada en PAQUETES y
+# `docs/presupuestos/auth/admin-usuarios-delegado.md`).
+ADMIN_USUARIOS = "ADMIN_USUARIOS"
 
 PAQUETES: dict[str, dict] = {
     PISO: {
@@ -252,6 +261,21 @@ PAQUETES: dict[str, dict] = {
         "hardcodeado a una persona: si Melisa se va, se reasigna aqui y ya.",
         "permisos": {},
     },
+    "ADMIN_USUARIOS": {
+        "kind": KIND_ADITIVO,
+        # Solo se puede conceder (y solo aplica) a usuarios con rol base 'admin'.
+        "roles_base_permitidos": ("admin",),
+        "descripcion": "Administracion delegada de cuentas: ver usuarios, crearlos, editar nombre/correo/"
+        "rol, activar/desactivar, desbloquear y resetear contraseñas, mas ver el catalogo de roles y "
+        "los paquetes de cada usuario (solo lectura). Pensado para delegar el alta y soporte de cuentas "
+        "sin dar superadmin. LIMITES: solo opera sobre cuentas por DEBAJO de admin (no toca superadmin "
+        "ni otros admin, no promueve a nadie a admin, no toca al titular de la firma de Equipos), no "
+        "concede ni revoca paquetes y no ve Auditoria, Empresas ni Notificaciones. Solo puede "
+        "concederlo un superadmin y solo a usuarios con rol base admin.",
+        "permisos": {
+            "usuarios": ("administrar_cuentas", "ver_roles"),
+        },
+    },
 }
 
 
@@ -290,6 +314,21 @@ def es_singleton(nombre: str) -> bool:
     """
     paquete = PAQUETES.get(nombre)
     return bool(paquete and paquete.get("singleton", False))
+
+
+def roles_base_permitidos(nombre: str) -> tuple[str, ...] | None:
+    """Roles base que pueden tener este aditivo, o None si no hay restriccion.
+
+    Lo hacen valer dos capas: `user_roles.conceder_rol` (rechaza conceder) y
+    `rbac` al resolver permisos (ignora una concesion vieja o puesta a mano en
+    la base si el usuario ya no tiene un rol permitido)."""
+    paquete = PAQUETES.get(nombre)
+    return paquete.get("roles_base_permitidos") if paquete else None
+
+
+def es_concedible_a(nombre: str, rol_base: str) -> bool:
+    permitidos = roles_base_permitidos(nombre)
+    return permitidos is None or rol_base in permitidos
 
 
 def permisos_de_paquete(nombre: str) -> dict[str, set[str]]:

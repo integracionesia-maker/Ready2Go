@@ -7,7 +7,7 @@
     "equipos_inventario": ["ver","crear","editar","auditar_condicion","dar_de_baja"],
     "equipos_prestamos": ["solicitar","ver_propios","ver_global","registrar_devolucion","cancelar","exportar"],
     "equipos_aprobacion": ["autorizar_entrega","confirmar_devolucion","cerrar_incidencia"],
-    "usuarios": ["gestionar","gestionar_roles"],
+    "usuarios": ["gestionar","gestionar_roles","administrar_cuentas","ver_roles"],
     "auditoria": ["ver"]
   },
   "paquetes": {
@@ -25,7 +25,8 @@
     "CUSTODIO_EQUIPO":  {"kind":"aditivo","permisos":{"equipos_inventario":["crear","editar","auditar_condicion","dar_de_baja"],"equipos_prestamos":["ver_global"]}},
     "AUDITOR":          {"kind":"aditivo","permisos":{"presupuestos":["ver_global"],"equipos_inventario":["ver"],"equipos_prestamos":["ver_global"]}},
     "APROBADOR_PRESUPUESTOS": {"kind":"aditivo","permisos":{"presupuestos":["validar_ticket","borrar_ticket"]}},
-    "TITULAR_FIRMA_EQUIPO": {"kind":"aditivo","permisos":{}}
+    "TITULAR_FIRMA_EQUIPO": {"kind":"aditivo","permisos":{}},
+    "ADMIN_USUARIOS": {"kind":"aditivo","permisos":{"usuarios":["administrar_cuentas","ver_roles"]}}
   },
   "reglas": [
     "Permisos efectivos = UNION de los paquetes de [_PISO, rol base, ...aditivos concedidos].",

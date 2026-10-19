@@ -68,6 +68,15 @@ function formatLockedUntil(iso) {
   return new Date(iso).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+// Qué pasó con el perfil de creador al guardar un cambio de rol (`creador_accion`
+// de PUT /api/users/{id}).
+const AVISO_CREADOR = {
+  creado: (n) => `Perfil de creador «${n}» creado y enlazado`,
+  reactivado: (n) => `Perfil de creador «${n}» reactivado`,
+  vinculado: (n) => `Cuenta enlazada al creador «${n}»`,
+  desactivado: (n) => `Perfil de creador «${n}» desactivado`,
+};
+
 function emptyForm() {
   return {
     username: "",
@@ -123,6 +132,12 @@ async function mapWithConcurrencyLimit(items, limit, fn) {
 
 export default function UserManagement({ creators, onCreatorsChange }) {
   const { user: currentUser } = useAuth();
+  // El delegado ADMIN_USUARIOS (admin con el paquete) opera solo sobre cuentas
+  // por debajo de admin: no ve superadmins, no asigna ni toca el rol admin.
+  // El backend lo impone; esto evita ofrecer botones que devolverian 403.
+  const esSuperadmin = currentUser.role === "superadmin";
+  const rolesAsignables = esSuperadmin ? ROLE_OPTIONS : ROLE_OPTIONS.filter((r) => r.value !== "admin");
+  const puedeGestionar = (u) => u.role !== "superadmin" && (esSuperadmin || u.role !== "admin");
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -209,6 +224,10 @@ export default function UserManagement({ creators, onCreatorsChange }) {
   };
 
   const loadSuperAdmins = async () => {
+    if (!esSuperadmin) {
+      setSuperAdminLoading(false);
+      return;
+    }
     try {
       const data = await fetchUsers({ role: "superadmin", page_size: 200 });
       setSuperAdmins(data.items);
@@ -346,12 +365,19 @@ export default function UserManagement({ creators, onCreatorsChange }) {
 
       const creatorId = formData.role === "creador" ? Number(formData.creator_id) || null : null;
       if (editingUser) {
-        await updateUser(editingUser.id, {
+        // Al editar NO se manda creator_id: el backend crea, reactiva o
+        // desactiva el perfil de creador según el cambio de rol (y un null
+        // aquí ya no desvincula nada).
+        const actualizado = await updateUser(editingUser.id, {
           full_name: formData.full_name,
           email: formData.email,
           role: formData.role,
-          creator_id: creatorId,
         });
+        const titulo = AVISO_CREADOR[actualizado.creador_accion];
+        if (titulo) {
+          toast.push({ tone: "success", title: titulo(actualizado.creador_nombre) });
+          onCreatorsChange?.();
+        }
       } else {
         await createUser({
           username: formData.username,
@@ -406,6 +432,24 @@ export default function UserManagement({ creators, onCreatorsChange }) {
       setSubmitting(false);
     }
   };
+
+  // Aviso previo al guardar: qué va a pasar con el perfil de creador. El
+  // backend es quien lo hace; esto solo lo anuncia.
+  let avisoCambioRol = null;
+  if (editingUser && formData.role !== editingUser.role) {
+    const perfil = editingUser.creator_id
+      ? creators.find((c) => c.id === editingUser.creator_id)
+      : null;
+    if (formData.role === "creador") {
+      avisoCambioRol = perfil
+        ? perfil.is_active
+          ? `Esta cuenta ya está enlazada al creador «${perfil.name}»; se conserva.`
+          : `Se reactivará el perfil de creador «${perfil.name}» enlazado a esta cuenta.`
+        : `Se creará automáticamente el perfil de creador «${formData.full_name.trim()}» y se enlazará a esta cuenta. Su ciclo de presupuesto se configura después en Admin → Creadores.`;
+    } else if (editingUser.role === "creador" && perfil) {
+      avisoCambioRol = `El perfil de creador «${perfil.name}» se desactivará y dejará de aparecer en las listas. Su historial de tickets se conserva.`;
+    }
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -535,7 +579,7 @@ export default function UserManagement({ creators, onCreatorsChange }) {
             <tbody>
               {sortedUsers.map((u) => {
                 const isSelf = u.id === currentUser.id;
-                const isTargetSuperadmin = u.role === "superadmin";
+                const gestionable = puedeGestionar(u);
                 return (
                   <tr
                     key={u.id}
@@ -594,13 +638,13 @@ export default function UserManagement({ creators, onCreatorsChange }) {
                     <td onClick={(e) => e.stopPropagation()}>
                       <RowActions
                         actions={[
-                          !isTargetSuperadmin && {
+                          gestionable && {
                             key: "editar",
                             label: "Editar",
                             icon: ICONS.editar,
                             onClick: () => openEditForm(u),
                           },
-                          !isTargetSuperadmin && {
+                          gestionable && {
                             key: "toggle",
                             label: u.is_active ? "Desactivar" : "Activar",
                             icon: ICONS.toggle,
@@ -724,6 +768,7 @@ export default function UserManagement({ creators, onCreatorsChange }) {
           la única gestión entre pares es el reset de contraseña con
           confirmación fuerte — el botón solo se habilita tecleando el
           username exacto del objetivo. */}
+      {esSuperadmin && (
       <div className="rounded-go-lg border p-4" style={{ borderColor: "var(--go-border)" }}>
         <div className="flex items-center justify-between">
           <span className="go-eyebrow">Superadministradores</span>
@@ -831,6 +876,7 @@ export default function UserManagement({ creators, onCreatorsChange }) {
           </div>
         )}
       </div>
+      )}
 
     </GlassPanel>
 
@@ -891,12 +937,22 @@ export default function UserManagement({ creators, onCreatorsChange }) {
               onChange={(e) => setFormData({ ...formData, role: e.target.value, creator_id: "" })}
               className="go-select"
             >
-              {ROLE_OPTIONS.map((r) => (
+              {rolesAsignables.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
                 </option>
               ))}
             </select>
+            {avisoCambioRol && (
+              <p
+                role="status"
+                data-testid="aviso-cambio-rol"
+                className="mt-2 rounded-go border px-3 py-2 font-body text-xs"
+                style={{ borderColor: "var(--go-orange)", color: "var(--go-text-primary)" }}
+              >
+                {avisoCambioRol}
+              </p>
+            )}
           </div>
           {!editingUser && formData.role === "creador" && (
             <div>
