@@ -131,7 +131,11 @@ def get_creator(db: Session, creator_id: int) -> Optional[models.Creator]:
     return db.query(models.Creator).filter(models.Creator.id == creator_id).first()
 
 
-def create_creator(db: Session, data: schemas.CreatorCreate) -> models.Creator:
+def create_creator(
+    db: Session, data: schemas.CreatorCreate, commit: bool = True
+) -> models.Creator:
+    """`commit=False` deja el creador solo en `flush` para que quien llama lo
+    guarde junto con su usuario vinculado en una sola transacción."""
     creator = models.Creator(
         name=data.name,
         initial_budget=data.initial_budget,
@@ -140,8 +144,21 @@ def create_creator(db: Session, data: schemas.CreatorCreate) -> models.Creator:
         cycle_period=data.cycle_period,
     )
     db.add(creator)
-    db.commit()
-    db.refresh(creator)
+    if commit:
+        db.commit()
+        db.refresh(creator)
+    else:
+        db.flush()
+    return creator
+
+
+def create_creator_for_user(db: Session, name: str) -> models.Creator:
+    """Perfil de creador mínimo (sin ciclo ni presupuesto) para un usuario ya
+    existente que acaba de pasar a rol 'creador'. Solo `flush`: el commit lo
+    hace quien llama, junto con el cambio de rol."""
+    creator = models.Creator(name=name.strip()[:100], initial_budget=0.0, remaining_budget=0.0)
+    db.add(creator)
+    db.flush()
     return creator
 
 

@@ -68,6 +68,15 @@ function formatLockedUntil(iso) {
   return new Date(iso).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+// Qué pasó con el perfil de creador al guardar un cambio de rol (`creador_accion`
+// de PUT /api/users/{id}).
+const AVISO_CREADOR = {
+  creado: (n) => `Perfil de creador «${n}» creado y enlazado`,
+  reactivado: (n) => `Perfil de creador «${n}» reactivado`,
+  vinculado: (n) => `Cuenta enlazada al creador «${n}»`,
+  desactivado: (n) => `Perfil de creador «${n}» desactivado`,
+};
+
 function emptyForm() {
   return {
     username: "",
@@ -346,12 +355,19 @@ export default function UserManagement({ creators, onCreatorsChange }) {
 
       const creatorId = formData.role === "creador" ? Number(formData.creator_id) || null : null;
       if (editingUser) {
-        await updateUser(editingUser.id, {
+        // Al editar NO se manda creator_id: el backend crea, reactiva o
+        // desactiva el perfil de creador según el cambio de rol (y un null
+        // aquí ya no desvincula nada).
+        const actualizado = await updateUser(editingUser.id, {
           full_name: formData.full_name,
           email: formData.email,
           role: formData.role,
-          creator_id: creatorId,
         });
+        const titulo = AVISO_CREADOR[actualizado.creador_accion];
+        if (titulo) {
+          toast.push({ tone: "success", title: titulo(actualizado.creador_nombre) });
+          onCreatorsChange?.();
+        }
       } else {
         await createUser({
           username: formData.username,
@@ -406,6 +422,24 @@ export default function UserManagement({ creators, onCreatorsChange }) {
       setSubmitting(false);
     }
   };
+
+  // Aviso previo al guardar: qué va a pasar con el perfil de creador. El
+  // backend es quien lo hace; esto solo lo anuncia.
+  let avisoCambioRol = null;
+  if (editingUser && formData.role !== editingUser.role) {
+    const perfil = editingUser.creator_id
+      ? creators.find((c) => c.id === editingUser.creator_id)
+      : null;
+    if (formData.role === "creador") {
+      avisoCambioRol = perfil
+        ? perfil.is_active
+          ? `Esta cuenta ya está enlazada al creador «${perfil.name}»; se conserva.`
+          : `Se reactivará el perfil de creador «${perfil.name}» enlazado a esta cuenta.`
+        : `Se creará automáticamente el perfil de creador «${formData.full_name.trim()}» y se enlazará a esta cuenta. Su ciclo de presupuesto se configura después en Admin → Creadores.`;
+    } else if (editingUser.role === "creador" && perfil) {
+      avisoCambioRol = `El perfil de creador «${perfil.name}» se desactivará y dejará de aparecer en las listas. Su historial de tickets se conserva.`;
+    }
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -897,6 +931,16 @@ export default function UserManagement({ creators, onCreatorsChange }) {
                 </option>
               ))}
             </select>
+            {avisoCambioRol && (
+              <p
+                role="status"
+                data-testid="aviso-cambio-rol"
+                className="mt-2 rounded-go border px-3 py-2 font-body text-xs"
+                style={{ borderColor: "var(--go-orange)", color: "var(--go-text-primary)" }}
+              >
+                {avisoCambioRol}
+              </p>
+            )}
           </div>
           {!editingUser && formData.role === "creador" && (
             <div>

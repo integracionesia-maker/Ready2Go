@@ -159,19 +159,72 @@ def update_user(
     target = _get_target_or_404(db, user_id)
     _ensure_not_superadmin_target(target)
 
-    update_data = data.model_dump(exclude_unset=True)
+    # Un `null` explícito significa "no tocar": ninguna de estas columnas admite
+    # NULL salvo `creator_id`, y ese enlace se gestiona abajo (nunca se borra
+    # por mandar null, así el perfil de creador sobrevive a un cambio de rol).
+    update_data = {
+        k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None
+    }
 
-    if update_data.get("role") is not None:
+    if "role" in update_data:
         _ensure_assignable_role(update_data["role"])
-
-    if update_data.get("creator_id") is not None:
-        if not crud.get_creator(db, update_data["creator_id"]):
-            raise HTTPException(status_code=404, detail="Creador no encontrado.")
 
     if update_data.get("email"):
         existing = crud.get_user_by_email(db, update_data["email"])
         if existing and existing.id != target.id:
             raise HTTPException(status_code=409, detail="Ese correo ya está en uso.")
+
+    rol_anterior = target.role
+    rol_nuevo = update_data.get("role", rol_anterior)
+    era_creador = rol_anterior == models.UserRole.CREADOR.value
+    sera_creador = rol_nuevo == models.UserRole.CREADOR.value
+    creator_id_explicito = update_data.pop("creator_id", None)
+
+    elegido = None
+    if creator_id_explicito is not None:
+        if not sera_creador:
+            raise HTTPException(
+                status_code=400,
+                detail="Solo los usuarios de rol 'creador' pueden vincularse a un creador.",
+            )
+        elegido = crud.get_creator(db, creator_id_explicito)
+        if not elegido:
+            raise HTTPException(status_code=404, detail="Creador no encontrado.")
+        otro = (
+            db.query(models.User)
+            .filter(models.User.creator_id == elegido.id, models.User.id != target.id)
+            .first()
+        )
+        if otro:
+            raise HTTPException(status_code=409, detail="Ese creador ya tiene un usuario vinculado.")
+
+    # Un usuario con rol 'creador' SIEMPRE debe tener su perfil de creador
+    # (tickets, ciclos y préstamos de Equipos cuelgan de él). Al promover a
+    # alguien (p.ej. admin → creador) el perfil se crea o reactiva aquí mismo;
+    # al sacarlo del rol se desactiva (no se borra: conserva su historial).
+    accion = None
+    creador = None
+    if sera_creador:
+        if elegido is not None:
+            creador = elegido
+        elif target.creator_id:
+            creador = crud.get_creator(db, target.creator_id)
+        if creador is None:
+            nombre = update_data.get("full_name") or target.full_name
+            creador = crud.create_creator_for_user(db, nombre)
+            accion = "creado"
+        else:
+            if not era_creador and not creador.is_active:
+                creador.is_active = True
+                accion = "reactivado"
+            elif elegido is not None and elegido.id != target.creator_id:
+                accion = "vinculado"
+        target.creator_id = creador.id
+    elif era_creador and target.creator_id:
+        creador = crud.get_creator(db, target.creator_id)
+        if creador and creador.is_active:
+            creador.is_active = False
+            accion = "desactivado"
 
     try:
         updated = crud.update_user_admin(db, target, update_data)
@@ -179,10 +232,19 @@ def update_user(
         db.rollback()
         raise HTTPException(status_code=409, detail="Ese creador ya tiene un usuario vinculado.")
 
+    detalle = f"role {rol_anterior}->{rol_nuevo}" if rol_anterior != rol_nuevo else None
+    if accion and creador is not None:
+        detalle = f"{detalle + '; ' if detalle else ''}creador {accion} (creator_id={creador.id})"
     crud.log_audit(
         db, actor_user_id=current_user.id, action="user.update", target_type="user", target_id=target.id,
+        details=detalle,
     )
-    return updated
+
+    respuesta = schemas.UserResponse.model_validate(updated)
+    if accion and creador is not None:
+        respuesta.creador_accion = accion
+        respuesta.creador_nombre = creador.name
+    return respuesta
 
 
 @router.post("/{user_id}/reset-password", response_model=schemas.ResetPasswordResponse)
@@ -290,6 +352,15 @@ def set_user_estado(
     _ensure_not_superadmin_target(target)
 
     updated = crud.set_user_active(db, target, data.is_active)
+    # Un usuario 'creador' y su perfil van juntos: si la cuenta se desactiva (o
+    # reactiva), el perfil deja de aparecer (o vuelve a aparecer) en las listas.
+    # Solo aplica mientras el rol sea 'creador': un perfil desactivado porque su
+    # usuario pasó a otro rol no se reactiva por activar la cuenta.
+    if target.role == models.UserRole.CREADOR.value and target.creator_id:
+        perfil = crud.get_creator(db, target.creator_id)
+        if perfil and perfil.is_active != data.is_active:
+            perfil.is_active = data.is_active
+            db.commit()
     if not data.is_active:
         crud.revoke_all_refresh_tokens_for_user(db, target.id)
 
