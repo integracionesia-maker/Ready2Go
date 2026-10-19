@@ -13,6 +13,7 @@ import {
   ADMINISTRACION_ROLES,
   PRESUPUESTOS_ROLES,
   SUPERADMIN_ONLY,
+  puedeAdministrarUsuarios,
   TICKETS_ROLES,
   puedeValidarTickets,
 } from "./roles";
@@ -250,7 +251,7 @@ export default function PresupuestosLayout() {
             <Route
               path="/administracion-sistema"
               element={
-                <ProtectedRoute roles={SUPERADMIN_ONLY}>
+                <ProtectedRoute roles={SUPERADMIN_ONLY} allow={puedeAdministrarUsuarios(user)}>
                   {loading || networkError ? (
                     <LoadingScreen isOffline={networkError} onRetry={loadData} />
                   ) : (

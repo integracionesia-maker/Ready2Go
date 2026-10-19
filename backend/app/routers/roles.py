@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud_rbac, models, rbac_catalog, schemas_rbac
 from ..database import get_db
-from ..rbac import require_perm
+from ..rbac import require_cualquiera
 
 router = APIRouter(prefix="/api/roles", tags=["roles"])
 
@@ -26,7 +26,9 @@ router = APIRouter(prefix="/api/roles", tags=["roles"])
 @router.get("/", response_model=List[schemas_rbac.RolResponse])
 def listar_roles(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm("usuarios", "gestionar_roles")),
+    current_user: models.User = Depends(
+        require_cualquiera(("usuarios", "gestionar_roles"), ("usuarios", "ver_roles"))
+    ),
 ):
     filas = crud_rbac.listar_roles(db)
     activos = {fila.name: fila.is_active for fila in filas}

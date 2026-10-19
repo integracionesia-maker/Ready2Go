@@ -1,4 +1,6 @@
-"""Gestión de usuarios (sección Administración): exclusiva de superadmin.
+"""Gestión de usuarios (sección Administración): superadmin, y por delegación un
+`admin` con el paquete ADMIN_USUARIOS (solo cuentas por debajo de admin; ver
+`_ensure_alcance` y docs/presupuestos/auth/admin-usuarios-delegado.md).
 
 Cambio R4 (doc/prompt-mejoras-integrales.md): antes un admin podía gestionar
 usuarios de rol 'creador'; ahora TODA la gestión de usuarios es exclusiva del
@@ -13,13 +15,56 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .. import crud, models, schemas, security
+from .. import crud, crud_rbac, models, rbac_catalog, schemas, security
 from ..database import get_db
-from ..rbac import require_perm
+from ..errores import NoEncontrado, SinPermiso
+from ..rbac import require_cualquiera, require_perm
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 VALID_ROLES = {r.value for r in models.UserRole}
+
+# Puerta de las rutas de cuentas: superadmin (`gestionar`) o el paquete delegado
+# ADMIN_USUARIOS (`administrar_cuentas`). `gestionar` NO se reparte (tambien
+# guarda empresas y notificaciones); el delegado entra solo por aqui, y los
+# limites de abajo (`_ensure_alcance`, `_ensure_rol_asignable`) aplican a quien
+# no sea superadmin.
+_puerta_cuentas = require_cualquiera(
+    ("usuarios", "gestionar"), ("usuarios", "administrar_cuentas")
+)
+
+_ROLES_FUERA_DE_ALCANCE_DELEGADO = (
+    models.UserRole.SUPERADMIN.value,
+    models.UserRole.ADMIN.value,
+)
+
+
+def _es_superadmin(user: models.User) -> bool:
+    return user.role == models.UserRole.SUPERADMIN.value
+
+
+def _ensure_alcance(db: Session, actor: models.User, target: models.User) -> None:
+    """Quien no es superadmin (el delegado ADMIN_USUARIOS) solo opera sobre
+    cuentas POR DEBAJO de admin. Resetear la contraseña o cambiar el rol de un
+    admin equivale a tomar su cuenta y sus paquetes, y la del titular de la
+    firma de Equipos es una identidad que ningun permiso cubre."""
+    if _es_superadmin(actor):
+        return
+    if target.role in _ROLES_FUERA_DE_ALCANCE_DELEGADO:
+        raise SinPermiso(
+            "Tu paquete de administracion de cuentas solo opera sobre cuentas por debajo de administrador."
+        )
+    titular = crud_rbac.titular_firma_equipo(db)
+    if titular is not None and titular.id == target.id:
+        raise SinPermiso(
+            "Esta cuenta es la titular de la firma de Equipos; solo un superadmin puede gestionarla."
+        )
+
+
+def _ensure_rol_asignable(actor: models.User, role: str) -> None:
+    """El delegado no crea ni promueve administradores."""
+    if not _es_superadmin(actor) and role in _ROLES_FUERA_DE_ALCANCE_DELEGADO:
+        raise SinPermiso("Solo un superadmin puede asignar el rol 'admin'.")
 
 
 def _ensure_assignable_role(role: str) -> None:
@@ -58,12 +103,19 @@ def list_users(
     sort_by: str = Query("username"),
     sort_dir: str = Query("asc"),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
+    current_user: models.User = Depends(_puerta_cuentas),
 ):
+    exclude_roles = [exclude_role] if exclude_role else []
+    if not _es_superadmin(current_user):
+        # El delegado no ve las cuentas superadmin (ni siquiera que existen).
+        if role == models.UserRole.SUPERADMIN.value:
+            raise SinPermiso("Tu paquete de administracion de cuentas no incluye cuentas superadmin.")
+        exclude_roles.append(models.UserRole.SUPERADMIN.value)
+
     filas, total = crud.list_users(
         db,
         role=role,
-        exclude_role=exclude_role,
+        exclude_roles=exclude_roles,
         search=search,
         is_active=is_active,
         locked_only=locked_only,
@@ -85,9 +137,10 @@ def list_users(
 def create_user(
     data: schemas.UserCreateRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
+    current_user: models.User = Depends(_puerta_cuentas),
 ):
     _ensure_assignable_role(data.role)
+    _ensure_rol_asignable(current_user, data.role)
 
     if data.role == models.UserRole.CREADOR.value:
         if not data.creator_id:
@@ -144,9 +197,12 @@ def create_user(
 def get_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
+    current_user: models.User = Depends(_puerta_cuentas),
 ):
-    return _get_target_or_404(db, user_id)
+    target = _get_target_or_404(db, user_id)
+    if not _es_superadmin(current_user) and _es_superadmin(target):
+        raise NoEncontrado("Usuario no encontrado.")
+    return target
 
 
 @router.put("/{user_id}", response_model=schemas.UserResponse)
@@ -154,10 +210,11 @@ def update_user(
     user_id: int,
     data: schemas.UserUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
+    current_user: models.User = Depends(_puerta_cuentas),
 ):
     target = _get_target_or_404(db, user_id)
     _ensure_not_superadmin_target(target)
+    _ensure_alcance(db, current_user, target)
 
     # Un `null` explícito significa "no tocar": ninguna de estas columnas admite
     # NULL salvo `creator_id`, y ese enlace se gestiona abajo (nunca se borra
@@ -168,6 +225,7 @@ def update_user(
 
     if "role" in update_data:
         _ensure_assignable_role(update_data["role"])
+        _ensure_rol_asignable(current_user, update_data["role"])
 
     if update_data.get("email"):
         existing = crud.get_user_by_email(db, update_data["email"])
@@ -233,6 +291,19 @@ def update_user(
         raise HTTPException(status_code=409, detail="Ese creador ya tiene un usuario vinculado.")
 
     detalle = f"role {rol_anterior}->{rol_nuevo}" if rol_anterior != rol_nuevo else None
+    if rol_anterior != rol_nuevo:
+        # Un paquete restringido por rol base (ADMIN_USUARIOS, solo para admin)
+        # no sobrevive al cambio de rol: se revoca para no dejar una concesion
+        # colgada que reviva si el usuario vuelve a ser admin.
+        retirados = [
+            g.role_name
+            for g in crud_rbac.listar_grants(db, target.id)
+            if not rbac_catalog.es_concedible_a(g.role_name, rol_nuevo)
+        ]
+        for nombre in retirados:
+            crud_rbac.revocar(db, target.id, nombre)
+        if retirados:
+            detalle = f"{detalle}; paquetes revocados: {', '.join(retirados)}"
     if accion and creador is not None:
         detalle = f"{detalle + '; ' if detalle else ''}creador {accion} (creator_id={creador.id})"
     crud.log_audit(
@@ -251,10 +322,11 @@ def update_user(
 def reset_password(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
+    current_user: models.User = Depends(_puerta_cuentas),
 ):
     target = _get_target_or_404(db, user_id)
     _ensure_not_superadmin_target(target)
+    _ensure_alcance(db, current_user, target)
 
     temp_password = security.generate_temp_password()
     crud.set_user_password(db, target, security.hash_password(temp_password), must_change_password=True)
@@ -322,13 +394,14 @@ def reset_password_superadmin(
 def desbloquear_usuario(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
+    current_user: models.User = Depends(_puerta_cuentas),
 ):
     """Un clic: limpia intentos fallidos y `locked_until`, sin tocar contraseña
     ni sesiones. Para la cuenta superadmin sigue existiendo el camino dedicado
     (`reset-password-superadmin`, que ya desbloquea de paso)."""
     target = _get_target_or_404(db, user_id)
     _ensure_not_superadmin_target(target)
+    _ensure_alcance(db, current_user, target)
 
     crud.unlock_user(db, target)
     crud.log_audit(
@@ -346,10 +419,11 @@ def set_user_estado(
     user_id: int,
     data: schemas.SetUserActiveRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_perm("usuarios", "gestionar")),
+    current_user: models.User = Depends(_puerta_cuentas),
 ):
     target = _get_target_or_404(db, user_id)
     _ensure_not_superadmin_target(target)
+    _ensure_alcance(db, current_user, target)
 
     updated = crud.set_user_active(db, target, data.is_active)
     # Un usuario 'creador' y su perfil van juntos: si la cuenta se desactiva (o

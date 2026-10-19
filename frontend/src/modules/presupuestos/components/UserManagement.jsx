@@ -132,6 +132,12 @@ async function mapWithConcurrencyLimit(items, limit, fn) {
 
 export default function UserManagement({ creators, onCreatorsChange }) {
   const { user: currentUser } = useAuth();
+  // El delegado ADMIN_USUARIOS (admin con el paquete) opera solo sobre cuentas
+  // por debajo de admin: no ve superadmins, no asigna ni toca el rol admin.
+  // El backend lo impone; esto evita ofrecer botones que devolverian 403.
+  const esSuperadmin = currentUser.role === "superadmin";
+  const rolesAsignables = esSuperadmin ? ROLE_OPTIONS : ROLE_OPTIONS.filter((r) => r.value !== "admin");
+  const puedeGestionar = (u) => u.role !== "superadmin" && (esSuperadmin || u.role !== "admin");
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -218,6 +224,10 @@ export default function UserManagement({ creators, onCreatorsChange }) {
   };
 
   const loadSuperAdmins = async () => {
+    if (!esSuperadmin) {
+      setSuperAdminLoading(false);
+      return;
+    }
     try {
       const data = await fetchUsers({ role: "superadmin", page_size: 200 });
       setSuperAdmins(data.items);
@@ -569,7 +579,7 @@ export default function UserManagement({ creators, onCreatorsChange }) {
             <tbody>
               {sortedUsers.map((u) => {
                 const isSelf = u.id === currentUser.id;
-                const isTargetSuperadmin = u.role === "superadmin";
+                const gestionable = puedeGestionar(u);
                 return (
                   <tr
                     key={u.id}
@@ -628,13 +638,13 @@ export default function UserManagement({ creators, onCreatorsChange }) {
                     <td onClick={(e) => e.stopPropagation()}>
                       <RowActions
                         actions={[
-                          !isTargetSuperadmin && {
+                          gestionable && {
                             key: "editar",
                             label: "Editar",
                             icon: ICONS.editar,
                             onClick: () => openEditForm(u),
                           },
-                          !isTargetSuperadmin && {
+                          gestionable && {
                             key: "toggle",
                             label: u.is_active ? "Desactivar" : "Activar",
                             icon: ICONS.toggle,
@@ -758,6 +768,7 @@ export default function UserManagement({ creators, onCreatorsChange }) {
           la única gestión entre pares es el reset de contraseña con
           confirmación fuerte — el botón solo se habilita tecleando el
           username exacto del objetivo. */}
+      {esSuperadmin && (
       <div className="rounded-go-lg border p-4" style={{ borderColor: "var(--go-border)" }}>
         <div className="flex items-center justify-between">
           <span className="go-eyebrow">Superadministradores</span>
@@ -865,6 +876,7 @@ export default function UserManagement({ creators, onCreatorsChange }) {
           </div>
         )}
       </div>
+      )}
 
     </GlassPanel>
 
@@ -925,7 +937,7 @@ export default function UserManagement({ creators, onCreatorsChange }) {
               onChange={(e) => setFormData({ ...formData, role: e.target.value, creator_id: "" })}
               className="go-select"
             >
-              {ROLE_OPTIONS.map((r) => (
+              {rolesAsignables.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
                 </option>

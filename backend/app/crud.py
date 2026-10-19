@@ -1135,6 +1135,7 @@ def list_users(
     *,
     role: Optional[str] = None,
     exclude_role: Optional[str] = None,
+    exclude_roles: Optional[List[str]] = None,
     search: Optional[str] = None,
     is_active: Optional[bool] = None,
     locked_only: bool = False,
@@ -1146,10 +1147,10 @@ def list_users(
     q = db.query(models.User)
     if role:
         q = q.filter(models.User.role == role)
-    if exclude_role:
-        # ANTES del count(): el total de paginación debe respetar la exclusión
-        # (la tabla principal de Usuarios excluye superadmins, 2026-08-19).
-        q = q.filter(models.User.role != exclude_role)
+    # ANTES del count(): el total de paginación debe respetar la exclusión
+    # (la tabla principal de Usuarios excluye superadmins, 2026-08-19).
+    for excluido in [*([exclude_role] if exclude_role else []), *(exclude_roles or [])]:
+        q = q.filter(models.User.role != excluido)
     if is_active is not None:
         q = q.filter(models.User.is_active == is_active)
     if locked_only:

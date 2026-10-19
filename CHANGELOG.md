@@ -4,6 +4,26 @@ Registro de cambios del proyecto. Formato: `Agregado` / `Actualizado` / `Elimina
 
 ---
 
+## 2026-10-19 — Paquete `ADMIN_USUARIOS`: administrar cuentas sin ser superadmin
+
+### Agregado
+
+- **Paquete aditivo `ADMIN_USUARIOS`** (solo concedible a rol base `admin`, solo lo concede un superadmin): delega el alta y soporte de cuentas sin dar superadmin. Abre dos acciones nuevas de `usuarios`: `administrar_cuentas` (`/api/users/*`: listar, crear, editar nombre/correo/rol, activar/desactivar, desbloquear, resetear contraseña) y `ver_roles` (solo lectura del catálogo y de los paquetes de cada usuario). No reutiliza `usuarios:gestionar` porque esa también guarda Empresas y Notificaciones.
+- **Límites impuestos por el backend**: el delegado solo opera sobre cuentas por debajo de admin — no ve ni toca superadmins, no toca admins (ni la suya), no crea ni promueve a nadie a `admin`, no toca al titular de la firma de Equipos, y no concede ni revoca paquetes (solo los ve). Sigue sin acceso a Auditoría, Empresas ni Notificaciones.
+- Un paquete restringido por rol base se ignora si el usuario ya no tiene ese rol, y cambiar a un admin a otro rol le revoca el paquete.
+- UI: "Administración" en el menú de perfil y pestañas Usuarios / Roles y Permisos para el delegado (sin Asignaciones, sin tabla de superadmins, sin acciones sobre admins, sin la opción de rol "Administrador").
+- `crud.list_users` acepta `exclude_roles` (lista). Detalle: `docs/presupuestos/auth/admin-usuarios-delegado.md`.
+
+### Pruebas
+
+- Nuevo `tests/test_admin_usuarios_delegado.py` (32 casos); ajustada la tabla de superadmin en `tests/rbac/test_permisos_efectivos.py`.
+
+### Pendiente en cada entorno
+
+- Correr `python migrate_rbac_aditivo.py` desde `backend/` (idempotente) para sembrar el paquete. **Pendiente en producción.**
+
+---
+
 ## 2026-10-19 — Cambio de rol a/desde `creador` ya mantiene el perfil de creador
 
 ### Corregido

@@ -143,7 +143,7 @@ TODO_EL_CATALOGO = {
         "exportar",
     },
     "equipos_aprobacion": {"autorizar_entrega", "confirmar_devolucion", "cerrar_incidencia"},
-    "usuarios": {"gestionar", "gestionar_roles"},
+    "usuarios": {"gestionar", "gestionar_roles", "administrar_cuentas", "ver_roles"},
     "auditoria": {"ver"},
 }
 

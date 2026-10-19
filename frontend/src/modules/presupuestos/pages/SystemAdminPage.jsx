@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchUsers } from "@/api";
+import { useAuth } from "@/context/AuthContext";
 import UserManagement from "../components/UserManagement";
 import RoleManagement from "../components/RoleManagement";
 import UserRoleAssignment from "../components/UserRoleAssignment";
@@ -11,14 +12,19 @@ const TABS = [
 ];
 
 /**
- * Administracion del Sistema — exclusiva de superadmin (ProtectedRoute en
- * PresupuestosLayout). Separada de /administracion (Creadores/Marcas, que
- * admin tambien ve): gestion de usuarios y RBAC es SOLO de superadmin (R4).
+ * Administracion del Sistema — superadmin, o un admin con el paquete delegado
+ * ADMIN_USUARIOS (ProtectedRoute en PresupuestosLayout). Separada de
+ * /administracion (Creadores/Marcas, que admin tambien ve). El delegado ve
+ * Usuarios y el catalogo de Roles (solo lectura); conceder/revocar paquetes
+ * (Asignaciones) y las cuentas superadmin siguen siendo solo de superadmin (R4).
  */
 import { usePageTitle } from "@/design";
 
 export default function SystemAdminPage({ creators, onCreatorsChange }) {
   usePageTitle("Administración del Sistema");
+  const { user: sesion } = useAuth();
+  const esSuperadmin = sesion?.role === "superadmin";
+  const tabs = esSuperadmin ? TABS : TABS.filter((t) => t.key !== "asignaciones");
   const [tab, setTab] = useState("usuarios");
 
   const [users, setUsers] = useState([]);
@@ -26,6 +32,11 @@ export default function SystemAdminPage({ creators, onCreatorsChange }) {
   const [usersError, setUsersError] = useState(null);
 
   useEffect(() => {
+    // Solo la pestaña Asignaciones (superadmin) usa esta lista.
+    if (!esSuperadmin) {
+      setUsersLoading(false);
+      return undefined;
+    }
     let active = true;
     setUsersLoading(true);
     setUsersError(null);
@@ -55,7 +66,7 @@ export default function SystemAdminPage({ creators, onCreatorsChange }) {
           className="flex items-center gap-1 rounded-go p-1"
           style={{ background: "var(--go-surface)" }}
         >
-          {TABS.map((t) => {
+          {tabs.map((t) => {
             const isActive = tab === t.key;
             return (
               <button
@@ -78,7 +89,7 @@ export default function SystemAdminPage({ creators, onCreatorsChange }) {
         <UserManagement creators={creators} onCreatorsChange={onCreatorsChange} />
       )}
       {tab === "roles" && <RoleManagement />}
-      {tab === "asignaciones" &&
+      {esSuperadmin && tab === "asignaciones" &&
         (usersError ? (
           <div
             className="rounded-go border px-4 py-3 font-body text-sm"
