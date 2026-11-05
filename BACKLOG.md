@@ -1,75 +1,73 @@
 # BACKLOG — GOCreate (Presupuestos + Control de Equipos)
 
-> Plataforma interna del area de marketing de Grupo Ortiz. Dos modulos, una app.
-> Fase actual: **5 Build** (modulo Control de Equipos, arranca 27/07) · Presupuestos en Fase 5.
-> Plan de referencia: `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md` · Contrato congelado: `docs/contratos/`
-> El trabajo esta repartido en carriles con interseccion de archivos cero. Cada carril tiene su lista de tareas
-> en su propia rama (`docs/ASIGNACION_EQUIPOS.md`); las tareas E1-E17 de abajo son el mapa global de la fase.
+> Plataforma interna del area de marketing de Grupo Ortiz. Dos modulos, una app. Corte: 05/11/26.
+> Fase actual: **8 Produccion** (Observatorio, 30/10/26) · en `https://gocreate.mx` · mejora continua en paralelo.
+> Plan de referencia: `docs/equipos/plan-quirurgico.md` · Contrato congelado: `docs/equipos/contratos/`
+> Seguridad: gaps abiertos en `SECURITY.md` (los #13-#19 de abajo salen de ahi).
 
 ---
 
-## Cierres de fin de proyecto — NINGUNO bloquea el arranque
+## Cierres de fin de proyecto (con marketing)
 
-Cada uno tiene su plan B ya definido, por eso el build corre sin ellos. Se cierran antes del piloto, no antes de escribir codigo.
+Ya no bloquean nada: el sistema esta en produccion. Lo que sigue abierto se confirma con Damian.
 
-| # | Pendiente | De quien | Plan B mientras tanto |
+| # | Pendiente | De quien | Estado al 05/11/26 |
 |---|---|---|---|
-| T1 | Nombres + correos GO del area | Emily | Usuarios de prueba sembrados |
-| T2 | Inventario de camaras, luces y tripies | Emily / Betzabet | Seed con los 8 equipos ya auditados |
-| T3 | Razon social emisora de la responsiva | Marketing / RH | Sale de la tabla `empresa`, nunca hardcode |
-| T4 | Nombre de dominio | Emily / Melisa | **Diferido por Jose 27/07: no es necesario para desarrollo** |
-| T6 | Credenciales SMTP | Jose / Sistemas | `NOTIF_ENABLED=false` |
-| T7 | Fuentes Blauer Nue / Conthic en woff2 | `context_desing_go` | Pila de respaldo con `font-display: swap` |
+| T1 | Nombres + correos GO del area | Emily | Por confirmar con Damian (hay usuarios reales: 27 al 27/08) |
+| T2 | Inventario de camaras, luces y tripies | Emily / Betzabet | Por confirmar (9 equipos en produccion al 27/08) |
+| T3 | Razon social emisora de la responsiva | Marketing / RH | Sale de la tabla `empresa` (3 al 27/08) |
+| T4 | Nombre de dominio | Emily / Melisa | **Cerrado:** `gocreate.mx` |
+| T6 | Credenciales SMTP | Jose / Sistemas | Por confirmar: el doc de migracion decia sin `SMTP_*` en produccion |
+| T7 | Fuentes Blauer Nue / Conthic en woff2 | `context_desing_go` | Abierto: `frontend/src/design/fonts.css` usa pila de respaldo |
 
-T5 (aprobacion del costo del dominio) — **cerrado 27/07, Melisa aprobo por correo.**
+T5 (aprobacion del costo del dominio) — cerrado 27/07, Melisa aprobo por correo.
 
-## Pendientes — modulo Control de Equipos (por WP del plan)
+## Control de Equipos — mapa E1-E17 (plan original)
 
-| # | Tarea | WP | Fase | Prioridad | Estado |
-|---|---|---|---|---|---|
-| E1 | RBAC aditivo: 3 tablas + motor `rbac.py` + `require_perm` + permisos en `/auth/me` + migracion idempotente | WP1 | 5 | Alta | Pendiente |
-| E2 | Pruebas de RBAC: set efectivo por combinacion de roles, 503 en fallo de DB, `APROBADOR_EQUIPO` sin acceso a presupuestos | WP1 | 5 | Alta | Pendiente |
-| E3 | Modelo de datos de equipos: 11 tablas, indice unico parcial de disponibilidad, `folio_counter`, `empresa` | WP2 | 5 | Alta | Pendiente |
-| E4 | Seed del inventario auditado (8 equipos del 10/06) + 2 razones sociales | WP2 | 5 | Alta | Pendiente |
-| E5 | API inventario + auditorias de condicion + ficha con historial | WP3 | 5 | Alta | Pendiente |
-| E6 | API prestamos: borrador, items (409 si ocupado), media, confirmar, cancelar, devolucion, historial, export CSV | WP4 | 5 | Alta | Pendiente |
-| E7 | API aprobacion: autorizar entrega, confirmar devolucion por equipo, cerrar incidencia | WP4 | 5 | Alta | Pendiente |
-| E8 | Carta responsiva PDF en servidor (reportlab) + versionado + hash | WP5 | 5 | Alta | Pendiente |
-| E9 | Mailer SMTP + `notification_log` idempotente + reintentos | WP6 | 5 | Alta | Pendiente |
-| E10 | Recordatorio diario de prestamos vencidos (LaunchAgent, no cron en uvicorn) | WP6 | 5 | Media | Pendiente |
-| E11 | Shell liquid glass: tokens, primitivas, fuentes de marca, `motion`, dark/light | WP7 | 5 | Alta | Pendiente |
-| E12 | Migracion visual de las vistas de Presupuestos al shell nuevo (sin tocar logica) | WP7 | 5 | Media | Pendiente |
-| E13 | Frontend inventario (busqueda, filtros, ficha, alta/edicion, auditoria) | WP8 | 5 | Alta | Pendiente |
-| E14 | Frontend nuevo prestamo (wizard 4 pasos + `SignaturePad` + `PhotoCapture`) | WP8 | 5 | Alta | Pendiente |
-| E15 | Frontend activos + aprobaciones + historial + ficha de prestamo con bitacora | WP8 | 5 | Alta | Pendiente |
-| E16 | Dashboard de equipos (KPIs, requiere atencion, distribucion de estados) | WP8 | 5 | Media | Pendiente |
-| E17 | e2e Playwright del flujo completo (solicitar → firmar → autorizar → devolver → confirmar) | WP8 | 6 | Alta | Pendiente |
+| # | Tarea | WP | Estado |
+|---|---|---|---|
+| E1-E2 | RBAC aditivo y sus pruebas | WP1 | Hecho — `app/rbac.py`, `tests/rbac/` |
+| E3-E4 | Modelo de datos y seed del inventario | WP2 | Hecho — `models_equipos.py`, `migrate_equipos.py`, `seed_equipos.py` |
+| E5-E7 | API inventario, prestamos y aprobacion | WP3-4 | Hecho — `routers/equipment.py`, `loans.py`, `approvals.py` |
+| E8 | Carta responsiva PDF versionada con hash | WP5 | Hecho — `app/pdf/responsiva.py` |
+| E9 | Mailer SMTP + log idempotente | WP6 | Hecho — `mailer.py`, `notificaciones.py`; BCC `25d432f` |
+| E10 | Recordatorio diario de vencidos | WP6 | **Cancelado 14/09/26** (script eliminado; `docs/deploy/recordatorios_launchagent.md`). Reabrir si marketing lo pide |
+| E11 | Shell liquid glass | WP7 | Parcial — `frontend/src/design/`; faltan fuentes de marca (T7) |
+| E12 | Migrar vistas de Presupuestos al shell | WP7 | Hecho — `Glass*` usados en `modules/presupuestos` |
+| E13-E16 | Frontend inventario, prestamo, activos/aprobaciones/historial, dashboard | WP8 | Hecho — `frontend/src/modules/equipos/pages/` |
+| E17 | e2e del flujo completo | WP8 | Hecho — `frontend/e2e/equipos-flujo-completo.spec.js` |
 
-## Pendientes — modulo Presupuestos y transversales
+## Pendientes
 
-| # | Tarea | Fase | Prioridad | Estado |
-|---|---|---|---|---|
-| 3 | Backups automaticos de `presupuesto.db` **y de `uploads/`** (ahora guardara responsivas firmadas) | 5 | Alta | Pendiente |
-| 4 | Tests de CRUD de creadores/marcas (la suite actual cubre permisos y calculo, no CRUD puro) | 6 | Media | Pendiente |
-| 5 | Crear `SECURITY.md` con checklist formal | 6 | Media | Pendiente |
-| 8 | HTTPS + CSP + HSTS + revision de `CORS_ORIGINS` antes de exponer fuera de `127.0.0.1` | 6 | Alta | Pendiente |
-| 9 | Auditoria `/cyber-neo` del modulo nuevo antes de piloto | 6 | Alta | Pendiente |
-| 10 | Dominio + deploy en Mac mini segun `doc/deploy-runbook.md` | 8 | Alta | Pendiente |
-| 11 | Rate limit de login en almacen compartido si se escala a varios workers | 8 | Baja | Pendiente |
+| # | Tarea | Prioridad | Estado |
+|---|---|---|---|
+| 3 | Respaldos **programados** de `presupuesto.db` y `uploads/` (hoy solo al desplegar: 7 copias, misma maquina, sin cifrar) | Alta | Pendiente |
+| 4 | Tests de CRUD de creadores/marcas | Media | Pendiente |
+| 8 | CSP + HSTS + `nosniff` y revisar `CORS_ORIGINS` (HTTPS ya lo da Cloudflare) | Alta | Pendiente |
+| 9 | Auditoria `/cyber-neo` del modulo Equipos | Alta | Pendiente |
+| 11 | Rate limit de login en almacen compartido (solo si hay varios workers) | Baja | Pendiente |
+| 13 | Comprobantes de ticket: validar firma de bytes y leer por partes (diag. M1, M2) | Media | Pendiente |
+| 14 | Exigir `must_change_password` en el backend (diag. M7) | Media | Pendiente |
+| 15 | Correr `migrate_rbac_aditivo.py` en produccion (siembra `ADMIN_USUARIOS`) | Alta | Pendiente |
+| 16 | Confirmar correo en produccion (`NOTIF_ENABLED`, SMTP) | Media | Por confirmar con Damian |
+| 17 | Ignorar `backend/presupuesto.db.bak-*` en `.gitignore`; sanear PII de `seed_usuarios_mkt.py` (diag. A3) | Media | Pendiente |
+| 18 | Saneo de `audit_log` anterior al 18/08/26 con contrasenas (diag. C1) | Media | Por confirmar con Damian |
+| 19 | `react-router-dom` 6 a 7 (2 avisos moderados) | Baja | Pendiente |
 
 ## En progreso
 
-_Ninguna. El modulo Equipos espera luz verde; Presupuestos sin cambios esta semana._
+_Ninguna registrada en el repo (ultimo commit 19/10/26)._
 
 ## Completados (recientes)
 
-| # | Tarea | Fase | Completado | Evidencia |
-|---|---|---|---|---|
-| 12 | Plan quirurgico de integracion de Control de Equipos (RBAC aditivo, modelo de datos, PDF, correo, liquid glass, 22 hallazgos adversariales) | 3.5 | 27 Jul 2026 | `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md` |
-| 13 | Repo renombrado a Ready2Go, remote reapuntado, `jose-branch` creada, referencias del pool actualizadas | 3.5 | 27 Jul 2026 | `git remote -v` → `integracionesia-maker/Ready2Go`; OWNERS.md, context_proyectos.md, playbook_registry.json |
-| 14 | Decision de tipografia de marca (Blauer Nue + Conthic + JetBrains Mono) — cierra pendiente historico #7 | 3.5 | 27 Jul 2026 | `DESIGN_SYSTEM.md` |
-| 1 | Inicializar repo git | 5 | 17 Jul 2026 | Historial real en `master` |
-| 2 | Autenticacion / control de acceso en la API | 5 | 17 Jul 2026 | `doc/auth-arquitectura.md`, 167 pruebas |
-| 6 | Confirmar owner del proyecto (Damian, supervision Jose) | 5 | 17 Jul 2026 | `OWNERS.md` raiz del pool |
-| 7 | Responsividad movil completa (320px, `RowActions`, scroll de tablas) | 5 | 23 Jul 2026 | `doc/responsividad-movil.md` |
-| 8 | Gastos generales + borrado logico/fisico de tickets (R12) | 5 | 23 Jul 2026 | `doc/gastos-generales-manual.md`, `doc/borrado-tickets.md` |
+| # | Tarea | Completado | Evidencia |
+|---|---|---|---|
+| 5 | `SECURITY.md` con checklist formal | 05 Nov 2026 | `SECURITY.md` |
+| 10 | Dominio + deploy en Mac mini | 2026 (fecha Por conciliar: 10/08 Observatorio; 27/08 y 01/09 en el repo) | `docs/deploy/`, `status.md` |
+| 20 | Paquete `ADMIN_USUARIOS` y rol/perfil de creador | 19 Oct 2026 | `0676c64`, `4695ba2` |
+| 21 | Reporte del dashboard en HTML autocontenido | 09 Oct 2026 | `a7cbdce` |
+| 22 | Firma predeterminada del perfil | 06 Oct 2026 | `79ff3bd` |
+| 23 | Fotos de entrega reemplazables; meta de gasto mensual y periodo unico | 15 Sep 2026 | `4c5ea3d`, `abf34cb` |
+| 24 | Fecha de regreso editable, BCC en correos, auto-desbloqueo | 14 Sep 2026 | `4838ebc`, `25d432f`, `367de7f` |
+| 25 | Diagnostico de seguridad y correcciones criticas | 18 Ago 2026 | `docs/seguridad/`, `f58edb9` |
+| 1, 2, 6, 7, 12-14 | Repo, auth, owner, responsividad, plan quirurgico, renombre, tipografia (y gastos generales/borrado, antes #8) | Jul 2026 | ver `CHANGELOG.md` y `docs/` |

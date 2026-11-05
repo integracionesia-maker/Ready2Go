@@ -2,7 +2,7 @@
 
 > Conexiones pool: [[CLAUDE]] | [[context_proyectos]] | [[framework_operative_enforcement/CLAUDE]] | [[framework_operative_enforcement/PLAYBOOK]] | [[framework_operative_enforcement/FRAMEWORK]]
 > Recursos: [[IDENTIDAD DE MARCA/context_design]] (visual)
-> Archivos del proyecto: [[CLAUDE]] | [[status]] | [[BACKLOG]] | [[RISKS]] | [[MVP_BREAKDOWN]] | [[DESIGN_SYSTEM]] | [[CHANGELOG]] | [[avances_diarios]] | [[docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26]]
+> Archivos del proyecto: [[CLAUDE]] | [[status]] | [[BACKLOG]] | [[RISKS]] | [[MVP_BREAKDOWN]] | [[DESIGN_SYSTEM]] | [[CHANGELOG]] | [[avances_diarios]] | [[SECURITY]] | [[docs/equipos/plan-quirurgico]]
 
 ## 1. Resumen
 
@@ -10,9 +10,9 @@
 - Departamento: Inteligencia Operativa / Marketing (Grupo Ortiz)
 - Owner: Damian (marketing) — supervision: Jose Aguilar
 - Repo: `github.com/integracionesia-maker/Ready2Go` · ramas: `master`, `dami-branch`, `jose-branch`, `BeniBranch`
-- Estado: modulo Presupuestos en Fase 5 (uso interno local); modulo Control de Equipos en **Fase 3.5 (plan aprobado, sin construir)**
-- Ultima actualizacion: 2026-07-27 (integracion de Control de Equipos: plan quirurgico, RBAC aditivo, direccion visual liquid glass)
-- Clasificacion: Herramienta interna — desarrollo activo
+- Estado: **Fase 8 Produccion** (Observatorio, 30/10/26) en `https://gocreate.mx`; Presupuestos y Control de Equipos construidos y operando
+- Ultima actualizacion: 2026-11-05 (puesta al dia: produccion, Equipos construido, pruebas, riesgos). Antes: 2026-07-27
+- Clasificacion: Herramienta interna — en produccion
 
 ## 2. Problema
 
@@ -27,7 +27,7 @@ Una sola plataforma, un login, dos modulos:
 
 **Presupuestos** (existente): creadores + ciclos semanal/mensual, tickets con comprobante y validacion, gastos generales por marca, borrado logico/fisico, dashboard con KPIs y graficos, reporte PDF.
 
-**Control de Equipos** (plan aprobado): inventario con ficha e historial de auditorias de condicion, prestamo con seleccion de equipos y accesorios, foto frente+atras obligatoria por equipo en entrega y devolucion, firma digital de quien entrega y quien recibe, carta responsiva en PDF generada en servidor con folio, autorizacion de entrega y confirmacion de devolucion por la aprobadora, notificacion por correo, historial exportable.
+**Control de Equipos** (construido; plan en `docs/equipos/plan-quirurgico.md`): inventario con ficha e historial de auditorias de condicion, prestamo con seleccion de equipos y accesorios, foto frente+atras obligatoria por equipo en entrega y devolucion, firma digital de quien entrega y quien recibe, carta responsiva en PDF generada en servidor con folio, autorizacion de entrega y confirmacion de devolucion por la aprobadora, notificacion por correo, historial exportable.
 
 ## 4. Usuarios
 
@@ -36,11 +36,13 @@ Una sola plataforma, un login, dos modulos:
 | `superadmin` | Damian, Jose | Todo, incluida gestion de usuarios y roles |
 | `admin` | Marketing (presupuestos) | Presupuestos completo + operacion de equipos. Sin gestion de usuarios (R4) |
 | `creador` | Creadores de contenido | Sube sus tickets, ve solo lo propio |
-| `colaborador_mkt` (nuevo) | Area de marketing | Pide equipo, ve su propio historial. Nada de presupuestos |
+| `marketing_presupuestos`, `marketing_equipos`, `marketing_admin`, `marketing_basico` | Area de marketing | Presupuestos y/o Equipos segun el rol (`app/rbac_catalog.py`) |
+| `colaborador_mkt` (legado), `usuario` | Area de marketing / empleados | Pide equipo y ve lo propio; `usuario` solo inicio y perfil |
 | `APROBADOR_EQUIPO` (aditivo) | Melisa | Autoriza entregas, confirma devoluciones, cierra incidencias |
-| `CUSTODIO_EQUIPO` (aditivo) | A definir con el area | Alta/edicion/auditoria/baja de inventario |
+| `CUSTODIO_EQUIPO`, `AUDITOR`, `APROBADOR_PRESUPUESTOS` (aditivos) | A definir con el area | Inventario; solo lectura global; aprobar tickets sin ser admin |
+| `TITULAR_FIRMA_EQUIPO`, `ADMIN_USUARIOS` (aditivos) | Una persona / un admin | Firma de entrega en la responsiva; administrar cuentas sin ser superadmin |
 
-Roles aditivos: se suman al rol base, no lo reemplazan. Matriz completa: §3 del plan quirurgico.
+Roles aditivos: se suman al rol base, no lo reemplazan. 9 roles base y 6 paquetes aditivos en `app/rbac_catalog.py`; matriz original: §3 del plan quirurgico.
 
 ## 5. Proceso objetivo (Control de Equipos)
 
@@ -55,12 +57,12 @@ Roles aditivos: se suman al rol base, no lo reemplazan. Matriz completa: §3 del
 
 ## 6. Sistema / stack
 
-- Backend: FastAPI + SQLAlchemy + SQLite (`backend/presupuesto.db`), routers `auth users creators brands tickets dashboard general_expenses` (+ `equipment loans approvals notifications` por construir)
-- Frontend: Vite 6 + React 18.3.1 + Tailwind 3 + ApexCharts. 100% React (cero HTML/JS suelto)
-- Auth: JWT en cookie httpOnly + refresh token rotativo, rate limit de login, 167 pruebas
-- PDF: cliente (`jspdf` + `html2canvas`, reporte de dashboard) y servidor (`reportlab`, carta responsiva — por construir)
-- Correo: SMTP corporativo GO (por construir)
-- Sin deploy — local `127.0.0.1:8000` / `127.0.0.1:5173`
+- Backend: FastAPI + SQLAlchemy + SQLite (`backend/presupuesto.db`), routers `auth users creators brands tickets dashboard general_expenses operational_expenses rubros roles user_roles empresas equipment loans approvals media responsivas notifications audit_logs firma_guardada`
+- Frontend: Vite 6 + React 18.3.1 + Tailwind 3 + ApexCharts (v1.1.0). 100% React (cero HTML/JS suelto)
+- Auth: JWT en cookie httpOnly + refresh token rotativo, bloqueo por cuenta, rate limit de login por IP; detalle en `SECURITY.md`
+- Reportes: carta responsiva PDF en servidor (`reportlab`, versionada con sha256); reporte del dashboard como HTML autocontenido (el PDF del dashboard se reemplazo el 09/10/26)
+- Correo: SMTP por `smtplib` con copia oculta `SMTP_BCC`; apagado por defecto (`NOTIF_ENABLED=false`). Estado real en produccion: Por confirmar con Damian
+- Produccion: `https://gocreate.mx` en la Mac mini (tunel Cloudflare, uvicorn `127.0.0.1:8000`, un worker); local `127.0.0.1:8000` / `127.0.0.1:5173`
 
 ## 7. Tabla de fases
 
@@ -70,38 +72,40 @@ Roles aditivos: se suman al rol base, no lo reemplazan. Matriz completa: §3 del
 | 1 Descubrimiento | Hecho | Hecho (transcript + maqueta HTML) |
 | 2 Clasificacion | Hecho | Hecho (herramienta interna) |
 | 3 Diseno operativo | Hecho | Hecho (flujo y roles en el plan) |
-| 3.5 Planeacion Quirurgica | n/a | **Hecho — plan aprobado 27/07, esperando luz verde de build** |
+| 3.5 Planeacion Quirurgica | n/a | Hecho — plan aprobado 27/07 |
 | 4 Diseno tecnico | Hecho | Hecho (modelo de datos + API + RBAC en el plan) |
-| 5 Build | En curso | No iniciado |
-| 6 Revision critica | Pendiente | Pendiente |
-| 7 Piloto | Pendiente | Pendiente (Emily, Betzabet, Melisa) |
-| 8 Produccion | Pendiente (falta dominio + HTTPS) | Pendiente |
-| 9 Mejora continua | — | — |
+| 5 Build | Hecho | Hecho (construido jul-sep 2026; 786 funciones de prueba) |
+| 6 Revision critica | Parcial (diagnostico de seguridad 18/08/26; falta `/cyber-neo` de Equipos) | Parcial |
+| 7 Piloto | Sin registro en el repo | Sin registro en el repo (Por confirmar con Damian) |
+| 8 Produccion | **En curso — fase actual (Observatorio, 30/10/26)**; `gocreate.mx` | En produccion (mismo despliegue) |
+| 9 Mejora continua | Activa (meta mensual, reporte HTML, paquetes delegados) | Activa (fotos reemplazables, fecha de regreso editable, firma guardada) |
+
+Fecha de produccion: Observatorio dice desde el 10/08/26; el repo prueba `gocreate.mx` con datos reales el 27/08/26 y la Mac mini el 01/09/26 (ver `status.md`, «Por conciliar con Damian»).
 
 ## 8. Dependencias
 
-- Ninguna API externa hoy. Por agregar: cuenta SMTP corporativa GO.
-- `reportlab` (PDF servidor), `motion` (animacion) — por agregar en el build.
-- Fuentes de marca Blauer Nue / Conthic en woff2 desde `context_desing_go`.
-- Pendientes de marketing que bloquean fases (no el plan): tabla de nombres+correos del area, inventario de camaras/luces/tripies, confirmacion de la razon social emisora de la responsiva, nombre de dominio, aprobacion firmada del costo del dominio (~11 USD/ano).
+- Servicios: Cloudflare (dominio `gocreate.mx` y tunel), Tailscale (acceso SSH de deploy). Correo SMTP corporativo GO: implementado, estado en produccion Por confirmar.
+- `reportlab` y `pillow` (PDF y validacion de imagen) ya estan en `backend/requirements.txt`.
+- Fuentes de marca Blauer Nue / Conthic en woff2 desde `context_desing_go`: **siguen pendientes** (`frontend/src/design/fonts.css` usa pila de respaldo).
+- Dominio y su costo: resueltos (BACKLOG T4/T5). Siguen abiertos con marketing: nombres+correos del area, inventario de camaras/luces/tripies y razon social emisora (BACKLOG T1-T3), segun lo ya sembrado en produccion Por confirmar.
 
 ## 9. Riesgos
 
-Ver `RISKS.md`. Top 3 hoy:
-1. Sin HTTPS/CSP/HSTS — bloquea exponer la app fuera de `127.0.0.1`, y el modulo de equipos no sirve en local: los colaboradores lo usan desde su celular.
-2. La superficie de datos sensibles crece: fotos de equipo, firmas y cartas responsivas son evidencia; un IDOR ahi filtra documentos firmados de personas (ya paso una vez con comprobantes de tickets, corregido).
-3. Sin backups automaticos de `presupuesto.db` ni de `uploads/` — y con el modulo de equipos, `uploads/` pasa a contener las responsivas firmadas.
+Ver `RISKS.md`. Top 3 al 05/11/26:
+1. Respaldos solo en cada deploy (7 copias, misma maquina, sin cifrar); `uploads/` guarda las responsivas firmadas.
+2. Sin cabeceras de seguridad (CSP, HSTS, `nosniff`) en la app; HTTPS ya lo da Cloudflare. Ver `SECURITY.md`.
+3. Datos sensibles de Equipos (fotos, firmas, responsivas): hoy protegidos por endpoint con sesion y participacion; la firma no es firma electronica avanzada.
 
 ## 10. Metricas
 
-- MVP total (dos modulos): ver `MVP_BREAKDOWN.md` — 40% (el porcentaje baja porque el alcance crecio, no porque se perdiera trabajo)
-- Semaforo: Verde (plan cerrado el mismo dia de la reunion, sin bloqueos internos)
-- Pruebas: 167 pytest (auth, permisos, ciclos, validacion, borrado, gastos generales) + 3 suites e2e Playwright
-- Datos: 6 creadores, 8 marcas, 89 tickets, 12 meses de historial. Inventario: 8 equipos ya auditados (10/06/2026) listos para seed
+- MVP total: 91% (30/33) segun `MVP_BREAKDOWN.md`; plan original A+B 88% (22/25). Observatorio (Damian, 30/10/26): 100% — Por conciliar con Damian
+- Semaforo: Verde (Observatorio, 30/10/26)
+- Pruebas: 786 funciones `def test_` en `backend/tests` (conteo por busqueda) + 11 specs e2e Playwright. Otras cifras en docs (680, 801, 871+) son de otras fechas
+- Datos de produccion al 27/08/26 (droplet): 27 usuarios, 7 creadores, 26 tickets, 9 equipos, 3 razones sociales. Cifras actuales Por confirmar con Damian
 
 ## 11. Seguridad
 
-`SECURITY.md` sigue pendiente de crear (BACKLOG). Gaps: sin HTTPS/CSP/HSTS, sin backups automaticos, rate limit de login en memoria de un solo proceso. El plan de equipos suma requisitos: validacion de subidas por magic bytes, media y PDF servidos solo por endpoint autenticado con autorizacion por participacion, y PDF de responsiva versionado con hash (nunca sobrescrito).
+`SECURITY.md` existe desde el 05/11/26 (describe lo que hace el codigo y 13 gaps abiertos). Diagnostico previo: `docs/seguridad/diagnostico-seguridad-2026-08-18.md`. Resumen: cookies httpOnly, refresh rotativo, RBAC deny-by-default, subidas de Equipos por firma de bytes, media y PDF solo por endpoint con participacion, responsiva versionada con sha256. Abiertos: cabeceras de seguridad, respaldos programados, rate limit en memoria, comprobantes de ticket sin validar firma de bytes.
 
 ## 12. Diseno visual
 
@@ -110,14 +114,14 @@ Ver `RISKS.md`. Top 3 hoy:
 
 ## 13. Automatizacion
 
-Hoy manual (levantar servidores, seed). Por agregar: recordatorio diario de prestamos vencidos como LaunchAgent del Mac mini (mismo patron que `doc/deploy-runbook.md`), no cron dentro de uvicorn.
+Deploy por releases en la Mac mini: `sudo /opt/go/bin/deploy-app.sh gocreate` (respaldo de DB y `uploads/`, health check y rollback automatico; `docs/deploy/deploy-app.sh`). El recordatorio diario de prestamos vencidos se **retiro el 14/09/26** (`docs/deploy/recordatorios_launchagent.md`); no hay tareas programadas.
 
-## 14. Estado actual
+## 14. Estado actual (05/11/26)
 
-Presupuestos funciona local con auth, roles, ciclos, validacion, gastos generales, borrado logico/fisico, dashboard y responsividad movil. Control de Equipos tiene plan quirurgico completo (modelo de datos, API, RBAC aditivo, PDF, correo, frontend liquid glass) con 22 hallazgos adversariales documentados y mitigados en el diseno. Cero codigo del modulo nuevo escrito: espera luz verde.
+Presupuestos y Control de Equipos estan construidos y en produccion. Presupuestos: ciclos, tickets con varias fotos, validacion, gastos generales y operativos, dashboard con graficas, meta de gasto mensual y reporte HTML. Equipos: inventario, prestamos con fotos reemplazables y fecha de regreso editable, firmas (pendiente al confirmar, titular, firma guardada), responsiva PDF versionada, aprobaciones, creadores como beneficiarios, correo con copia oculta. Administracion: roles y paquetes aditivos, auditoria, auto-desbloqueo, `ADMIN_USUARIOS`. Ultimo commit: 19/10/26.
 
 ## 15. Siguiente paso
 
-1. Jose revisa `docs/PLAN_QUIRURGICO_EQUIPOS_27_07_26.md` y da (o no) luz verde de build.
-2. Marketing entrega los pendientes de §14 del plan (usuarios, inventario, razon social, dominio, aprobacion del gasto).
-3. Con luz verde: WP1 (RBAC aditivo) — primero pruebas, luego motor, luego migracion.
+1. Sembrar `ADMIN_USUARIOS` en produccion (`migrate_rbac_aditivo.py`).
+2. Cabeceras de seguridad y respaldos programados (BACKLOG #8 y #3).
+3. Confirmar con Damian: fecha de produccion, estado del correo y fuentes de marca.
