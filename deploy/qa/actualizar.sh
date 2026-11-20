@@ -34,9 +34,9 @@ done
 
 # El argumento debe coincidir EXACTO con la regla de sudoers (no pasar vacios).
 if [ "$FORCE" -eq 1 ]; then
-  sudo -n /opt/go/bin/deploy-app.sh "$QA_SLUG" --force
+  ( cd / && sudo -n /opt/go/bin/deploy-app.sh "$QA_SLUG" --force )
 else
-  sudo -n /opt/go/bin/deploy-app.sh "$QA_SLUG"
+  ( cd / && sudo -n /opt/go/bin/deploy-app.sh "$QA_SLUG" )
 fi
 
 esperar_salud_qa || die "el QA no responde con QA_MODE tras el deploy; revisa $QA_BASE/logs/backend.log (como_qa tail)."

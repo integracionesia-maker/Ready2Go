@@ -114,7 +114,7 @@ Alta lista. Siguientes pasos (ver README.md):
   1. Tunel y acceso en Cloudflare (hostname ${QA_HOSTNAME} -> http://127.0.0.1:${QA_PORT}); guardar el token en
        ${QA_BASE}/tunnel/tunnel.token  (permisos 600, dueño ${QA_USER}).
   2. Rama qa en GitHub:  git push origin master:qa   (desde la maquina de desarrollo).
-  3. Primer deploy:      sudo /opt/go/bin/deploy-app.sh ${QA_SLUG}
+  3. Primer deploy:      cd /tmp && sudo /opt/go/bin/deploy-app.sh ${QA_SLUG}   (desde /tmp, no desde tu home)
   4. Sembrar datos:      ./reiniciar_datos.sh --si
   5. Encender el tunel:  ./encender.sh
   6. Verificar:          ./verificar_aislamiento.sh

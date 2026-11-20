@@ -37,10 +37,12 @@ exigir_mac_mini() {
 }
 
 # Ejecutar como el usuario de servicio del QA (regla sudoers: integraciones -> _gocreateqa).
-como_qa() { sudo -n -u "$QA_USER" env HOME="$QA_BASE/home_${QA_SLUG}" PATH="$PATH" "$@"; }
+# El cd / es obligatorio: sudo hereda el directorio actual de quien llama (p. ej. ~/qa) y el
+# usuario de servicio no puede leerlo ("Incapaz de leer el directorio de trabajo actual").
+como_qa() { ( cd / && sudo -n -u "$QA_USER" env HOME="$QA_BASE/home_${QA_SLUG}" PATH="$PATH" "$@" ); }
 
 # Solo lectura sobre produccion (regla sudoers existente: integraciones -> _gocreate).
-como_prod_lectura() { sudo -n -u "$PROD_USER" "$@"; }
+como_prod_lectura() { ( cd / && sudo -n -u "$PROD_USER" "$@" ); }
 
 # Carpeta backend/ de la release activa del QA, segun el plist.
 release_backend() {

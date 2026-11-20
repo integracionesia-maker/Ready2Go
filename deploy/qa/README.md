@@ -89,7 +89,7 @@ Pide la contraseña de `sudo` de `integraciones`. Es idempotente. No arranca nad
 ### 4. Primer deploy y datos
 
 ```bash
-ssh -t gocreate-prod "sudo /opt/go/bin/deploy-app.sh gocreate-qa"      # clona la rama qa, compila con VITE_APP_ENV=qa, arranca
+ssh -t gocreate-prod "cd /tmp && sudo /opt/go/bin/deploy-app.sh gocreate-qa"   # (desde /tmp: el usuario del QA no puede leer tu home) clona la rama qa, compila con VITE_APP_ENV=qa, arranca
 ssh -t gocreate-prod "~/qa/reiniciar_datos.sh --si"                    # siembra los datos ficticios y crea las credenciales
 ssh -t gocreate-prod "~/qa/encender.sh"                                # enciende también el túnel
 ```
