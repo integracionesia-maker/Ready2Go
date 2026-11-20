@@ -32,6 +32,13 @@ CORS_ORIGINS = os.getenv(
 # En producción se deshabilitan /docs y /redoc (Swagger/Redoc quedaban abiertos sin auth).
 IS_PRODUCTION = os.getenv("ENV", "development") == "production"
 
+# Entorno QA (deploy/qa/): segunda instancia con datos ficticios para auditoria.
+# NO es un `ENV` distinto a proposito: `ENV` solo distingue "production" del
+# resto, y con `ENV=qa` las cookies perderian `Secure` y /docs quedaria abierto.
+# El QA corre con ENV=production y este flag aparte. En produccion el flag no
+# existe, asi que nada de lo que cuelga de el cambia el comportamiento real.
+QA_MODE = os.getenv("QA_MODE", "").strip().lower() in ("1", "true", "yes", "si", "on")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Arranca y detiene el consumidor de la cola de auditoria."""
@@ -59,6 +66,16 @@ app.add_middleware(
 # orden inverso al que se agregan, asi que CORS queda mas externo (procesa el
 # preflight OPTIONS antes) y este corre ya sobre requests reales.
 app.add_middleware(AuditMiddleware)
+
+if QA_MODE:
+    # Requisito QA-11: que ningun buscador indexe el QA, aunque alguien comparta
+    # la URL. Cloudflare Access ya lo cubre; esto es la segunda capa y lo que
+    # `deploy/qa/verificar_aislamiento.sh` comprueba con `curl -I`.
+    @app.middleware("http")
+    async def _noindex_qa(request, call_next):
+        respuesta = await call_next(request)
+        respuesta.headers["X-Robots-Tag"] = "noindex, nofollow"
+        return respuesta
 
 # El mount estático de /uploads se eliminó: todo comprobante se sirve ahora vía
 # GET /api/tickets/file/{id}, que valida sesión y pertenencia del ticket.
@@ -110,7 +127,20 @@ app.openapi()
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "version": "1.0.0"}
+    cuerpo = {"status": "ok", "version": "1.0.0"}
+    if QA_MODE:
+        # Solo en QA: permite a verificar_aislamiento.sh confirmar que esta
+        # hablando con la instancia QA y no con produccion.
+        cuerpo["qa"] = True
+    return cuerpo
+
+
+if QA_MODE:
+    from fastapi.responses import PlainTextResponse
+
+    @app.get("/robots.txt", include_in_schema=False)
+    def _robots_qa():
+        return PlainTextResponse("User-agent: *\nDisallow: /\n")
 
 # realpath: resuelve symlinks y "." para poder comparar contra el candidato de
 # cada request y confirmar que la ruta pedida no se sale del directorio.

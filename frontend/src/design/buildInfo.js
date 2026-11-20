@@ -21,8 +21,26 @@ export const APP_VERSION = import.meta.env.VITE_APP_VERSION || "dev";
 export const COMMIT_HASH = import.meta.env.VITE_COMMIT_HASH || "sin-git";
 export const BUILD_DATE = import.meta.env.VITE_BUILD_DATE || "—";
 
+/**
+ * ¿Es el entorno QA (pruebas con datos ficticios)? Dos señales, cualquiera basta:
+ * la variable de build `VITE_APP_ENV=qa` (la fija `deploy/qa/app.conf` al
+ * compilar) o un host que empieza con `qa.` (qa.gocreate.mx). En producción
+ * ninguna de las dos existe, así que esto es siempre `false` y no cambia nada.
+ */
+export function esEntornoQA() {
+  if (import.meta.env.VITE_APP_ENV === "qa") return true;
+  const host = typeof window === "undefined" ? "" : window.location.hostname;
+  return host.startsWith("qa.");
+}
+
+/** Prefijo del título de la pestaña: "[QA] " en QA, vacío en cualquier otro entorno. */
+export function prefijoTituloQA() {
+  return esEntornoQA() ? "[QA] " : "";
+}
+
 /** Entorno derivado del host: la app ya sabe dónde corre, no hace falta endpoint. */
 export function entornoActual() {
+  if (esEntornoQA()) return "QA (datos ficticios)";
   const host = typeof window === "undefined" ? "" : window.location.hostname;
   if (host === "gocreate.mx" || host === "www.gocreate.mx") return "producción";
   if (host === "localhost" || host === "127.0.0.1") return "local";
