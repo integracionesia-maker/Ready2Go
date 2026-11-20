@@ -7,8 +7,8 @@ Se corre desde backend/ de la release del QA, con el python de su venv:
 
 Maneja la app EN PROCESO (TestClient) contra la base del QA. Hace: iniciar
 sesion, crear una marca, editarla, subir un archivo (gasto general con
-comprobante), borrarlo y desactivar la marca. Deja la marca desactivada con el
-prefijo "Smoke QA" (no hay borrado de marcas en la app).
+comprobante), borrarlo, desactivar la marca y eliminarla. El nombre de la marca
+es unico por corrida, asi que la prueba es repetible y no deja rastro en los catalogos.
 
 Se niega a correr sin QA_MODE, igual que sembrar_datos.py.
 """
@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 from io import BytesIO
 from pathlib import Path
 
@@ -65,13 +66,16 @@ def main() -> int:
     if not paso("iniciar sesion", r.status_code == 200, f"HTTP {r.status_code}"):
         return 1
 
-    r = c.post("/api/brands/", json={"name": "Smoke QA temporal", "priority": "baja"})
+    # Las marcas tienen nombre unico: un nombre fijo solo dejaba pasar la primera corrida.
+    sufijo = time.strftime("%Y%m%d%H%M%S")
+    nombre = f"Smoke QA {sufijo}"
+    r = c.post("/api/brands/", json={"name": nombre, "priority": "baja"})
     if not paso("crear registro (marca)", r.status_code == 201, f"HTTP {r.status_code} {r.text[:120]}"):
         return 1
     marca = r.json()["id"]
 
-    r = c.put(f"/api/brands/{marca}", json={"name": "Smoke QA editada"})
-    paso("editar registro", r.status_code == 200 and r.json().get("name") == "Smoke QA editada", f"HTTP {r.status_code}")
+    r = c.put(f"/api/brands/{marca}", json={"name": nombre + " editada"})
+    paso("editar registro", r.status_code == 200 and r.json().get("name") == nombre + " editada", f"HTTP {r.status_code}")
 
     buf = BytesIO()
     Image.new("RGB", (120, 80), (200, 200, 200)).save(buf, format="JPEG")
@@ -90,6 +94,20 @@ def main() -> int:
 
     r = c.put(f"/api/brands/{marca}", json={"is_active": False})
     paso("desactivar la marca de prueba", r.status_code == 200 and r.json().get("is_active") is False, f"HTTP {r.status_code}")
+
+    # Limpieza: la marca no tiene tickets ni gastos (el gasto se borro arriba), asi que se
+    # elimina para que la prueba no deje rastro en los catalogos del QA.
+    try:
+        from app.database import SessionLocal
+        from app.models import Brand
+
+        db = SessionLocal()
+        db.query(Brand).filter(Brand.id == marca).delete()
+        db.commit()
+        db.close()
+        paso("limpiar la marca de prueba", True)
+    except Exception as exc:  # no debe tirar la prueba: es solo higiene
+        paso("limpiar la marca de prueba", False, str(exc)[:120])
 
     fallos = [n for n, ok, _ in resultados if not ok]
     print(f"\nPrueba de humo: {len(resultados) - len(fallos)}/{len(resultados)} en verde.")

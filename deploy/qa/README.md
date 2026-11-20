@@ -102,7 +102,7 @@ Si el primer deploy falla a medias, revisa `/opt/go/gocreate-qa/logs/deploy.log`
 ssh gocreate-prod "~/qa/verificar_aislamiento.sh --dominio --prod-despues ~/qa/prod_antes.txt" | tee deploy/qa/VERIFICACION_$(date +%F).md
 ```
 
-Guarda el informe fechado. **Debe quedar todo en PASS.** Ojo con la última comprobación («`_gocreateqa` no lee el `.env` de producción ni escribe su base»): si sale en FAIL, es un problema de permisos de **producción** (ver INVENTARIO §6) que hay que corregir antes de dar el QA por aislado.
+Guarda el informe fechado. **Debe quedar todo en PASS.** Excepción esperada: si reciclaste el túnel de producción (en vez de crear uno propio), la comprobación «Producción intacta» saldrá en FAIL por el pid y la configuración del túnel; eso es el cambio deliberado, no un daño. Ojo con la última comprobación («`_gocreateqa` no lee el `.env` de producción ni escribe su base»): si sale en FAIL, es un problema de permisos de **producción** (ver INVENTARIO §6) que hay que corregir antes de dar el QA por aislado.
 
 ### 6. Registro (QA-14) y entrega a Dafnne
 
