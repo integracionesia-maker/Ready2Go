@@ -99,7 +99,10 @@ fi
 if [ "$CON_SUDOERS" -eq 1 ]; then
   visudo -cf "$SRC/sudoers-gocreate-qa.txt" >/dev/null || die "sudoers-gocreate-qa.txt no pasa visudo -c; no se instala."
   install -m 0440 -o root -g wheel "$SRC/sudoers-gocreate-qa.txt" /etc/sudoers.d/integraciones-gocreate-qa
-  visudo -c >/dev/null || { rm -f /etc/sudoers.d/integraciones-gocreate-qa; die "visudo -c fallo tras instalar; regla retirada."; }
+  # Se valida SOLO el archivo del QA: `visudo -c` a secas revisa todo /etc/sudoers.d
+  # y falla por archivos ajenos (p. ej. integraciones-claude con permisos distintos de 0440).
+  visudo -cf /etc/sudoers.d/integraciones-gocreate-qa >/dev/null || { rm -f /etc/sudoers.d/integraciones-gocreate-qa; die "visudo -cf fallo en la regla del QA; regla retirada."; }
+  visudo -c >/dev/null 2>&1 || info "AVISO: visudo -c global reporta problemas AJENOS al QA (p. ej. permisos de otro archivo en /etc/sudoers.d); no se tocan."
   info "reglas sudo del QA instaladas en /etc/sudoers.d/integraciones-gocreate-qa"
 else
   info "sudoers NO instalado (falta --sudoers). Sin esas reglas, los scripts piden contraseña de sudo."
