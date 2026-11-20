@@ -10,6 +10,10 @@
     <!-- Barra del navegador móvil del color del fondo oscuro de la app -->
     <meta name="theme-color" content="#262626" />
     <title>GOCreate — Grupo Ortiz</title>
+    <!-- Entorno QA (host qa.*): prefija el título antes de que cargue la app. -->
+    <script>
+      if (location.hostname.indexOf("qa.") === 0) document.title = "[QA] " + document.title;
+    </script>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script src="/theme-boot.js"></script>

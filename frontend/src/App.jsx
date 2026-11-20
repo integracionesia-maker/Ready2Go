@@ -4,7 +4,7 @@ import ProtectedRoute from "./modules/presupuestos/components/ProtectedRoute";
 import PresupuestosLayout from "./modules/presupuestos/PresupuestosLayout";
 import AppShell from "./shell/AppShell";
 import EquiposLayout from "./modules/equipos/EquiposLayout";
-import { NotFoundPage, ScrollToTop, SkeletonShimmer } from "@/design";
+import { NotFoundPage, QaBanner, ScrollToTop, SkeletonShimmer } from "@/design";
 
 const LoginPage = lazy(() => import("./modules/presupuestos/pages/LoginPage"));
 const InicioPage = lazy(() => import("./modules/equipos/pages/InicioPage"));
@@ -32,6 +32,8 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      {/* Solo se pinta en el entorno QA (deploy/qa); en producción es null. */}
+      <QaBanner />
       <Routes>
       <Route
         path="/login"

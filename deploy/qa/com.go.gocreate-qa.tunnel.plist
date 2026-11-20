@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.go.gocreate-qa.tunnel</string>
+  <!-- Tunel PROPIO del QA, administrado remotamente desde el panel de Cloudflare
+       (el ingress qa.gocreate.mx -> http://127.0.0.1:8010 y la regla final 404 se
+       configuran alla). Corre con token-file: NO hace falta cert.pem de la
+       cuenta, que daria poder sobre los demas tuneles de la organizacion.
+       NO se reutiliza el tunel de produccion (2bb84bef-…): agregarle una regla
+       implica editar su config y reiniciarlo, o sea tocar produccion. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/cloudflared</string>
+    <string>tunnel</string>
+    <string>--no-autoupdate</string>
+    <string>run</string>
+    <string>--token-file</string>
+    <string>/opt/go/gocreate-qa/tunnel/tunnel.token</string>
+  </array>
+  <key>UserName</key>
+  <string>_gocreateqa</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/opt/go/gocreate-qa/logs/cloudflared.log</string>
+  <key>StandardErrorPath</key>
+  <string>/opt/go/gocreate-qa/logs/cloudflared.log</string>
+</dict>
+</plist>

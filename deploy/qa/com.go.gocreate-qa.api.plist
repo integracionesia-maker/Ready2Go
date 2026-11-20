@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.go.gocreate-qa.api</string>
+	<!-- ProgramArguments:0 y WorkingDirectory son marcadores: deploy-app.sh los
+	     reescribe en cada release (PlistBuddy) y recarga con bootout y bootstrap.
+	     El host 127.0.0.1 y un solo worker NO se tocan (QA-04; SQLite y rate limit en memoria).
+	     (En XML un comentario no puede contener dos guiones seguidos.) -->
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/go/gocreate-qa/releases/PENDIENTE/backend/venv/bin/python</string>
+		<string>-m</string>
+		<string>uvicorn</string>
+		<string>app.main:app</string>
+		<string>--host</string>
+		<string>127.0.0.1</string>
+		<string>--port</string>
+		<string>8010</string>
+		<string>--workers</string>
+		<string>1</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/opt/go/gocreate-qa/logs/backend.log</string>
+	<key>StandardOutPath</key>
+	<string>/opt/go/gocreate-qa/logs/backend.log</string>
+	<key>UserName</key>
+	<string>_gocreateqa</string>
+	<key>WorkingDirectory</key>
+	<string>/opt/go/gocreate-qa/releases/PENDIENTE/backend</string>
+</dict>
+</plist>

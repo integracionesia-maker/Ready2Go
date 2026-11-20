@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { prefijoTituloQA } from "./buildInfo";
 
 /**
  * Título del documento por ruta: "Dashboard · GOCreate".
@@ -10,6 +11,8 @@ import { useEffect } from "react";
  */
 export default function usePageTitle(titulo) {
   useEffect(() => {
-    document.title = titulo ? `${titulo} · GOCreate` : "GOCreate — Grupo Ortiz";
+    // En QA el título lleva "[QA] " para no confundir pestañas con producción.
+    document.title =
+      prefijoTituloQA() + (titulo ? `${titulo} · GOCreate` : "GOCreate — Grupo Ortiz");
   }, [titulo]);
 }

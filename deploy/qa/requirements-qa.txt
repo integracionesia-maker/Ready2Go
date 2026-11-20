@@ -1,0 +1,6 @@
+# Dependencias EXTRA que solo necesita el QA (no entran a produccion).
+# `sembrar_datos.py` y `smoke_qa.py` manejan la app en proceso con
+# fastapi.testclient.TestClient, que exige httpx. backend/requirements.txt no lo
+# trae (es dependencia de pruebas), asi que `reiniciar_datos.sh` lo instala en el
+# venv de la release del QA antes de sembrar. Idempotente.
+httpx>=0.27.0

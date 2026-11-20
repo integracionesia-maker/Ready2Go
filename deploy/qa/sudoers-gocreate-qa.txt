@@ -1,0 +1,29 @@
+# Reglas de sudo SOLO para el QA de GOCreate. Mismo criterio que
+# /etc/sudoers.d/integraciones-claude (docs/deploy/acceso-deploy-gocreate.md §2):
+# comandos con argumentos exactos, nunca sudo general. NO incluyen nada de
+# produccion ni de las otras apps (crece, requis, plazamadero).
+#
+# Instalacion (alta_host.sh --sudoers lo hace con validacion previa):
+#   sudo visudo -cf deploy/qa/sudoers-gocreate-qa.txt          # validar sintaxis
+#   sudo install -m 0440 -o root -g wheel deploy/qa/sudoers-gocreate-qa.txt /etc/sudoers.d/integraciones-gocreate-qa
+#
+# Para que sirve cada linea:
+#  - deploy-app.sh gocreate-qa [--force]: el despliegue oficial del QA (solo ese slug).
+#  - (_gocreateqa) ALL: actuar como el usuario de servicio del QA (leer/editar su
+#    .env, correr el sembrado, ver sus logs). Ese usuario no es dueño de nada de prod.
+#  - launchctl bootstrap/bootout/enable/disable/kickstart/print de SUS dos servicios:
+#    encender.sh, apagar.sh y reiniciar_datos.sh.
+integraciones ALL=(ALL) NOPASSWD: /opt/go/bin/deploy-app.sh gocreate-qa, /opt/go/bin/deploy-app.sh gocreate-qa --force
+integraciones ALL=(_gocreateqa) NOPASSWD: ALL
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl bootstrap system /Library/LaunchDaemons/com.go.gocreate-qa.api.plist
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl bootstrap system /Library/LaunchDaemons/com.go.gocreate-qa.tunnel.plist
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl bootout system/com.go.gocreate-qa.api
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl bootout system/com.go.gocreate-qa.tunnel
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl enable system/com.go.gocreate-qa.api
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl enable system/com.go.gocreate-qa.tunnel
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl disable system/com.go.gocreate-qa.api
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl disable system/com.go.gocreate-qa.tunnel
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl kickstart -k system/com.go.gocreate-qa.api
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl kickstart -k system/com.go.gocreate-qa.tunnel
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl print system/com.go.gocreate-qa.api
+integraciones ALL=(ALL) NOPASSWD: /bin/launchctl print system/com.go.gocreate-qa.tunnel
