@@ -53,7 +53,7 @@ else
     fi
   done
   [ -n "$N" ] || die "no hay un id libre entre 453 y 499 para el usuario de servicio."
-  info "creando grupo y usuario $QA_USER con id $N…"
+  info "creando grupo y usuario $QA_USER con id $N..."
   dscl . -create "/Groups/$QA_USER"
   dscl . -create "/Groups/$QA_USER" PrimaryGroupID "$N"
   dscl . -create "/Groups/$QA_USER" Password "*"
@@ -68,7 +68,7 @@ else
 fi
 
 # --- 2. Estructura de carpetas ------------------------------------------------
-info "creando $QA_BASE…"
+info "creando $QA_BASE..."
 for d in repo releases shared/data/uploads shared/env backups deploy logs tunnel incoming "home_${QA_SLUG}"; do
   mkdir -p "$QA_BASE/$d"
 done

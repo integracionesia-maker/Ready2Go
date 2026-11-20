@@ -46,21 +46,21 @@ if [ "$SI" -ne 1 ]; then
   [ "$resp" = "QA" ] || die "cancelado."
 fi
 
-info "deteniendo la API del QA…"
+info "deteniendo la API del QA..."
 sudo -n /bin/launchctl bootout "system/$QA_LABEL_API" 2>/dev/null || true
 sleep 2
 
-info "borrando base y archivos del QA…"
+info "borrando base y archivos del QA..."
 como_qa sh -c 'rm -f "$1/presupuesto.db" "$1/presupuesto.db-wal" "$1/presupuesto.db-shm" && rm -rf "$1/uploads" && mkdir -p "$1/uploads"' _ "$DATA"
 if [ "$NUEVAS" -eq 1 ]; then
   como_qa rm -f "$QA_CREDENCIALES"
   info "credenciales anteriores descartadas: se generaran nuevas."
 fi
 
-info "instalando dependencias extra del QA (httpx) en el venv de la release…"
+info "instalando dependencias extra del QA (httpx) en el venv de la release..."
 como_qa "$WD/venv/bin/pip" install --quiet -r "$WD/../deploy/qa/requirements-qa.txt"
 
-info "sembrando datos ficticios…"
+info "sembrando datos ficticios..."
 set +e
 como_qa sh -c 'cd "$1" && exec "$2" "$3" --credenciales "$4"' _ \
   "$WD" "$WD/venv/bin/python" "$WD/../deploy/qa/sembrar_datos.py" "$QA_CREDENCIALES"
@@ -69,7 +69,7 @@ set -e
 [ "$RC" -eq 0 ] || [ "$RC" -eq 2 ] || die "el sembrado fallo (codigo $RC); la API del QA queda detenida."
 [ "$RC" -eq 2 ] && info "AVISO: sembrado PARCIAL (algun escenario de prestamos fallo; ver arriba)."
 
-info "arrancando la API del QA…"
+info "arrancando la API del QA..."
 sudo -n /bin/launchctl bootstrap system "$QA_PLIST_API" 2>/dev/null || sudo -n /bin/launchctl kickstart -k "system/$QA_LABEL_API"
 esperar_salud_qa || die "la API del QA no responde tras sembrar; revisa $QA_BASE/logs/backend.log"
 info "QA listo: $(salud_qa)"
